@@ -8,7 +8,7 @@ Productivity skills for autonomous coding, research, and development workflows, 
 
 ```bash
 # Add marketplace
-/plugin marketplace add weedmo/autofree
+/plugin marketplace add weedmo/skills
 
 # Install
 /plugin install weed-harness@weed-plugins
@@ -17,7 +17,7 @@ Productivity skills for autonomous coding, research, and development workflows, 
 Or via CLI:
 
 ```bash
-claude plugin marketplace add https://github.com/weedmo/autofree.git
+claude plugin marketplace add https://github.com/weedmo/skills.git
 claude plugin install weed-harness@weed-plugins
 ```
 
@@ -26,7 +26,7 @@ claude plugin install weed-harness@weed-plugins
 Add the marketplace:
 
 ```bash
-codex marketplace add weedmo/autofree
+codex marketplace add weedmo/skills
 ```
 
 The installed Codex CLI currently exposes `marketplace add`, but not a separate `install` subcommand. After adding the marketplace, restart Codex if needed and enable `weed-harness` from Codex's plugin UI.

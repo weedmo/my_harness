@@ -57,8 +57,8 @@ Target: `~/autofree/` (this git repo)
 7. **Local plugin update** — Pull the new release into the local Claude Code plugin cache so this machine actually runs the version just published:
    ```bash
    MARKETPLACE_DIR=~/.claude/plugins/marketplaces/weed-plugins
-   # Ensure remote URL is current (repo was renamed my_harness → autofree)
-   git -C "$MARKETPLACE_DIR" remote set-url origin https://github.com/weedmo/autofree.git
+   # Ensure remote URL is current (repo was renamed my_harness → autofree → skills)
+   git -C "$MARKETPLACE_DIR" remote set-url origin https://github.com/weedmo/skills.git
    git -C "$MARKETPLACE_DIR" fetch origin --tags
    git -C "$MARKETPLACE_DIR" reset --hard origin/main
 
@@ -84,7 +84,7 @@ Target: `~/autofree/` (this git repo)
    ```
 
 8. **Verify** — Confirm ALL of:
-   - Tag `vX.Y.Z` exists on GitHub (`gh release view vX.Y.Z --repo weedmo/autofree`)
+   - Tag `vX.Y.Z` exists on GitHub (`gh release view vX.Y.Z --repo weedmo/skills`)
    - Marketplace clone HEAD matches origin/main
    - Cache dir `~/.claude/plugins/cache/weed-plugins/weed-harness/X.Y.Z/` exists with `.claude-plugin/plugin.json` showing version X.Y.Z
    - `installed_plugins.json` entry for `weed-harness@weed-plugins` shows `"version": "X.Y.Z"` and matching `installPath`
