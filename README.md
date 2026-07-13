@@ -50,7 +50,6 @@ Current limitation: Claude-specific hook automation and slash-command behavior a
 | `/test-validation` | Verify code fixes with FAIL-to-PASS pattern validation |
 | `/agent-development` | Guidance for creating Claude Code agents |
 | `/ecc-tools` | Skill combination advisor for document-skills workflows |
-| `/a5c-ai-babysitter-isaac-sim` | NVIDIA Isaac Sim simulation and synthetic data generation |
 
 ## Claude Configuration
 

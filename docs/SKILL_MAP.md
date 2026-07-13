@@ -32,7 +32,7 @@ fan out with a workflow, but add adversarial verification gates).
 
 [2] Now pick the EXECUTION ENGINE by scale:
       trivial (typo, 1-liner, obvious fix) → just do it directly (NO skill)
-      small / sequential                   → single skill: tdd (mattpocock/superpowers) / diagnose
+      small / sequential                   → single skill: tdd (mattpocock/superpowers) / systematic-debugging (superpowers)
       large / sequential + review matters   → subagent-driven-development (superpowers)
                                               or team (OMC)
       large / parallel / audit / migration  → Workflow tool (ultracode)
@@ -40,7 +40,7 @@ fan out with a workflow, but add adversarial verification gates).
 
 [3] Apply RISK modifier (independent of clarity):
       high risk → add gates even when clear:
-                  grill-spec → verify-plan / refine-plan → then execute
+                  grill-spec → refine-plan → then execute
 ```
 
 ---
@@ -50,10 +50,10 @@ fan out with a workflow, but add adversarial verification gates).
 | Clarity | Risk | Scale | Recommended path |
 | :-- | :-- | :-- | :-- |
 | Vague | — | — | **Interview first** (grill-spec / brainstorming), then re-judge |
-| Clear | Low | trivial / small | **Direct** or single skill (tdd (mattpocock/superpowers) / diagnose) |
+| Clear | Low | trivial / small | **Direct** or single skill (tdd (mattpocock/superpowers) / systematic-debugging (superpowers)) |
 | Clear | Low | large · parallel | **Workflow / ultracode** |
 | Clear | Low | large · sequential | **OMC team** or **subagent-driven-development** (autonomous) |
-| Clear | **High** | large | Autonomous + **verification gates** (grill-spec → verify-plan → execute) |
+| Clear | **High** | large | Autonomous + **verification gates** (grill-spec → refine-plan → execute) |
 
 **Anti-pattern:** Running brainstorming's HARD-GATE or a workflow on a trivial fix.
 That is over-engineering and contradicts "Simplicity First". superpowers is NOT
@@ -112,7 +112,7 @@ vague → superpowers/ouroboros interview; clear → OMC autonomous.
 - **writing-plans** (superpowers) — spec → multi-step implementation plan
 - **to-prd** — synthesize conversation into a PRD, publish to tracker (no interview)
 - **goal-set** — compress approved plan → goal.md (testable exit criteria)
-- **verify-plan / refine-plan** — Codex↔Claude consensus to harden a plan in-place
+- **refine-plan** — Codex↔Claude consensus to harden a plan in-place
 - **ouroboros: interview / seed** — Socratic interview → immutable spec
 
 ### Execution
@@ -123,10 +123,9 @@ vague → superpowers/ouroboros interview; clear → OMC autonomous.
 - **team / team-dispatch** (OMC) — multi-agent team execution
 
 ### Debugging
-- **diagnose** — 6-phase discipline; Phase 1 (build a fast deterministic
-  pass/fail feedback loop) is 90% of the skill
+- **systematic-debugging** (superpowers) — disciplined debugging loop
+- **diagnosing-bugs** (mattpocock) — diagnosis loop for hard bugs / perf regressions
 - **investigate** (gstack) — 4-phase, "Iron Law: no fix without root cause"
-- **systematic-debugging** (superpowers) — superpowers-integrated debugging
 
 ### Verification / quality
 - **verification-before-completion** (superpowers) — evidence before claiming done
@@ -155,7 +154,7 @@ grill-spec                    ← adversarial verify of the spec (if risky)
         ↓
 writing-plans / to-prd        ← plan / PRD
         ↓
-verify-plan / refine-plan     ← machine-harden the plan (Codex)  [risk gate]
+refine-plan                   ← machine-harden the plan (Codex)  [risk gate]
         ↓
 goal-set                      ← goal.md = exit criteria
         ↓

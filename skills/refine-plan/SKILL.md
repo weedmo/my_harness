@@ -243,6 +243,5 @@ After APPROVE, recommend the user run `/goal-set <feature-id>` next.
 ## Related skills
 
 - `/to-prd` — produces the PRD this skill consumes
-- `verify-plan` (weed-harness) — similar Codex↔Claude loop, but generic 3-pass; `/refine-plan` is stricter (5-round min, RALPLAN-DR structure, ADR enforcement)
 - `ouroboros:ralph` — pure self-referential loop, no consensus structure
 - `/goal-set` — the next phase after this skill returns APPROVE
