@@ -32,7 +32,7 @@ fan out with a workflow, but add adversarial verification gates).
 
 [2] Now pick the EXECUTION ENGINE by scale:
       trivial (typo, 1-liner, obvious fix) → just do it directly (NO skill)
-      small / sequential                   → single skill: tdd / diagnose
+      small / sequential                   → single skill: tdd (mattpocock/superpowers) / diagnose
       large / sequential + review matters   → subagent-driven-development (superpowers)
                                               or team (OMC)
       large / parallel / audit / migration  → Workflow tool (ultracode)
@@ -50,7 +50,7 @@ fan out with a workflow, but add adversarial verification gates).
 | Clarity | Risk | Scale | Recommended path |
 | :-- | :-- | :-- | :-- |
 | Vague | — | — | **Interview first** (grill-spec / brainstorming), then re-judge |
-| Clear | Low | trivial / small | **Direct** or single skill (tdd / diagnose) |
+| Clear | Low | trivial / small | **Direct** or single skill (tdd (mattpocock/superpowers) / diagnose) |
 | Clear | Low | large · parallel | **Workflow / ultracode** |
 | Clear | Low | large · sequential | **OMC team** or **subagent-driven-development** (autonomous) |
 | Clear | **High** | large | Autonomous + **verification gates** (grill-spec → verify-plan → execute) |
@@ -106,7 +106,7 @@ vague → superpowers/ouroboros interview; clear → OMC autonomous.
 
 ### Design / planning (front of the pipeline)
 - **brainstorming** (superpowers) — idea → approved spec, HARD-GATE before any code
-- **grill-me** — relentless interview to stress-test a plan/design
+- **grill-me** (mattpocock) — relentless interview to stress-test a plan/design
 - **grill-spec** (custom) — *adversarial verification* of an existing spec; writes
   resolutions back into the file, re-commits
 - **writing-plans** (superpowers) — spec → multi-step implementation plan
@@ -140,8 +140,8 @@ vague → superpowers/ouroboros interview; clear → OMC autonomous.
 - **worktree-spawn** — deterministic PORT_BASE for parallel multi-port dev servers
 
 ### Architecture / knowledge
-- **improve-codebase-architecture** — find deepening/refactor opportunities
-- **graphify** — any input → knowledge graph (code/docs/papers/images)
+- **improve-codebase-architecture** (mattpocock) — find deepening/refactor opportunities
+- **graphify** (standalone, `~/.claude/skills/graphify` via `graphify install`) — any input → knowledge graph (code/docs/papers/images)
 - **understand-anything** — codebase → interactive knowledge graph
 
 ---
