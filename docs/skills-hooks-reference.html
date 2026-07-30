@@ -225,7 +225,7 @@
   </div>
 
   <h2>1. 리포 스킬 — weed-harness (<code>skills/</code>)</h2>
-  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 12개. Codex 협업 파이프라인(refine-plan, goal-set, team-*)과 devlog는 2026-07-30에 제거되었습니다.</p>
+  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 13개. Codex 협업 파이프라인(refine-plan, goal-set, team-*)은 2026-07-30에 제거되었습니다.</p>
 
   <h3>📋 계획</h3>
   <div class="tablewrap">
@@ -258,7 +258,7 @@
     <tr><td class="name">harness-sync</td><td><span class="tag orange">유지관리</span></td>
       <td>로컬 <code>~/.claude/</code> 설정(hooks, skills, CLAUDE.md, settings.json 등)을 이 저장소로 동기화하고 버전 패치범프 → 커밋 → 태그 → 푸시 → GitHub Release → 플러그인 캐시 갱신까지 수행. "sync"라고 말하면 실행.</td></tr>
     <tr><td class="name">setup</td><td><span class="tag orange">유지관리</span></td>
-      <td>새 환경에 weed-harness를 셋업 — statusLine HUD, understand-anything 플러그인, 커스텀 훅 등록 등. 멱등이라 반복 실행해도 안전.</td></tr>
+      <td>새 환경에 weed-harness를 셋업 — statusLine HUD, understand-anything 플러그인 연결, 커스텀 훅 등록 등. 멱등이라 반복 실행해도 안전.</td></tr>
     <tr><td class="name">skill-subscribe</td><td><span class="tag orange">유지관리</span></td>
       <td>외부 GitHub 저장소에서 스킬 하나만 골라 <code>~/.claude/skills</code>에 설치하고 업스트림과 동기화 유지. SessionStart 훅(check.py)이 업데이트를 알림.</td></tr>
     <tr><td class="name">find-skills</td><td><span class="tag orange">유지관리</span></td>
@@ -300,7 +300,7 @@
   </div>
 
   <h2>3. Hooks (<code>hooks/</code>)</h2>
-  <p class="section-note">이벤트에 자동 반응하는 스크립트 5개와 플러그인 등록 파일. OMC·Codex review·devlog 관련 훅은 정리 완료로 삭제됐습니다.</p>
+  <p class="section-note">이벤트에 자동 반응하는 스크립트 5개와 플러그인 훅 선언 파일. 레거시 Codex 리뷰·devlog·TSG 훅은 삭제됐습니다.</p>
 
   <div class="tablewrap">
   <table>
@@ -316,7 +316,7 @@
     <tr><td class="name">language-rule.sh</td><td><span class="tag blue">UserPromptSubmit</span></td>
       <td>매 프롬프트마다 언어 규칙 리마인더 주입 — 사용자 보고/대화는 한국어, 코드·주석·커밋 메시지는 English.</td></tr>
     <tr><td class="name">hooks.json</td><td><span class="tag gray">플러그인 등록</span></td>
-      <td>weed-harness 플러그인이 설치될 때 등록되는 훅 선언. 현재 자동 등록되는 플러그인 훅은 없음.</td></tr>
+      <td>weed-harness 플러그인이 설치될 때 등록되는 훅 선언. 현재 플러그인 전용 훅은 없습니다.</td></tr>
   </table>
   </div>
 
@@ -331,8 +331,8 @@
             <li><span class="tag green">SessionStart</span> <code>skill-subscribe/scripts/check.py --hook</code> (업스트림 스킬 업데이트 확인) + <code>graphify-upgrade-check.sh</code></li>
           </ul>
         </li>
-        <li><strong><code>hooks.json</code> (플러그인)</strong> — 현재 등록된 훅 없음.</li>
-        <li>merge-conflict, gstack-filter, language-rule 훅은 <code>/setup</code> 스킬이 사용자 설정에 등록해 주는 방식입니다.</li>
+        <li><strong><code>hooks.json</code> (플러그인)</strong> — 현재 등록된 플러그인 전용 훅 없음.</li>
+        <li><code>/setup</code> 스킬은 merge-conflict, gstack-filter, language-rule 훅을 사용자 설정에 등록합니다.</li>
       </ul>
       <p class="section-note">참고: 리포의 <code>settings.json</code>은 업스트림에서 vendored된 파일이라 <code>/home/weed/</code> 경로가 남아 있습니다 — 로컬 설정 원본이 아닙니다.</p>
     </div>
@@ -341,12 +341,12 @@
   <div class="callout">
     <span class="ico">🔄</span>
     <div>
-      <p><strong>훅이 만드는 자동화 루프.</strong> 세션 시작 시 skill-subscribe와 graphify 업데이트를 확인하고, 사용자 프롬프트에는 언어 규칙을 적용합니다. <code>/setup</code>은 merge-conflict와 gstack 필터 훅도 사용자 설정에 등록합니다.</p>
+      <p><strong>훅이 만드는 자동화 루프.</strong> 머지 충돌은 merge-conflict-trigger가 해결 흐름으로 연결하고, gstack 업데이트 뒤에는 allowlist 필터가 스킬 목록을 정리합니다. 세션이 시작될 때마다 skill-subscribe와 graphify 업데이트 확인이 돌아 하니스가 스스로 최신 상태를 유지합니다.</p>
     </div>
   </div>
 
   <p class="footer-note">
-    2026-07-30 기준 · <code>weedmo/skills</code> main 브랜치 · OMC / weed-cowork / document-skills / everything-claude-code 및 Codex 협업 스킬(refine-plan, goal-set, team-split, team-dispatch, team-review, team-templates)은 정리되어 이 문서에 포함되지 않음.
+    2026-07-30 기준 · <code>weedmo/skills</code> main 브랜치 · OMC / weed-cowork / document-skills / everything-claude-code, Codex 협업 스킬(refine-plan, goal-set, team-split, team-dispatch, team-review, team-templates), devlog 및 레거시 리뷰·TSG 훅은 정리되어 이 문서에 포함되지 않음.
   </p>
 </div>
 
