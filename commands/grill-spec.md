@@ -79,7 +79,7 @@ Fix issues inline.
 
 1. Stage and commit the updated document only (do not bundle unrelated changes). Commit message:
    `docs(spec): adversarial review of <topic>` — English, no Co-Authored-By line.
-2. Report a short summary: **what was challenged**, **what changed in the doc**, **remaining accepted risks**, and the **recommended next step** (e.g. `writing-plans` / `/to-prd` / `/refine-plan`).
+2. Report a short summary: **what was challenged**, **what changed in the doc**, **remaining accepted risks**, and the **recommended next step** (e.g. `writing-plans` / `/to-prd`).
 
 ## Guardrails
 
