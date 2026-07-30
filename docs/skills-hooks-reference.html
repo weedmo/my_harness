@@ -210,7 +210,7 @@
 
   <div class="props">
     <div class="prop"><span class="k">📦 저장소</span><span class="v"><code>weedmo/skills</code> (구 autofree) → weed-harness 플러그인 소스</span></div>
-    <div class="prop"><span class="k">🧩 리포 스킬</span><span class="v">12개 (<code>skills/</code>)</span></div>
+    <div class="prop"><span class="k">🧩 리포 스킬</span><span class="v">11개 (<code>skills/</code>)</span></div>
     <div class="prop"><span class="k">🖥️ 로컬 스킬</span><span class="v">9개 (<code>~/.claude/skills/</code>)</span></div>
     <div class="prop"><span class="k">🪝 훅 스크립트</span><span class="v">5개 + <code>hooks.json</code> (<code>hooks/</code>)</span></div>
     <div class="prop"><span class="k">📅 기준일</span><span class="v">2026-07-30 (OMC·weed-cowork 정리 완료 후)</span></div>
@@ -225,7 +225,7 @@
   </div>
 
   <h2>1. 리포 스킬 — weed-harness (<code>skills/</code>)</h2>
-  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 12개. Codex 협업 파이프라인(refine-plan, goal-set, team-*)과 devlog는 2026-07-30에 제거되었습니다.</p>
+  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 11개. Codex 협업 파이프라인(refine-plan, goal-set, team-*), devlog, type-graph는 2026-07-30에 제거되었습니다.</p>
 
   <h3>📋 계획</h3>
   <div class="tablewrap">
@@ -267,8 +267,6 @@
       <td>에이전트·스킬·MCP·룰이 컨텍스트 윈도우를 얼마나 소비하는지 감사. 상시 로드 vs 온디맨드 오버헤드를 구분해 토큰 예산 산정.</td></tr>
     <tr><td class="name">merge-resolve</td><td><span class="tag gray">유틸</span></td>
       <td>머지 충돌 발생 시 충돌 헝크를 하나씩 보여주며 사용자가 해결안을 고르게 하는 대화형 해결 가이드. merge-conflict-trigger 훅이 자동 호출.</td></tr>
-    <tr><td class="name">type-graph</td><td><span class="tag gray">유틸</span></td>
-      <td>Python 코드베이스의 함수 단위 타입·호출 그래프 생성 (ROS rqt_graph 스타일).</td></tr>
   </table>
   </div>
 
@@ -316,7 +314,7 @@
     <tr><td class="name">language-rule.sh</td><td><span class="tag blue">UserPromptSubmit</span></td>
       <td>매 프롬프트마다 언어 규칙 리마인더 주입 — 사용자 보고/대화는 한국어, 코드·주석·커밋 메시지는 English.</td></tr>
     <tr><td class="name">hooks.json</td><td><span class="tag gray">플러그인 등록</span></td>
-      <td>weed-harness 플러그인이 설치될 때 등록되는 훅 선언. Codex 리뷰 훅 제거 후 현재는 빈 선언(<code>"hooks": {}</code>)이며 플러그인이 자동 등록하는 훅은 없습니다.</td></tr>
+      <td>weed-harness 플러그인이 설치될 때 등록되는 훅 선언. Codex 리뷰 훅 제거 후 현재는 빈 선언(<code>"hooks": {}</code>) — 모든 훅은 <code>/setup</code>을 통한 opt-in 등록.</td></tr>
   </table>
   </div>
 
@@ -332,7 +330,7 @@
           </ul>
         </li>
         <li><strong><code>hooks.json</code> (플러그인)</strong> — Codex 리뷰 훅 제거 후 빈 선언. 플러그인이 자동 등록하는 훅은 없음.</li>
-        <li>merge-conflict, gstack-filter, language-rule 훅은 <code>/setup</code> 스킬이 사용자 설정에 등록해 주는 방식입니다.</li>
+        <li>나머지 훅(merge-conflict, gstack-filter, graphify-inject)은 <code>/setup</code> 스킬이 사용자 설정에 등록해 주는 방식입니다.</li>
       </ul>
       <p class="section-note">참고: 리포의 <code>settings.json</code>은 업스트림에서 vendored된 파일이라 <code>/home/weed/</code> 경로가 남아 있습니다 — 로컬 설정 원본이 아닙니다.</p>
     </div>
