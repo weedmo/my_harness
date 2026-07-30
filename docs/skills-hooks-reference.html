@@ -316,7 +316,7 @@
     <tr><td class="name">language-rule.sh</td><td><span class="tag blue">UserPromptSubmit</span></td>
       <td>매 프롬프트마다 언어 규칙 리마인더 주입 — 사용자 보고/대화는 한국어, 코드·주석·커밋 메시지는 English.</td></tr>
     <tr><td class="name">hooks.json</td><td><span class="tag gray">플러그인 등록</span></td>
-      <td>weed-harness 플러그인이 설치될 때 등록되는 훅 선언. Codex 리뷰 훅 제거 후 현재는 빈 선언(<code>"hooks": {}</code>) — 모든 훅은 <code>/setup</code>을 통한 opt-in 등록.</td></tr>
+      <td>weed-harness 플러그인이 설치될 때 등록되는 훅 선언. Codex 리뷰 훅 제거 후 현재는 빈 선언(<code>"hooks": {}</code>)이며 플러그인이 자동 등록하는 훅은 없습니다.</td></tr>
   </table>
   </div>
 
@@ -332,7 +332,7 @@
           </ul>
         </li>
         <li><strong><code>hooks.json</code> (플러그인)</strong> — Codex 리뷰 훅 제거 후 빈 선언. 플러그인이 자동 등록하는 훅은 없음.</li>
-        <li>나머지 훅(merge-conflict, gstack-filter, graphify-inject)은 <code>/setup</code> 스킬이 사용자 설정에 등록해 주는 방식입니다.</li>
+        <li>merge-conflict, gstack-filter, language-rule 훅은 <code>/setup</code> 스킬이 사용자 설정에 등록해 주는 방식입니다.</li>
       </ul>
       <p class="section-note">참고: 리포의 <code>settings.json</code>은 업스트림에서 vendored된 파일이라 <code>/home/weed/</code> 경로가 남아 있습니다 — 로컬 설정 원본이 아닙니다.</p>
     </div>
