@@ -107,8 +107,6 @@ clarity: vague → interview first; clear → skip the heavy interview and execu
   resolutions back into the file, re-commits
 - **writing-plans** (superpowers) — spec → multi-step implementation plan
 - **to-prd** — synthesize conversation into a PRD, publish to tracker (no interview)
-- **goal-set** — compress approved plan → goal.md (testable exit criteria)
-- **refine-plan** — Codex↔Claude consensus to harden a plan in-place
 - **ouroboros: interview / seed** — Socratic interview → immutable spec
 
 ### Execution
@@ -116,7 +114,6 @@ clarity: vague → interview first; clear → skip the heavy interview and execu
 - **executing-plans** (superpowers) — same, in a parallel session
 - **Workflow / ultracode** (native) — parallel agent fan-out, adversarial verify
 - **ralph** (ouroboros) — evolutionary loop until convergence
-- **team / team-dispatch** (OMC) — multi-agent team execution
 
 ### Debugging
 - **systematic-debugging** (superpowers) — disciplined debugging loop
@@ -150,13 +147,9 @@ grill-spec                    ← adversarial verify of the spec (if risky)
         ↓
 writing-plans / to-prd        ← plan / PRD
         ↓
-refine-plan                   ← machine-harden the plan (Codex)  [risk gate]
-        ↓
-goal-set                      ← goal.md = exit criteria
-        ↓
 using-git-worktrees           ← isolated workspace
         ↓
-EXECUTE  ── pick by scale ──→  subagent-driven / executing-plans / Workflow / ralph / team
+EXECUTE  ── pick by scale ──→  subagent-driven / executing-plans / Workflow / ralph
         ↓
 verification-before-completion + code-review
         ↓
@@ -176,6 +169,4 @@ Not every task uses every stage. Trivial work skips the whole thing — just do 
 - Running a workflow on tightly-coupled sequential tasks = **wasted parallelism**
   (use subagent-driven instead)
 - Autonomous execution on a vague spec = **fast path to confidently-wrong output**
-- `.omx` is OMC runtime state (logs/metrics/routing) — **not a skill**, keep it
-  git-ignored
 ```
