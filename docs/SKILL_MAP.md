@@ -28,7 +28,7 @@ fan out with a workflow, but add adversarial verification gates).
 [1] Requirements clear?
       ├─ NO  → clarify first: brainstorming / grill-me / grill-spec
       │         (resolve ambiguity, THEN re-evaluate)
-      └─ YES → skip heavy interview; machine consensus (ralplan / Codex) is enough
+      └─ YES → skip heavy interview and execute
 
 [2] Now pick the EXECUTION ENGINE by scale:
       trivial (typo, 1-liner, obvious fix) → just do it directly (NO skill)
