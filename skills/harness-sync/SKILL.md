@@ -1,6 +1,6 @@
 ---
 name: harness-sync
-description: Sync the local ~/.claude/ config (hooks, skills, agents, CLAUDE.md, settings.json, hud, scripts) to the ~/autofree/ git repo, patch-bump the version, commit, tag, push, create a GitHub Release, and refresh the local plugin cache. Use when the user says "sync", "sync harness", "publish harness", or wants to release a new patch of weed-harness.
+description: Sync the local ~/.claude/ config (hooks, skills, agents, CLAUDE.md, settings.json, hud) to the ~/autofree/ git repo, patch-bump the version, commit, tag, push, create a GitHub Release, and refresh the local plugin cache. Use when the user says "sync", "sync harness", "publish harness", or wants to release a new patch of weed-harness.
 ---
 
 # Harness Sync
