@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harness Skills &amp; Hooks 레퍼런스</title>
+<style>
+  :root {
+    --paper: #ffffff;
+    --ink: #37352f;
+    --fog: #787774;
+    --line: #e9e9e7;
+    --hover: #f1f1ef;
+    --callout-bg: #f7f6f3;
+    --code-bg: rgba(135, 131, 120, 0.15);
+    --code-ink: #eb5757;
+    --blue: #2383e2;
+    --tag-gray-bg: #f1f0ef;   --tag-gray-ink: #32302c;
+    --tag-blue-bg: #e7f3f8;   --tag-blue-ink: #183347;
+    --tag-green-bg: #edf3ec;  --tag-green-ink: #1c3829;
+    --tag-orange-bg: #faebdd; --tag-orange-ink: #49290e;
+    --tag-purple-bg: #f6f3f9; --tag-purple-ink: #412454;
+    --tag-yellow-bg: #fbf3db; --tag-yellow-ink: #402c1b;
+    --tag-red-bg: #fdebec;    --tag-red-ink: #5d1715;
+    --tag-brown-bg: #f4eeee;  --tag-brown-ink: #442a1e;
+    --cover-a: #dbeafe;
+    --cover-b: #e8e6f7;
+  }
+  /* Deliberately light-only: this page commits to Notion's light look. */
+  html { background: var(--paper); color-scheme: light only; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji";
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 20px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    font-size: 14px; color: var(--fog);
+  }
+  .topbar .crumb { color: var(--ink); }
+  .topbar .sep { color: var(--fog); }
+
+  .cover {
+    height: 160px;
+    background: linear-gradient(120deg, var(--cover-a), var(--cover-b));
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 32px 120px;
+  }
+
+  .page-icon {
+    font-size: 72px; line-height: 1;
+    margin-top: -44px;
+    display: inline-block;
+  }
+  h1.page-title {
+    font-size: 40px; font-weight: 700; line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin: 12px 0 4px;
+    text-wrap: balance;
+  }
+  .page-sub { color: var(--fog); margin: 0 0 24px; }
+
+  .props { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    padding: 8px 0; margin-bottom: 32px; font-size: 14px; }
+  .prop { display: flex; gap: 16px; padding: 4px 0; }
+  .prop .k { flex: 0 0 150px; color: var(--fog); display: flex; align-items: center; gap: 6px; }
+  .prop .v { color: var(--ink); }
+  .prop .v code { font-size: 13px; }
+
+  h2 {
+    font-size: 24px; font-weight: 600; letter-spacing: -0.01em;
+    margin: 48px 0 4px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+    text-wrap: balance;
+  }
+  h3 { font-size: 18px; font-weight: 600; margin: 32px 0 8px; }
+  .section-note { color: var(--fog); font-size: 14px; margin: 4px 0 16px; }
+
+  .callout {
+    display: flex; gap: 12px;
+    background: var(--callout-bg);
+    border-radius: 4px;
+    padding: 16px;
+    margin: 20px 0;
+    font-size: 15px;
+  }
+  .callout .ico { flex: 0 0 auto; font-size: 20px; line-height: 1.4; }
+  .callout p { margin: 0 0 6px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 0.85em;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  pre.plain {
+    background: var(--callout-bg);
+    border-radius: 4px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--ink);
+    margin: 16px 0;
+  }
+
+  .tag {
+    display: inline-block;
+    border-radius: 3px;
+    padding: 1px 7px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .tag.gray   { background: var(--tag-gray-bg);   color: var(--tag-gray-ink); }
+  .tag.blue   { background: var(--tag-blue-bg);   color: var(--tag-blue-ink); }
+  .tag.green  { background: var(--tag-green-bg);  color: var(--tag-green-ink); }
+  .tag.orange { background: var(--tag-orange-bg); color: var(--tag-orange-ink); }
+  .tag.purple { background: var(--tag-purple-bg); color: var(--tag-purple-ink); }
+  .tag.yellow { background: var(--tag-yellow-bg); color: var(--tag-yellow-ink); }
+  .tag.red    { background: var(--tag-red-bg);    color: var(--tag-red-ink); }
+  .tag.brown  { background: var(--tag-brown-bg);  color: var(--tag-brown-ink); }
+
+  .tablewrap { overflow-x: auto; margin: 16px 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    color: var(--fog);
+    font-weight: 500;
+    background: var(--callout-bg);
+    white-space: nowrap;
+  }
+  td.name { white-space: nowrap; font-weight: 500; }
+  td .cmd { color: var(--fog); font-size: 12px; display: block; margin-top: 2px;
+    font-family: ui-monospace, Consolas, monospace; }
+
+  details {
+    border-radius: 4px;
+    margin: 8px 0;
+  }
+  details summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-radius: 4px;
+    list-style: none;
+    display: flex; align-items: center; gap: 8px;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before {
+    content: "▶";
+    font-size: 10px;
+    color: var(--fog);
+    transition: transform 0.15s ease;
+  }
+  details[open] summary::before { transform: rotate(90deg); }
+  details summary:hover { background: var(--hover); }
+  details summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  details .body { padding: 4px 8px 8px 26px; }
+  @media (prefers-reduced-motion: reduce) {
+    details summary::before { transition: none; }
+  }
+
+  .divider { border: none; border-top: 1px solid var(--line); margin: 40px 0; }
+
+  ul.notion { padding-left: 24px; margin: 8px 0; }
+  ul.notion li { margin: 4px 0; }
+
+  .pipeline {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    background: var(--callout-bg); border-radius: 4px;
+    padding: 14px 16px; margin: 16px 0;
+    font-size: 14px;
+  }
+  .pipeline .step {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .pipeline .arr { color: var(--fog); }
+
+  .footer-note { color: var(--fog); font-size: 13px; margin-top: 56px;
+    border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<div class="topbar">
+  <span>🏠</span><span class="sep">/</span>
+  <span>harness</span><span class="sep">/</span>
+  <span class="crumb">Skills &amp; Hooks 레퍼런스</span>
+</div>
+<div class="cover"></div>
+
+<div class="page">
+  <span class="page-icon">🧰</span>
+  <h1 class="page-title">Harness Skills &amp; Hooks 레퍼런스</h1>
+  <p class="page-sub">weed-harness 저장소와 로컬 <code>~/.claude</code>에 설치된 skill·hook의 역할 정리</p>
+
+  <div class="props">
+    <div class="prop"><span class="k">📦 저장소</span><span class="v"><code>weedmo/skills</code> (구 autofree) → weed-harness 플러그인 소스</span></div>
+    <div class="prop"><span class="k">🧩 리포 스킬</span><span class="v">19개 (<code>skills/</code>)</span></div>
+    <div class="prop"><span class="k">🖥️ 로컬 스킬</span><span class="v">9개 (<code>~/.claude/skills/</code>)</span></div>
+    <div class="prop"><span class="k">🪝 훅 스크립트</span><span class="v">8개 + <code>hooks.json</code> (<code>hooks/</code>)</span></div>
+    <div class="prop"><span class="k">📅 기준일</span><span class="v">2026-07-30 (OMC·weed-cowork 정리 완료 후)</span></div>
+  </div>
+
+  <div class="callout">
+    <span class="ico">💡</span>
+    <div>
+      <p><strong>스킬은 3계층으로 나뉩니다.</strong> ① 이 저장소의 <code>skills/</code> — weed-harness 플러그인으로 배포되는 스킬, ② <code>~/.claude/skills/</code> — 플러그인과 무관하게 로컬에 직접 설치된 스킬, ③ superpowers·ouroboros 등 다른 플러그인이 제공하는 스킬(이 문서 범위 밖).</p>
+      <p>훅은 이 저장소의 <code>hooks/</code>에 스크립트로 보관되고, <code>settings.json</code>(사용자 전역)과 <code>hooks.json</code>(플러그인)에 이벤트별로 등록되어 실행됩니다.</p>
+    </div>
+  </div>
+
+  <h2>1. 리포 스킬 — weed-harness (<code>skills/</code>)</h2>
+  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 19개. 핵심은 "계획 → 팀 실행 → 리뷰 → 기록"의 개발 파이프라인입니다.</p>
+
+  <h3>📋 계획 파이프라인</h3>
+  <div class="pipeline">
+    <span class="step">/to-prd</span><span class="arr">→</span>
+    <span class="step">/refine-plan</span><span class="arr">→</span>
+    <span class="step">/goal-set</span><span class="arr">→</span>
+    <span class="step">/team-dispatch</span><span class="arr">→</span>
+    <span class="step">/team-review</span>
+  </div>
+  <div class="tablewrap">
+  <table>
+    <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
+    <tr><td class="name">to-prd</td><td><span class="tag blue">계획</span></td>
+      <td>현재 대화 맥락을 PRD로 합성해 프로젝트 이슈 트래커에 게시. 인터뷰 없이 바로 문서화.</td></tr>
+    <tr><td class="name">refine-plan</td><td><span class="tag blue">계획</span></td>
+      <td>Codex↔Claude 합의 루프로 plan.md를 다듬는 단계. Architect + Critic 판정을 통과할 때까지 최소 5라운드, 최대 10라운드 반복.</td></tr>
+    <tr><td class="name">goal-set</td><td><span class="tag blue">계획</span></td>
+      <td>승인된 plan.md를 goal.md(테스트 가능한 종료 조건 + 제약 + 서브팀 도구)로 압축. Codex가 실행할 목표 패키지를 만듦.</td></tr>
+    <tr><td class="name">workflow-plan</td><td><span class="tag blue">계획</span></td>
+      <td>Workflow 오케스트레이션 도구에 바로 얹을 수 있는 형태(phase / agent / parallel / pipeline / barrier 태깅)로 구현 계획을 작성.</td></tr>
+    <tr><td class="name">team-split</td><td><span class="tag blue">계획</span></td>
+      <td>마스터 플랜을 기능별 git worktree + 태스크 디렉토리(PRD/plan/goal/tools 템플릿 포함)로 분할해 병렬 작업을 준비.</td></tr>
+  </table>
+  </div>
+
+  <h3>🤝 팀 실행 (Codex 협업)</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
+    <tr><td class="name">team-dispatch</td><td><span class="tag green">실행</span></td>
+      <td>goal 패키지 + 서브팀 API와 함께 기능 구현을 Codex 창(pane)에 위임. Codex가 구현자-감독자 역할을 하며 헬퍼를 스폰할 수 있음.</td></tr>
+    <tr><td class="name">team-review</td><td><span class="tag green">실행</span></td>
+      <td>Codex 구현 결과를 goal.md 종료 조건에 대조해 리뷰하고, 소규모 리팩토링 후 <code>/review</code> + <code>/ship</code>으로 PR 생성. team-dispatch가 DONE을 남긴 뒤 사용.</td></tr>
+    <tr><td class="name">team-templates</td><td><span class="tag green">실행</span></td>
+      <td>스킬이라기보다 템플릿 모음 — team-split이 사용하는 <code>prd.md</code> / <code>plan.md</code> / <code>goal.md</code> / <code>tools.md</code> 원본.</td></tr>
+  </table>
+  </div>
+
+  <h3>🔁 자율 루프</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
+    <tr><td class="name">autocode</td><td><span class="tag purple">루프</span></td>
+      <td>자율 코드 개선 루프. 단일 에이전트 모드(순차 실험 + PIVOT/REFINE 판단)와 PGE(Plan-Generate-Execute) 팀 모드 지원. 서브커맨드: install / init / run / status / resume.</td></tr>
+    <tr><td class="name">auto_research</td><td><span class="tag purple">루프</span></td>
+      <td>ML 연구용 자율 실험 루프. 딥 인터뷰로 초기화하고, 선택적으로 23단계 연구 파이프라인(AutoResearchClaw) 실행. 문헌 검색·멀티에이전트 토론·품질 게이트 포함.</td></tr>
+  </table>
+  </div>
+
+  <h3>📝 기록 · 배포 · 유지관리</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
+    <tr><td class="name">devlog</td><td><span class="tag yellow">기록</span></td>
+      <td>개발 로그 허브 — <code>/devlog</code>(개발 저널), <code>/devlog tsg</code>(트러블슈팅 가이드), <code>/devlog search</code>(통합 검색)로 <code>logs/</code> 하위 기록을 관리. 아래 devlog-hook이 커밋마다 자동 트리거.</td></tr>
+    <tr><td class="name">deploy-verify</td><td><span class="tag red">배포</span></td>
+      <td>배포 후 검증 파이프라인: PR 머지 → 카나리 모니터링 → 벤치마크를 체인으로 실행. <code>/deploy-verify canary</code>는 모니터링만.</td></tr>
+    <tr><td class="name">harness-sync</td><td><span class="tag orange">유지관리</span></td>
+      <td>로컬 <code>~/.claude/</code> 설정(hooks, skills, CLAUDE.md, settings.json 등)을 이 저장소로 동기화하고 버전 패치범프 → 커밋 → 태그 → 푸시 → GitHub Release → 플러그인 캐시 갱신까지 수행. "sync"라고 말하면 실행.</td></tr>
+    <tr><td class="name">setup</td><td><span class="tag orange">유지관리</span></td>
+      <td>새 환경에 weed-harness를 셋업 — statusLine HUD, Codex 플러그인 연결, 커스텀 훅 등록 등. 멱등이라 반복 실행해도 안전.</td></tr>
+    <tr><td class="name">skill-subscribe</td><td><span class="tag orange">유지관리</span></td>
+      <td>외부 GitHub 저장소에서 스킬 하나만 골라 <code>~/.claude/skills</code>에 설치하고 업스트림과 동기화 유지. SessionStart 훅(check.py)이 업데이트를 알림.</td></tr>
+    <tr><td class="name">find-skills</td><td><span class="tag orange">유지관리</span></td>
+      <td>"X를 하는 스킬 있나?" 같은 질문에 설치 가능한 스킬을 탐색·설치하도록 도움.</td></tr>
+    <tr><td class="name">context-budget</td><td><span class="tag gray">유틸</span></td>
+      <td>에이전트·스킬·MCP·룰이 컨텍스트 윈도우를 얼마나 소비하는지 감사. 상시 로드 vs 온디맨드 오버헤드를 구분해 토큰 예산 산정.</td></tr>
+    <tr><td class="name">merge-resolve</td><td><span class="tag gray">유틸</span></td>
+      <td>머지 충돌 발생 시 충돌 헝크를 하나씩 보여주며 사용자가 해결안을 고르게 하는 대화형 해결 가이드. merge-conflict-trigger 훅이 자동 호출.</td></tr>
+    <tr><td class="name">type-graph</td><td><span class="tag gray">유틸</span></td>
+      <td>Python 코드베이스의 함수 단위 타입·호출 그래프 생성 (ROS rqt_graph 스타일).</td></tr>
+  </table>
+  </div>
+
+  <h2>2. 로컬 스킬 (<code>~/.claude/skills/</code>)</h2>
+  <p class="section-note">플러그인 배포와 무관하게 직접 설치된 9개. 출처별로 gstack 계열 / Orca 계열 / 독립 스킬로 나뉩니다.</p>
+
+  <div class="tablewrap">
+  <table>
+    <tr><th>스킬</th><th>출처</th><th>역할</th></tr>
+    <tr><td class="name">browse</td><td><span class="tag blue">gstack</span></td>
+      <td>QA 테스트·사이트 도그푸딩용 고속 헤드리스 브라우저.</td></tr>
+    <tr><td class="name">qa</td><td><span class="tag blue">gstack</span></td>
+      <td>웹 애플리케이션을 체계적으로 QA 테스트하고 발견된 버그를 수정.</td></tr>
+    <tr><td class="name">scrape</td><td><span class="tag blue">gstack</span></td>
+      <td>웹 페이지에서 데이터 추출.</td></tr>
+    <tr><td class="name">diagram</td><td><span class="tag blue">gstack</span></td>
+      <td>영어 설명(또는 mermaid 소스)을 다이어그램 3종 세트로 변환 — 소스 + 편집 가능한 .excalidraw 파일 포함.</td></tr>
+    <tr><td class="name">orca-cli</td><td><span class="tag purple">Orca</span></td>
+      <td><code>orca</code> CLI로 Orca가 관리하는 worktree·터미널·자동화·내장 브라우저를 조작. 다른 에이전트로의 완전한 핸드오프(handover)에도 사용.</td></tr>
+    <tr><td class="name">orchestration</td><td><span class="tag purple">Orca</span></td>
+      <td>Orca 멀티에이전트 조율 — 스레드 메시지, ask/reply 블로킹 플로우, 태스크 DAG, 의사결정 게이트, 코디네이터 루프.</td></tr>
+    <tr><td class="name">computer-use</td><td><span class="tag purple">Orca</span></td>
+      <td>Orca의 computer-use CLI로 로컬 데스크톱 앱 창을 접근성 트리·스크린샷·안전한 UI 액션으로 검사·조작.</td></tr>
+    <tr><td class="name">graphify</td><td><span class="tag green">독립</span></td>
+      <td>모든 입력(코드·문서·논문·이미지)을 영속 지식 그래프로 변환. <code>graphify-out/</code>이 있으면 코드베이스 질문을 그래프 쿼리로 먼저 처리해 토큰 절약. pip 패키지 <code>graphifyy</code>로 배포.</td></tr>
+    <tr><td class="name">karpathy-guidelines</td><td><span class="tag green">독립</span></td>
+      <td>LLM 코딩 실수를 줄이는 행동 지침 — 과잉 설계 방지, 수술적 변경, 가정 표면화, 검증 가능한 성공 기준. 모든 코드 작업에서 호출하도록 CLAUDE.md에 명시.</td></tr>
+  </table>
+  </div>
+
+  <h2>3. Hooks (<code>hooks/</code>)</h2>
+  <p class="section-note">이벤트에 자동 반응하는 스크립트 8개. OMC 관련 훅(omc-skill-filter)은 정리 완료로 삭제됐습니다.</p>
+
+  <div class="tablewrap">
+  <table>
+    <tr><th>훅</th><th>이벤트</th><th>역할</th></tr>
+    <tr><td class="name">codex-task-review.sh</td><td><span class="tag red">SubagentStop</span></td>
+      <td>서브에이전트 작업이 끝나면 백그라운드에서 <code>codex exec --full-auto</code>로 diff를 리뷰·자동수정. ALLOW/FIXED면 태스크당 1커밋 자동 생성, BLOCKED면 메인 세션에 해결 요청 (asyncRewake로 재기동).</td></tr>
+    <tr><td class="name">devlog-hook.sh</td><td><span class="tag orange">PostToolUse: Bash</span></td>
+      <td>git commit 성공을 감지해 자동 분기: fix/bug 커밋 → TSG 기록, revert 커밋 → devlog reject, 일반 커밋 → devlog 기록, devlog/TSG 문서 커밋 → 자동 PR 체인.</td></tr>
+    <tr><td class="name">tsg-bash-failure.sh</td><td><span class="tag orange">PostToolUse: Bash</span></td>
+      <td>명령이 실패(exit ≠ 0)하면 기존 TSG에서 해결책을 검색하거나 미해결 이슈로 기록하라고 제안.</td></tr>
+    <tr><td class="name">merge-conflict-trigger.sh</td><td><span class="tag orange">PostToolUse: Bash</span></td>
+      <td>git 머지 출력에서 CONFLICT를 감지하면 merge-resolve 스킬을 트리거하는 매직 키워드를 출력.</td></tr>
+    <tr><td class="name">gstack-skill-filter.sh</td><td><span class="tag orange">PostToolUse</span></td>
+      <td>gstack 업데이트 후 allowlist(browse, qa 등) 밖의 gstack 스킬을 비활성화해 스킬 목록 오염 방지.</td></tr>
+    <tr><td class="name">graphify-claudemd-inject.sh</td><td><span class="tag orange">PostToolUse: Skill</span></td>
+      <td><code>/graphify</code> 스킬 실행 후 프로젝트 CLAUDE.md에 graphify 운용 섹션을 자동 주입.</td></tr>
+    <tr><td class="name">graphify-upgrade-check.sh</td><td><span class="tag green">SessionStart</span></td>
+      <td>PyPI의 <code>graphifyy</code> 최신 버전과 pipx 설치 버전을 비교해 뒤처지면 한 줄 알림. 자동 적용은 하지 않으며, 실패해도 세션 시작을 막지 않음.</td></tr>
+    <tr><td class="name">language-rule.sh</td><td><span class="tag blue">UserPromptSubmit</span></td>
+      <td>매 프롬프트마다 언어 규칙 리마인더 주입 — 사용자 보고/대화는 한국어, 코드·주석·커밋 메시지는 English.</td></tr>
+    <tr><td class="name">hooks.json</td><td><span class="tag gray">플러그인 등록</span></td>
+      <td>weed-harness 플러그인이 설치될 때 등록되는 훅 선언. 현재는 SubagentStop → codex-task-review.sh 하나만 남음 (OMC 필터 제거됨).</td></tr>
+  </table>
+  </div>
+
+  <details>
+    <summary>실제 등록 위치 — settings.json vs hooks.json</summary>
+    <div class="body">
+      <p>같은 스크립트라도 <strong>어디에 등록되느냐</strong>에 따라 적용 범위가 다릅니다.</p>
+      <ul class="notion">
+        <li><strong><code>settings.json</code> (사용자 전역)</strong> — 모든 세션에 적용:
+          <ul class="notion">
+            <li><span class="tag red">SubagentStop</span> <code>codex-task-review.sh</code> (timeout 600s, asyncRewake)</li>
+            <li><span class="tag blue">UserPromptSubmit</span> <code>language-rule.sh</code></li>
+            <li><span class="tag green">SessionStart</span> <code>skill-subscribe/scripts/check.py --hook</code> (업스트림 스킬 업데이트 확인) + <code>graphify-upgrade-check.sh</code></li>
+          </ul>
+        </li>
+        <li><strong><code>hooks.json</code> (플러그인)</strong> — weed-harness 플러그인이 활성화된 경우에만: SubagentStop → codex-task-review.sh (timeout 900s)</li>
+        <li>나머지 훅(devlog, tsg, merge-conflict, gstack-filter, graphify-inject)은 <code>/setup</code> 스킬이 사용자 설정에 등록해 주는 방식입니다.</li>
+      </ul>
+      <p class="section-note">참고: 리포의 <code>settings.json</code>은 업스트림에서 vendored된 파일이라 <code>/home/weed/</code> 경로가 남아 있습니다 — 로컬 설정 원본이 아닙니다.</p>
+    </div>
+  </details>
+
+  <div class="callout">
+    <span class="ico">🔄</span>
+    <div>
+      <p><strong>훅이 만드는 자동화 루프.</strong> 커밋하면 devlog-hook이 기록을 남기고, 명령이 실패하면 tsg-bash-failure가 과거 해결책을 찾아주며, 서브에이전트가 일을 마치면 codex-task-review가 리뷰·수정·커밋까지 처리합니다. 세션이 시작될 때마다 skill-subscribe와 graphify 업데이트 확인이 돌아 하니스가 스스로 최신 상태를 유지합니다.</p>
+    </div>
+  </div>
+
+  <p class="footer-note">
+    2026-07-30 기준 · <code>weedmo/skills</code> main 브랜치 (ef85b40) · OMC / weed-cowork / document-skills / everything-claude-code 관련 항목은 정리되어 이 문서에 포함되지 않음.
+  </p>
+</div>
+
+</html>
