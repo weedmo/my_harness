@@ -1,7 +1,7 @@
 # Skill & Framework Routing Guide
 
 A decision aid for picking the right approach per task. Built from the installed
-harness (weed-harness + superpowers + ouroboros + understand-anything + codex)
+harness (weed-harness + superpowers + ouroboros + understand-anything)
 and the native Workflow tool.
 
 > **Golden rule:** Ceremony scales to the task. Three *independent* inputs decide
