@@ -16,7 +16,7 @@ Target: `~/autofree/` (this git repo)
 - `hooks/` — all `.sh` files and `hooks.json`
 - `skills/` — only directories already present in repo (do NOT import skills from other plugins like gstack, omc, everything-claude-code, etc.)
 - `agents/` — all files
-- `CLAUDE.md` — the OMC + weed-harness section (between `<!-- OMC:START -->` and the end of file)
+- `CLAUDE.md` — the weed-harness section
 - `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
 - `settings.json` — local active settings (statusLine, env, hooks, permissions). ALWAYS include unconditionally.
 - `hud/` — all files (statusLine HUD scripts referenced by settings.json)
