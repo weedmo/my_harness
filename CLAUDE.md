@@ -110,12 +110,12 @@ graphify is the standard knowledge-graph backbone for codebases here. The goal i
 two-fold and matters more as a project grows: **token savings** for agent retrieval
 and **fast human comprehension**. Apply this policy.
 
-- **Distribution**: graphify is the pip package `graphifyy` (installed via pipx),
-  and `graphify install --platform claude` generates the local skill. The package
-  version IS the skill version. A SessionStart hook
-  (`~/.claude/hooks/graphify-upgrade-check.sh`) checks PyPI and notifies on a newer
-  version; it does NOT auto-apply. Apply on approval with:
-  `pipx upgrade graphifyy && graphify install --platform claude`.
+- **Distribution**: graphify is the pip package `graphifyy`, and
+  `graphify install --platform claude` / `--platform codex` generates the local
+  skill for each platform. The package version IS the skill version. A
+  SessionStart hook (`~/.claude/hooks/auto-update.sh`) AUTO-applies newer PyPI
+  versions and re-installs the skill for both claude and codex; it also updates
+  the superpowers plugin and re-syncs the matt-* codex skills.
 - **Build for both audiences**: `graphify <repo> --directed --wiki`. `--directed`
   preserves call direction (matters for code); `--wiki` emits an agent-crawlable
   wiki that humans also read. Outputs land in `graphify-out/` (+ HTML / Obsidian

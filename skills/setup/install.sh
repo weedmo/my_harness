@@ -5,6 +5,8 @@
 # Usage:
 #   install.sh             # install all components
 #   install.sh hud         # install HUD (statusLine + hud/ copy)
+#   install.sh claude      # REQUIRED for Claude: superpowers plugin + graphify skill
+#   install.sh codex       # REQUIRED for Codex: matt-* skills + graphify skill
 #   install.sh understand  # install understand-anything plugin (codebase comprehension)
 #   install.sh hooks       # register weed-harness extra hooks in settings.json
 #   install.sh status      # report what is/isn't installed (no writes)
@@ -101,6 +103,64 @@ if existing != desired:
   fi
 }
 
+# ---------- helper: graphify ----------
+
+ensure_graphify() {
+  if command -v graphify >/dev/null 2>&1; then
+    skip "graphifyy already installed"
+    return 0
+  fi
+  log "installing graphifyy via pip..."
+  python3 -m pip install --user -q graphifyy 2>/dev/null || python -m pip install --user -q graphifyy 2>/dev/null || warn "graphifyy pip install failed"
+  command -v graphify >/dev/null 2>&1 && ok "graphifyy installed"
+}
+
+# ---------- step: claude (required: superpowers + graphify) ----------
+
+setup_claude() {
+  printf '\n[claude] required skills: superpowers plugin + graphify\n'
+  if command -v claude >/dev/null 2>&1; then
+    if claude plugin list 2>/dev/null | grep -q "superpowers@claude-plugins-official"; then
+      skip "superpowers already installed"
+    else
+      log "installing superpowers@claude-plugins-official..."
+      claude plugin install superpowers@claude-plugins-official 2>&1 | sed 's/^/    /' || warn "superpowers install failed"
+    fi
+  else
+    warn "claude CLI not found — cannot install superpowers"
+  fi
+  ensure_graphify
+  if command -v graphify >/dev/null 2>&1; then
+    if graphify install --platform claude >/dev/null 2>&1; then ok "graphify skill installed (claude)"; else warn "graphify install --platform claude failed"; fi
+  fi
+}
+
+# ---------- step: codex (required: matt-* skills + graphify) ----------
+
+setup_codex() {
+  printf '\n[codex] required skills: matt-interview + matt-orchestrator + graphify\n'
+  local codex_skills="${USER_HOME}/.codex/skills"
+  mkdir -p "$codex_skills"
+  for s in matt-interview matt-orchestrator; do
+    local src="${PLUGIN_ROOT}/skills/${s}"
+    if [ ! -d "$src" ]; then
+      warn "$s not found in plugin at $src"
+      continue
+    fi
+    if [ -d "$codex_skills/$s" ] && diff -rq "$src" "$codex_skills/$s" >/dev/null 2>&1; then
+      skip "$s up to date in ~/.codex/skills"
+    else
+      rm -rf "${codex_skills:?}/${s}"
+      cp -r "$src" "$codex_skills/$s"
+      ok "installed $s -> ~/.codex/skills/$s"
+    fi
+  done
+  ensure_graphify
+  if command -v graphify >/dev/null 2>&1; then
+    if graphify install --platform codex >/dev/null 2>&1; then ok "graphify skill installed (codex)"; else warn "graphify install --platform codex failed"; fi
+  fi
+}
+
 # ---------- step: understand-anything ----------
 
 setup_understand() {
@@ -132,6 +192,7 @@ setup_hooks() {
   # matcher empty (-) means no matcher
   local entries=(
     "UserPromptSubmit - language-rule.sh"
+    "SessionStart - auto-update.sh"
   )
 
   for entry in "${entries[@]}"; do
@@ -217,8 +278,17 @@ except Exception as e:
   else
     warn "claude CLI not available — cannot check"
   fi
+  printf '\n[claude required]\n'
+  if command -v claude >/dev/null 2>&1; then
+    if claude plugin list 2>/dev/null | grep -q superpowers@claude-plugins-official; then ok "superpowers installed"; else warn "superpowers NOT installed"; fi
+  fi
+  if command -v graphify >/dev/null 2>&1; then ok "graphifyy installed"; else warn "graphifyy NOT installed"; fi
+  printf '\n[codex required]\n'
+  for s in matt-interview matt-orchestrator; do
+    if [ -d "${USER_HOME}/.codex/skills/${s}" ]; then ok "$s present in ~/.codex/skills"; else warn "$s NOT installed for codex"; fi
+  done
   printf '\n[hooks]\n'
-  for s in language-rule.sh; do
+  for s in language-rule.sh auto-update.sh; do
     if grep -q "$s" "$SETTINGS" 2>/dev/null; then ok "$s registered"; else warn "$s NOT registered"; fi
   done
 }
@@ -231,17 +301,21 @@ cmd="${1:-all}"
 case "$cmd" in
   all)
     setup_hud
+    setup_claude
+    setup_codex
     setup_understand
     setup_hooks
     printf '\nDone. Restart Claude Code to apply hooks/statusLine changes.\n'
     ;;
   hud)        setup_hud ;;
+  claude)     setup_claude ;;
+  codex)      setup_codex ;;
   understand) setup_understand ;;
   hooks)      setup_hooks ;;
   status)     status ;;
   *)
     err "Unknown command: $cmd"
-    printf 'Usage: %s [all|hud|understand|hooks|status]\n' "$(basename "$0")"
+    printf 'Usage: %s [all|hud|claude|codex|understand|hooks|status]\n' "$(basename "$0")"
     exit 1
     ;;
 esac

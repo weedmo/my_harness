@@ -67,8 +67,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/hooks/graphify-upgrade-check.sh",
-            "timeout": 20
+            "command": "bash ~/.claude/hooks/auto-update.sh",
+            "timeout": 60
           }
         ]
       }

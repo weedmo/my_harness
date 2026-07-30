@@ -1,6 +1,6 @@
 ---
 name: setup
-description: "weed-harness 사용자 환경 셋업 — statusLine HUD 설치, understand-anything 플러그인 설치, 추가 hooks (language-rule 등) 등록. 멱등(idempotent)이라 여러 번 실행해도 안전. 트리거: '/setup', 'setup hud', 'plugin 설치 후 설정', 'statusLine 등록'."
+description: "weed-harness 사용자 환경 셋업 — Claude 필수 스킬(superpowers + graphify), Codex 필수 스킬(matt-interview/matt-orchestrator + graphify) 설치, statusLine HUD, understand-anything 플러그인, 추가 hooks (language-rule, auto-update) 등록. 멱등(idempotent)이라 여러 번 실행해도 안전. 트리거: '/setup', 'setup hud', 'setup claude', 'setup codex', 'plugin 설치 후 설정', 'statusLine 등록'."
 ---
 
 # weed-harness setup
@@ -20,8 +20,10 @@ Claude Code 플러그인은 `skills/`, `agents/`, `hooks/hooks.json`, MCP 서버
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh"            # 전체 셋업
 bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" hud        # HUD만
+bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" claude     # Claude 필수: superpowers + graphify
+bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" codex      # Codex 필수: matt-* skills + graphify
 bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" understand # understand-anything 플러그인
-bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" hooks      # 추가 hook 등록
+bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" hooks      # 추가 hook 등록 (language-rule, auto-update)
 bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" status     # 현재 상태만 보기 (변경 없음)
 ```
 
@@ -30,6 +32,8 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" status     # 현재 상태�
 1. 사용자의 의도를 파악:
    - "/setup", "setup all", "전부 설정해줘" → `install.sh all`
    - "setup hud", "statusLine 등록해줘" → `install.sh hud`
+   - "setup claude", "claude 필수 스킬" → `install.sh claude`
+   - "setup codex", "codex 필수 스킬" → `install.sh codex`
    - "setup understand", "understand-anything 설치" → `install.sh understand`
    - "setup hooks", "hook 등록" → `install.sh hooks`
    - "setup status", "뭐 설치되어 있어?" → `install.sh status`
@@ -49,6 +53,16 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" status     # 현재 상태�
 - **버전 무관 안정 경로** 를 사용 → 다음 plugin 업데이트(예: 2.1.9 → 2.2.0)에도 statusLine 깨지지 않음
 - 사용자가 statusLine을 다른 명령으로 바꿔놨다면 덮어씀 (멱등성을 위해)
 
+### `claude` — Claude 필수 스킬
+
+- **superpowers** 플러그인 (`superpowers@claude-plugins-official`) 설치 (이미 있으면 skip)
+- **graphify** — `graphifyy` pip 패키지 설치 후 `graphify install --platform claude`
+
+### `codex` — Codex 필수 스킬
+
+- **matt-interview / matt-orchestrator** — 플러그인의 `skills/matt-*`를 `~/.codex/skills/`로 복사 (내용 동일하면 skip)
+- **graphify** — `graphify install --platform codex`
+
 ### `understand`
 
 - `claude plugin marketplace add Lum1104/Understand-Anything` (이미 있으면 skip)
@@ -63,6 +77,9 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" status     # 현재 상태�
 | Event | Matcher | Script |
 |-------|---------|--------|
 | UserPromptSubmit | (none) | language-rule.sh |
+| SessionStart | (none) | auto-update.sh |
+
+`auto-update.sh`는 세션 시작마다 필수 스킬을 자동 업데이트: graphifyy 신버전이 PyPI에 있으면 업그레이드 후 claude/codex 양쪽에 재설치, superpowers 플러그인 업데이트(best-effort), matt-* codex 스킬 재동기화.
 
 각 hook script 가 사용자 `~/.claude/hooks/` 에 없으면 plugin에서 복사. 등록은 같은 matcher group에 합쳐짐.
 
@@ -76,8 +93,9 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" status     # 현재 상태�
 ## 적용 확인
 
 `install.sh status` 로 현재 상태를 점검할 수 있음:
-- HUD 파일 존재 여부
-- statusLine 등록 여부
+- HUD 파일 존재 여부, statusLine 등록 여부
+- Claude 필수(superpowers, graphifyy) 설치 여부
+- Codex 필수(matt-interview, matt-orchestrator) 설치 여부
 - 각 hook 등록 여부
 
 ## 재시작 필요

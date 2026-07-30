@@ -210,7 +210,7 @@
 
   <div class="props">
     <div class="prop"><span class="k">📦 저장소</span><span class="v"><code>weedmo/skills</code> (구 autofree) → weed-harness 플러그인 소스</span></div>
-    <div class="prop"><span class="k">🧩 리포 스킬</span><span class="v">8개 (<code>skills/</code>)</span></div>
+    <div class="prop"><span class="k">🧩 리포 스킬</span><span class="v">10개 (<code>skills/</code>, Codex용 2개 포함)</span></div>
     <div class="prop"><span class="k">🖥️ 로컬 스킬</span><span class="v">4개 활성 (<code>~/.claude/skills/</code>)</span></div>
     <div class="prop"><span class="k">🪝 훅 스크립트</span><span class="v">3개 + <code>hooks.json</code> (<code>hooks/</code>)</span></div>
     <div class="prop"><span class="k">📅 기준일</span><span class="v">2026-07-30 (OMC·weed-cowork 정리 완료 후)</span></div>
@@ -225,7 +225,7 @@
   </div>
 
   <h2>1. 리포 스킬 — weed-harness (<code>skills/</code>)</h2>
-  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 8개. Codex 협업 파이프라인(refine-plan, goal-set, team-*), devlog, type-graph, context-budget, merge-resolve, deploy-verify는 2026-07-30 정리에서 제거되었습니다.</p>
+  <p class="section-note">플러그인으로 패키징되는 10개 — Claude용 8개 + Codex 전용 2개(matt-*). Codex 협업 파이프라인(refine-plan, goal-set, team-*), devlog, type-graph, context-budget, merge-resolve, deploy-verify는 2026-07-30 정리에서 제거되었습니다.</p>
 
   <h3>📋 계획</h3>
   <div class="tablewrap">
@@ -256,11 +256,22 @@
     <tr><td class="name">harness-sync</td><td><span class="tag orange">유지관리</span></td>
       <td>로컬 <code>~/.claude/</code> 설정(hooks, skills, CLAUDE.md, settings.json 등)을 이 저장소로 동기화하고 버전 패치범프 → 커밋 → 태그 → 푸시 → GitHub Release → 플러그인 캐시 갱신까지 수행. "sync"라고 말하면 실행.</td></tr>
     <tr><td class="name">setup</td><td><span class="tag orange">유지관리</span></td>
-      <td>새 환경에 weed-harness를 셋업 — statusLine HUD, understand-anything 플러그인, 커스텀 훅 등록 등. 멱등이라 반복 실행해도 안전.</td></tr>
+      <td>새 환경에 weed-harness를 셋업 — Claude 필수(superpowers+graphify)·Codex 필수(matt-*+graphify) 스킬 설치, statusLine HUD, 커스텀 훅 등록. 멱등이라 반복 실행해도 안전.</td></tr>
     <tr><td class="name">skill-subscribe</td><td><span class="tag orange">유지관리</span></td>
       <td>외부 GitHub 저장소에서 스킬 하나만 골라 <code>~/.claude/skills</code>에 설치하고 업스트림과 동기화 유지. SessionStart 훅(check.py)이 업데이트를 알림.</td></tr>
     <tr><td class="name">find-skills</td><td><span class="tag orange">유지관리</span></td>
       <td>"X를 하는 스킬 있나?" 같은 질문에 설치 가능한 스킬을 탐색·설치하도록 도움.</td></tr>
+  </table>
+  </div>
+
+  <h3>🤖 Codex 전용 스킬</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
+    <tr><td class="name">matt-interview</td><td><span class="tag brown">Codex</span></td>
+      <td>개발자 대상 소크라테스식 인터뷰 — 코드베이스를 조사하고 요구사항을 벼려 구현 모호도를 10% 이하로 낮춘 실행 가능한 스펙을 만든 뒤 matt-orchestrator에 인계.</td></tr>
+    <tr><td class="name">matt-orchestrator</td><td><span class="tag brown">Codex</span></td>
+      <td>Matt Pocock 엔지니어링 스킬들을 Orca 태스크 DAG로 조율해 구현·버그수정·리팩토링을 병렬 실행. 모호도가 10%를 넘으면 matt-interview로 복귀. <code>/setup codex</code>가 <code>~/.codex/skills/</code>에 설치.</td></tr>
   </table>
   </div>
 
@@ -289,8 +300,8 @@
     <tr><th>훅</th><th>이벤트</th><th>역할</th></tr>
     <tr><td class="name">graphify-claudemd-inject.sh</td><td><span class="tag orange">PostToolUse: Skill</span></td>
       <td><code>/graphify</code> 스킬 실행 후 프로젝트 CLAUDE.md에 graphify 운용 섹션을 자동 주입.</td></tr>
-    <tr><td class="name">graphify-upgrade-check.sh</td><td><span class="tag green">SessionStart</span></td>
-      <td>PyPI의 <code>graphifyy</code> 최신 버전과 pipx 설치 버전을 비교해 뒤처지면 한 줄 알림. 자동 적용은 하지 않으며, 실패해도 세션 시작을 막지 않음.</td></tr>
+    <tr><td class="name">auto-update.sh</td><td><span class="tag green">SessionStart</span></td>
+      <td>필수 스킬 자동 업데이트 — PyPI에 <code>graphifyy</code> 신버전이 있으면 업그레이드 후 claude·codex 양쪽에 스킬 재설치, superpowers 플러그인 업데이트(best-effort), matt-* codex 스킬 재동기화. 실패해도 세션 시작을 막지 않음.</td></tr>
     <tr><td class="name">language-rule.sh</td><td><span class="tag blue">UserPromptSubmit</span></td>
       <td>매 프롬프트마다 언어 규칙 리마인더 주입 — 사용자 보고/대화는 한국어, 코드·주석·커밋 메시지는 English.</td></tr>
     <tr><td class="name">hooks.json</td><td><span class="tag gray">플러그인 등록</span></td>
@@ -306,7 +317,7 @@
         <li><strong><code>settings.json</code> (사용자 전역)</strong> — 모든 세션에 적용:
           <ul class="notion">
             <li><span class="tag blue">UserPromptSubmit</span> <code>language-rule.sh</code></li>
-            <li><span class="tag green">SessionStart</span> <code>skill-subscribe/scripts/check.py --hook</code> (업스트림 스킬 업데이트 확인) + <code>graphify-upgrade-check.sh</code></li>
+            <li><span class="tag green">SessionStart</span> <code>skill-subscribe/scripts/check.py --hook</code> (업스트림 스킬 업데이트 확인) + <code>auto-update.sh</code> (필수 스킬 자동 업데이트)</li>
           </ul>
         </li>
         <li><strong><code>hooks.json</code> (플러그인)</strong> — Codex 리뷰 훅 제거 후 빈 선언. 플러그인이 자동 등록하는 훅은 없음.</li>
@@ -319,7 +330,7 @@
   <div class="callout">
     <span class="ico">🔄</span>
     <div>
-      <p><strong>훅이 만드는 자동화.</strong> 매 프롬프트마다 language-rule이 언어 규칙을 상기시키고, <code>/graphify</code> 실행 후에는 CLAUDE.md에 운용 섹션이 자동 주입됩니다. 세션이 시작될 때마다 skill-subscribe와 graphify 업데이트 확인이 돌아 하니스가 스스로 최신 상태를 유지합니다.</p>
+      <p><strong>훅이 만드는 자동화.</strong> 매 프롬프트마다 language-rule이 언어 규칙을 상기시키고, <code>/graphify</code> 실행 후에는 CLAUDE.md에 운용 섹션이 자동 주입됩니다. 세션이 시작될 때마다 auto-update가 필수 스킬(graphify claude+codex, superpowers, matt-*)을 자동으로 최신화하고, skill-subscribe가 구독 스킬 업데이트를 알립니다.</p>
     </div>
   </div>
 
