@@ -72,7 +72,6 @@ All of these are *execution-layer* tools. They differ on **autonomy**,
 | **executing-plans** | superpowers | model (me) | sequential, parallel session | large sequential, separate session |
 | **Workflow / ultracode** | native tool | **code (JS script)** | **massively parallel** fan-out | large, independent units, audits, migrations |
 | **ralph** | ouroboros | MCP loop | iterative (generations) | single goal, evolve until convergence |
-| **team** | OMC | orchestrator | multi-agent team | large autonomous, clear spec |
 
 **Loop vs Workflow:** a loop repeats over *time* (1 context, N iterations — ralph,
 ultrawork). A workflow distributes over *space* (N agents, parallel — and may
