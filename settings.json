@@ -42,20 +42,7 @@
   "hooks": {
     "PreToolUse": [],
     "PostToolUse": [],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/codex-task-review.sh",
-            "timeout": 600,
-            "asyncRewake": true,
-            "rewakeMessage": "Codex review of recent subagent changes:",
-            "rewakeSummary": "Codex task review"
-          }
-        ]
-      }
-    ],
+    "SubagentStop": [],
     "UserPromptSubmit": [
       {
         "hooks": [
@@ -95,7 +82,6 @@
     "weed-harness@weed-plugins": false,
     "superpowers@claude-plugins-official": true,
     "skill-creator@claude-plugins-official": true,
-    "codex@openai-codex": true,
     "playwright@claude-plugins-official": false,
     "ouroboros@ouroboros": false
   },
@@ -104,12 +90,6 @@
       "source": {
         "source": "git",
         "url": "https://github.com/weedmo/my_harness.git"
-      }
-    },
-    "openai-codex": {
-      "source": {
-        "source": "github",
-        "repo": "openai/codex-plugin-cc"
       }
     },
     "ouroboros": {

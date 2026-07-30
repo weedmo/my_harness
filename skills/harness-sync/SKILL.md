@@ -20,7 +20,6 @@ Target: `~/autofree/` (this git repo)
 - `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
 - `settings.json` — local active settings (statusLine, env, hooks, permissions). ALWAYS include unconditionally.
 - `hud/` — all files (statusLine HUD scripts referenced by settings.json)
-- `scripts/` — `team.sh` and `pipeline.sh` (used by `/team-*` and `/refine-plan` skills; copied to `~/.claude/scripts/` by `/setup` on install)
 
 **Excluded:** `settings.local.json` (project-private overrides), `plugins/`, `sessions/`, `cache/`, `history.jsonl`, `projects/`, and any other runtime/state files.
 
