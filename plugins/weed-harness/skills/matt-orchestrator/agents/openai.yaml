@@ -1,0 +1,4 @@
+interface:
+  display_name: "Matt Orchestrator"
+  short_description: "Orchestrate Matt skills across parallel Orca workers"
+  default_prompt: "Use $matt-orchestrator to implement this request with a supervised Orca task DAG."

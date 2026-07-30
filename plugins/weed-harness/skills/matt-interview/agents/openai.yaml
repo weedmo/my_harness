@@ -1,0 +1,4 @@
+interface:
+  display_name: "Matt Interview"
+  short_description: "Reduce ambiguity with deep developer interviews"
+  default_prompt: "Use $matt-interview to clarify this request below 10% ambiguity, produce an implementation-ready spec, and hand it to $matt-orchestrator."
