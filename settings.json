@@ -93,7 +93,6 @@
   },
   "enabledPlugins": {
     "weed-harness@weed-plugins": false,
-    "weed-cowork@weed-cowork": true,
     "superpowers@claude-plugins-official": true,
     "skill-creator@claude-plugins-official": true,
     "codex@openai-codex": true,
@@ -105,12 +104,6 @@
       "source": {
         "source": "git",
         "url": "https://github.com/weedmo/my_harness.git"
-      }
-    },
-    "weed-cowork": {
-      "source": {
-        "source": "git",
-        "url": "https://github.com/weedmo/my_cowork.git"
       }
     },
     "openai-codex": {

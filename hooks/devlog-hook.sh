@@ -1,22 +1,14 @@
 #!/usr/bin/env bash
 # Unified devlog hook — handles all devlog/TSG triggers
-# PostToolUse: Bash (git commit detection), MCP state_clear (OMC mode complete)
+# PostToolUse: Bash (git commit detection)
 #
-# Modes (determined by TOOL_NAME from stdin):
+# Modes (determined by commit command from stdin):
 #   1. git commit with fix/bug keywords → TSG auto-record
 #   2. git commit with revert keywords → devlog reject
 #   3. git commit (other) → devlog auto-record
 #   4. git commit for devlog/TSG docs → auto PR chain
-#   5. OMC state_clear → devlog auto-record
 
 INPUT=$(cat)
-TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
-
-# --- Mode 5: OMC mode complete (state_clear) ---
-if [ "$TOOL_NAME" = "mcp__plugin_oh-my-claudecode_t__state_clear" ]; then
-  echo '[AUTO-DEVLOG] OMC 모드 완료 감지. /devlog --auto를 실행하여 개발 과정을 자동 기록하세요. 사용자 확인 없이 바로 작성하세요.'
-  exit 0
-fi
 
 # --- Modes 1-4: git commit detection ---
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
