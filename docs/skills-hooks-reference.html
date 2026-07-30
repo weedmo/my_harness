@@ -192,23 +192,6 @@
   ul.notion { padding-left: 24px; margin: 8px 0; }
   ul.notion li { margin: 4px 0; }
 
-  .pipeline {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-    background: var(--callout-bg); border-radius: 4px;
-    padding: 14px 16px; margin: 16px 0;
-    font-size: 14px;
-  }
-  .pipeline .step {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 4px 10px;
-    font-family: ui-monospace, Consolas, monospace;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-  .pipeline .arr { color: var(--fog); }
-
   .footer-note { color: var(--fog); font-size: 13px; margin-top: 56px;
     border-top: 1px solid var(--line); padding-top: 16px; }
 </style>
@@ -227,7 +210,7 @@
 
   <div class="props">
     <div class="prop"><span class="k">📦 저장소</span><span class="v"><code>weedmo/skills</code> (구 autofree) → weed-harness 플러그인 소스</span></div>
-    <div class="prop"><span class="k">🧩 리포 스킬</span><span class="v">19개 (<code>skills/</code>)</span></div>
+    <div class="prop"><span class="k">🧩 리포 스킬</span><span class="v">13개 (<code>skills/</code>)</span></div>
     <div class="prop"><span class="k">🖥️ 로컬 스킬</span><span class="v">9개 (<code>~/.claude/skills/</code>)</span></div>
     <div class="prop"><span class="k">🪝 훅 스크립트</span><span class="v">8개 + <code>hooks.json</code> (<code>hooks/</code>)</span></div>
     <div class="prop"><span class="k">📅 기준일</span><span class="v">2026-07-30 (OMC·weed-cowork 정리 완료 후)</span></div>
@@ -242,42 +225,16 @@
   </div>
 
   <h2>1. 리포 스킬 — weed-harness (<code>skills/</code>)</h2>
-  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 19개. 핵심은 "계획 → 팀 실행 → 리뷰 → 기록"의 개발 파이프라인입니다.</p>
+  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 13개. Codex 협업 파이프라인(refine-plan, goal-set, team-*)은 2026-07-30에 제거되었습니다.</p>
 
-  <h3>📋 계획 파이프라인</h3>
-  <div class="pipeline">
-    <span class="step">/to-prd</span><span class="arr">→</span>
-    <span class="step">/refine-plan</span><span class="arr">→</span>
-    <span class="step">/goal-set</span><span class="arr">→</span>
-    <span class="step">/team-dispatch</span><span class="arr">→</span>
-    <span class="step">/team-review</span>
-  </div>
+  <h3>📋 계획</h3>
   <div class="tablewrap">
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
     <tr><td class="name">to-prd</td><td><span class="tag blue">계획</span></td>
       <td>현재 대화 맥락을 PRD로 합성해 프로젝트 이슈 트래커에 게시. 인터뷰 없이 바로 문서화.</td></tr>
-    <tr><td class="name">refine-plan</td><td><span class="tag blue">계획</span></td>
-      <td>Codex↔Claude 합의 루프로 plan.md를 다듬는 단계. Architect + Critic 판정을 통과할 때까지 최소 5라운드, 최대 10라운드 반복.</td></tr>
-    <tr><td class="name">goal-set</td><td><span class="tag blue">계획</span></td>
-      <td>승인된 plan.md를 goal.md(테스트 가능한 종료 조건 + 제약 + 서브팀 도구)로 압축. Codex가 실행할 목표 패키지를 만듦.</td></tr>
     <tr><td class="name">workflow-plan</td><td><span class="tag blue">계획</span></td>
       <td>Workflow 오케스트레이션 도구에 바로 얹을 수 있는 형태(phase / agent / parallel / pipeline / barrier 태깅)로 구현 계획을 작성.</td></tr>
-    <tr><td class="name">team-split</td><td><span class="tag blue">계획</span></td>
-      <td>마스터 플랜을 기능별 git worktree + 태스크 디렉토리(PRD/plan/goal/tools 템플릿 포함)로 분할해 병렬 작업을 준비.</td></tr>
-  </table>
-  </div>
-
-  <h3>🤝 팀 실행 (Codex 협업)</h3>
-  <div class="tablewrap">
-  <table>
-    <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
-    <tr><td class="name">team-dispatch</td><td><span class="tag green">실행</span></td>
-      <td>goal 패키지 + 서브팀 API와 함께 기능 구현을 Codex 창(pane)에 위임. Codex가 구현자-감독자 역할을 하며 헬퍼를 스폰할 수 있음.</td></tr>
-    <tr><td class="name">team-review</td><td><span class="tag green">실행</span></td>
-      <td>Codex 구현 결과를 goal.md 종료 조건에 대조해 리뷰하고, 소규모 리팩토링 후 <code>/review</code> + <code>/ship</code>으로 PR 생성. team-dispatch가 DONE을 남긴 뒤 사용.</td></tr>
-    <tr><td class="name">team-templates</td><td><span class="tag green">실행</span></td>
-      <td>스킬이라기보다 템플릿 모음 — team-split이 사용하는 <code>prd.md</code> / <code>plan.md</code> / <code>goal.md</code> / <code>tools.md</code> 원본.</td></tr>
   </table>
   </div>
 
@@ -398,7 +355,7 @@
   </div>
 
   <p class="footer-note">
-    2026-07-30 기준 · <code>weedmo/skills</code> main 브랜치 (ef85b40) · OMC / weed-cowork / document-skills / everything-claude-code 관련 항목은 정리되어 이 문서에 포함되지 않음.
+    2026-07-30 기준 · <code>weedmo/skills</code> main 브랜치 · OMC / weed-cowork / document-skills / everything-claude-code 및 Codex 협업 스킬(refine-plan, goal-set, team-split, team-dispatch, team-review, team-templates)은 정리되어 이 문서에 포함되지 않음.
   </p>
 </div>
 
