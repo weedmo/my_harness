@@ -131,9 +131,7 @@ setup_hooks() {
   # Each entry: event matcher script_basename
   # matcher empty (-) means no matcher
   local entries=(
-    "PostToolUse Bash tsg-bash-failure.sh"
     "PostToolUse Bash merge-conflict-trigger.sh"
-    "PostToolUse Bash devlog-hook.sh"
     "PostToolUse Skill gstack-skill-filter.sh"
     "UserPromptSubmit - language-rule.sh"
   )
@@ -198,29 +196,6 @@ else:
   done
 }
 
-# ---------- step: scripts ----------
-
-setup_scripts() {
-  printf '\n[scripts] copy team.sh + pipeline.sh to ~/.claude/scripts/\n'
-  local user_scripts="${USER_HOME}/.claude/scripts"
-  mkdir -p "$user_scripts"
-  for s in team.sh pipeline.sh; do
-    local plugin_script="${PLUGIN_ROOT}/scripts/${s}"
-    local target="${user_scripts}/${s}"
-    if [ ! -f "$plugin_script" ]; then
-      warn "plugin script not found: $plugin_script (skipping)"
-      continue
-    fi
-    if [ ! -f "$target" ] || ! cmp -s "$plugin_script" "$target"; then
-      cp "$plugin_script" "$target"
-      chmod +x "$target"
-      ok "copied $s -> $target"
-    else
-      skip "$s up to date at $target"
-    fi
-  done
-}
-
 # ---------- status ----------
 
 status() {
@@ -238,24 +213,6 @@ try:
 except Exception as e:
     print('  ! could not read settings.json:', e)
 "
-  printf '\n[codex]\n'
-  if command -v claude >/dev/null 2>&1; then
-    if claude plugin list 2>/dev/null | grep -q codex@openai-codex; then ok "codex plugin installed"; else warn "codex plugin NOT installed"; fi
-  else
-    warn "claude CLI not available — cannot check"
-  fi
-  python3 -c "
-import json
-d=json.load(open('$SETTINGS'))
-found=False
-for g in d.get('hooks',{}).get('SubagentStop',[]):
-    for h in g.get('hooks',[]):
-        if 'codex-task-review' in h.get('command',''):
-            found=True
-            print('  ✓ codex SubagentStop hook configured (asyncRewake='+str(h.get('asyncRewake'))+', timeout='+str(h.get('timeout'))+')')
-if not found:
-    print('  ! codex SubagentStop hook NOT configured')
-"
   printf '\n[understand]\n'
   if command -v claude >/dev/null 2>&1; then
     if claude plugin list 2>/dev/null | grep -q understand-anything@understand-anything; then ok "understand-anything plugin installed"; else warn "understand-anything plugin NOT installed"; fi
@@ -263,12 +220,8 @@ if not found:
     warn "claude CLI not available — cannot check"
   fi
   printf '\n[hooks]\n'
-  for s in tsg-bash-failure.sh merge-conflict-trigger.sh devlog-hook.sh gstack-skill-filter.sh language-rule.sh; do
+  for s in merge-conflict-trigger.sh gstack-skill-filter.sh language-rule.sh; do
     if grep -q "$s" "$SETTINGS" 2>/dev/null; then ok "$s registered"; else warn "$s NOT registered"; fi
-  done
-  printf '\n[scripts]\n'
-  for s in team.sh pipeline.sh; do
-    if [ -x "${USER_HOME}/.claude/scripts/${s}" ]; then ok "$s present + executable"; else warn "$s NOT installed"; fi
   done
 }
 
@@ -280,21 +233,17 @@ cmd="${1:-all}"
 case "$cmd" in
   all)
     setup_hud
-    setup_codex
     setup_understand
     setup_hooks
-    setup_scripts
     printf '\nDone. Restart Claude Code to apply hooks/statusLine changes.\n'
     ;;
   hud)        setup_hud ;;
-  codex)      setup_codex ;;
   understand) setup_understand ;;
   hooks)      setup_hooks ;;
-  scripts)    setup_scripts ;;
   status)     status ;;
   *)
     err "Unknown command: $cmd"
-    printf 'Usage: %s [all|hud|codex|understand|hooks|scripts|status]\n' "$(basename "$0")"
+    printf 'Usage: %s [all|hud|understand|hooks|status]\n' "$(basename "$0")"
     exit 1
     ;;
 esac

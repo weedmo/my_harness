@@ -45,8 +45,6 @@ Current limitation: Claude-specific hook automation and slash-command behavior a
 | `/commit` | Commit message generator |
 | `/release` | Automated release workflow: version bump, tag, push, GitHub Release |
 | `/pr-ready` | PR preparation workflow with test verification |
-| `/tsg` | Troubleshooting guide — structured issue tracking and resolution |
-| `/devlog` | Development journal — record approaches, lessons learned |
 | `/test-validation` | Verify code fixes with FAIL-to-PASS pattern validation |
 | `/agent-development` | Guidance for creating Claude Code agents |
 | `/ecc-tools` | Skill combination advisor for document-skills workflows |
