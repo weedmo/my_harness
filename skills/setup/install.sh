@@ -131,8 +131,6 @@ setup_hooks() {
   # Each entry: event matcher script_basename
   # matcher empty (-) means no matcher
   local entries=(
-    "PostToolUse Bash merge-conflict-trigger.sh"
-    "PostToolUse Skill gstack-skill-filter.sh"
     "UserPromptSubmit - language-rule.sh"
   )
 
@@ -220,7 +218,7 @@ except Exception as e:
     warn "claude CLI not available — cannot check"
   fi
   printf '\n[hooks]\n'
-  for s in merge-conflict-trigger.sh gstack-skill-filter.sh language-rule.sh; do
+  for s in language-rule.sh; do
     if grep -q "$s" "$SETTINGS" 2>/dev/null; then ok "$s registered"; else warn "$s NOT registered"; fi
   done
 }

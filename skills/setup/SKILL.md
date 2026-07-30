@@ -1,6 +1,6 @@
 ---
 name: setup
-description: "weed-harness 사용자 환경 셋업 — statusLine HUD 설치, understand-anything 플러그인 설치, 추가 hooks (language-rule, gstack-skill-filter 등) 등록. 멱등(idempotent)이라 여러 번 실행해도 안전. 트리거: '/setup', 'setup hud', 'plugin 설치 후 설정', 'statusLine 등록'."
+description: "weed-harness 사용자 환경 셋업 — statusLine HUD 설치, understand-anything 플러그인 설치, 추가 hooks (language-rule 등) 등록. 멱등(idempotent)이라 여러 번 실행해도 안전. 트리거: '/setup', 'setup hud', 'plugin 설치 후 설정', 'statusLine 등록'."
 ---
 
 # weed-harness setup
@@ -13,7 +13,7 @@ Claude Code 플러그인은 `skills/`, `agents/`, `hooks/hooks.json`, MCP 서버
 
 - **`statusLine`** 은 사용자의 `~/.claude/settings.json`에 직접 등록되어야 함
 - **외부 플러그인 의존성** (예: understand-anything) 은 별도 설치 필요
-- 일부 hook (language-rule, gstack-skill-filter 등) 은 의도적으로 plugin hooks.json에 안 넣음 → opt-in으로 사용자가 등록
+- 일부 hook (language-rule 등) 은 의도적으로 plugin hooks.json에 안 넣음 → opt-in으로 사용자가 등록
 
 ## 사용법
 
@@ -62,8 +62,6 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" status     # 현재 상태�
 
 | Event | Matcher | Script |
 |-------|---------|--------|
-| PostToolUse | Bash | merge-conflict-trigger.sh |
-| PostToolUse | Skill | gstack-skill-filter.sh |
 | UserPromptSubmit | (none) | language-rule.sh |
 
 각 hook script 가 사용자 `~/.claude/hooks/` 에 없으면 plugin에서 복사. 등록은 같은 matcher group에 합쳐짐.

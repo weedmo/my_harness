@@ -62,10 +62,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
-# Karpathy Coding Guidelines
-
-When doing any code work, invoke the `karpathy-guidelines` skill and follow its principles.
-
 # weed-harness - Global Rules
 
 ## Parallel Execution

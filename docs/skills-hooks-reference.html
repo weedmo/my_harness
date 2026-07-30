@@ -210,9 +210,9 @@
 
   <div class="props">
     <div class="prop"><span class="k">📦 저장소</span><span class="v"><code>weedmo/skills</code> (구 autofree) → weed-harness 플러그인 소스</span></div>
-    <div class="prop"><span class="k">🧩 리포 스킬</span><span class="v">11개 (<code>skills/</code>)</span></div>
-    <div class="prop"><span class="k">🖥️ 로컬 스킬</span><span class="v">9개 (<code>~/.claude/skills/</code>)</span></div>
-    <div class="prop"><span class="k">🪝 훅 스크립트</span><span class="v">5개 + <code>hooks.json</code> (<code>hooks/</code>)</span></div>
+    <div class="prop"><span class="k">🧩 리포 스킬</span><span class="v">8개 (<code>skills/</code>)</span></div>
+    <div class="prop"><span class="k">🖥️ 로컬 스킬</span><span class="v">4개 활성 (<code>~/.claude/skills/</code>)</span></div>
+    <div class="prop"><span class="k">🪝 훅 스크립트</span><span class="v">3개 + <code>hooks.json</code> (<code>hooks/</code>)</span></div>
     <div class="prop"><span class="k">📅 기준일</span><span class="v">2026-07-30 (OMC·weed-cowork 정리 완료 후)</span></div>
   </div>
 
@@ -225,7 +225,7 @@
   </div>
 
   <h2>1. 리포 스킬 — weed-harness (<code>skills/</code>)</h2>
-  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 11개. Codex 협업 파이프라인(refine-plan, goal-set, team-*), devlog, type-graph는 2026-07-30에 제거되었습니다.</p>
+  <p class="section-note">플러그인으로 패키징되어 <code>/스킬명</code>으로 호출되는 8개. Codex 협업 파이프라인(refine-plan, goal-set, team-*), devlog, type-graph, context-budget, merge-resolve, deploy-verify는 2026-07-30 정리에서 제거되었습니다.</p>
 
   <h3>📋 계획</h3>
   <div class="tablewrap">
@@ -249,12 +249,10 @@
   </table>
   </div>
 
-  <h3>📝 배포 · 유지관리</h3>
+  <h3>📝 유지관리</h3>
   <div class="tablewrap">
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
-    <tr><td class="name">deploy-verify</td><td><span class="tag red">배포</span></td>
-      <td>배포 후 검증 파이프라인: PR 머지 → 카나리 모니터링 → 벤치마크를 체인으로 실행. <code>/deploy-verify canary</code>는 모니터링만.</td></tr>
     <tr><td class="name">harness-sync</td><td><span class="tag orange">유지관리</span></td>
       <td>로컬 <code>~/.claude/</code> 설정(hooks, skills, CLAUDE.md, settings.json 등)을 이 저장소로 동기화하고 버전 패치범프 → 커밋 → 태그 → 푸시 → GitHub Release → 플러그인 캐시 갱신까지 수행. "sync"라고 말하면 실행.</td></tr>
     <tr><td class="name">setup</td><td><span class="tag orange">유지관리</span></td>
@@ -263,27 +261,15 @@
       <td>외부 GitHub 저장소에서 스킬 하나만 골라 <code>~/.claude/skills</code>에 설치하고 업스트림과 동기화 유지. SessionStart 훅(check.py)이 업데이트를 알림.</td></tr>
     <tr><td class="name">find-skills</td><td><span class="tag orange">유지관리</span></td>
       <td>"X를 하는 스킬 있나?" 같은 질문에 설치 가능한 스킬을 탐색·설치하도록 도움.</td></tr>
-    <tr><td class="name">context-budget</td><td><span class="tag gray">유틸</span></td>
-      <td>에이전트·스킬·MCP·룰이 컨텍스트 윈도우를 얼마나 소비하는지 감사. 상시 로드 vs 온디맨드 오버헤드를 구분해 토큰 예산 산정.</td></tr>
-    <tr><td class="name">merge-resolve</td><td><span class="tag gray">유틸</span></td>
-      <td>머지 충돌 발생 시 충돌 헝크를 하나씩 보여주며 사용자가 해결안을 고르게 하는 대화형 해결 가이드. merge-conflict-trigger 훅이 자동 호출.</td></tr>
   </table>
   </div>
 
   <h2>2. 로컬 스킬 (<code>~/.claude/skills/</code>)</h2>
-  <p class="section-note">플러그인 배포와 무관하게 직접 설치된 9개. 출처별로 gstack 계열 / Orca 계열 / 독립 스킬로 나뉩니다.</p>
+  <p class="section-note">플러그인 배포와 무관하게 직접 설치된 스킬. 2026-07-30 정리에서 미사용 스킬 5개(browse, qa, scrape, diagram, karpathy-guidelines)는 <code>skillOverrides</code>로 비활성화되어 4개만 활성 상태입니다.</p>
 
   <div class="tablewrap">
   <table>
     <tr><th>스킬</th><th>출처</th><th>역할</th></tr>
-    <tr><td class="name">browse</td><td><span class="tag blue">gstack</span></td>
-      <td>QA 테스트·사이트 도그푸딩용 고속 헤드리스 브라우저.</td></tr>
-    <tr><td class="name">qa</td><td><span class="tag blue">gstack</span></td>
-      <td>웹 애플리케이션을 체계적으로 QA 테스트하고 발견된 버그를 수정.</td></tr>
-    <tr><td class="name">scrape</td><td><span class="tag blue">gstack</span></td>
-      <td>웹 페이지에서 데이터 추출.</td></tr>
-    <tr><td class="name">diagram</td><td><span class="tag blue">gstack</span></td>
-      <td>영어 설명(또는 mermaid 소스)을 다이어그램 3종 세트로 변환 — 소스 + 편집 가능한 .excalidraw 파일 포함.</td></tr>
     <tr><td class="name">orca-cli</td><td><span class="tag purple">Orca</span></td>
       <td><code>orca</code> CLI로 Orca가 관리하는 worktree·터미널·자동화·내장 브라우저를 조작. 다른 에이전트로의 완전한 핸드오프(handover)에도 사용.</td></tr>
     <tr><td class="name">orchestration</td><td><span class="tag purple">Orca</span></td>
@@ -292,21 +278,15 @@
       <td>Orca의 computer-use CLI로 로컬 데스크톱 앱 창을 접근성 트리·스크린샷·안전한 UI 액션으로 검사·조작.</td></tr>
     <tr><td class="name">graphify</td><td><span class="tag green">독립</span></td>
       <td>모든 입력(코드·문서·논문·이미지)을 영속 지식 그래프로 변환. <code>graphify-out/</code>이 있으면 코드베이스 질문을 그래프 쿼리로 먼저 처리해 토큰 절약. pip 패키지 <code>graphifyy</code>로 배포.</td></tr>
-    <tr><td class="name">karpathy-guidelines</td><td><span class="tag green">독립</span></td>
-      <td>LLM 코딩 실수를 줄이는 행동 지침 — 과잉 설계 방지, 수술적 변경, 가정 표면화, 검증 가능한 성공 기준. 모든 코드 작업에서 호출하도록 CLAUDE.md에 명시.</td></tr>
   </table>
   </div>
 
   <h2>3. Hooks (<code>hooks/</code>)</h2>
-  <p class="section-note">이벤트에 자동 반응하는 스크립트 5개. OMC 훅(omc-skill-filter), Codex 리뷰 훅(codex-task-review), devlog 계열 훅(devlog-hook, tsg-bash-failure)은 정리 완료로 삭제됐습니다.</p>
+  <p class="section-note">이벤트에 자동 반응하는 스크립트 3개. OMC 훅(omc-skill-filter), Codex 리뷰 훅(codex-task-review), devlog 계열(devlog-hook, tsg-bash-failure), merge-conflict-trigger, gstack-skill-filter는 정리 완료로 삭제됐습니다.</p>
 
   <div class="tablewrap">
   <table>
     <tr><th>훅</th><th>이벤트</th><th>역할</th></tr>
-    <tr><td class="name">merge-conflict-trigger.sh</td><td><span class="tag orange">PostToolUse: Bash</span></td>
-      <td>git 머지 출력에서 CONFLICT를 감지하면 merge-resolve 스킬을 트리거하는 매직 키워드를 출력.</td></tr>
-    <tr><td class="name">gstack-skill-filter.sh</td><td><span class="tag orange">PostToolUse</span></td>
-      <td>gstack 업데이트 후 allowlist(browse, qa 등) 밖의 gstack 스킬을 비활성화해 스킬 목록 오염 방지.</td></tr>
     <tr><td class="name">graphify-claudemd-inject.sh</td><td><span class="tag orange">PostToolUse: Skill</span></td>
       <td><code>/graphify</code> 스킬 실행 후 프로젝트 CLAUDE.md에 graphify 운용 섹션을 자동 주입.</td></tr>
     <tr><td class="name">graphify-upgrade-check.sh</td><td><span class="tag green">SessionStart</span></td>
@@ -330,7 +310,7 @@
           </ul>
         </li>
         <li><strong><code>hooks.json</code> (플러그인)</strong> — Codex 리뷰 훅 제거 후 빈 선언. 플러그인이 자동 등록하는 훅은 없음.</li>
-        <li>나머지 훅(merge-conflict, gstack-filter, graphify-inject)은 <code>/setup</code> 스킬이 사용자 설정에 등록해 주는 방식입니다.</li>
+        <li>graphify-inject 훅은 <code>/setup</code> 스킬이 사용자 설정에 등록해 주는 방식입니다.</li>
       </ul>
       <p class="section-note">참고: 리포의 <code>settings.json</code>은 업스트림에서 vendored된 파일이라 <code>/home/weed/</code> 경로가 남아 있습니다 — 로컬 설정 원본이 아닙니다.</p>
     </div>
@@ -339,12 +319,12 @@
   <div class="callout">
     <span class="ico">🔄</span>
     <div>
-      <p><strong>훅이 만드는 자동화.</strong> 머지 충돌이 나면 merge-conflict-trigger가 merge-resolve 스킬을 불러오고, 매 프롬프트마다 language-rule이 언어 규칙을 상기시키며, <code>/graphify</code> 실행 후에는 CLAUDE.md에 운용 섹션이 자동 주입됩니다. 세션이 시작될 때마다 skill-subscribe와 graphify 업데이트 확인이 돌아 하니스가 스스로 최신 상태를 유지합니다.</p>
+      <p><strong>훅이 만드는 자동화.</strong> 매 프롬프트마다 language-rule이 언어 규칙을 상기시키고, <code>/graphify</code> 실행 후에는 CLAUDE.md에 운용 섹션이 자동 주입됩니다. 세션이 시작될 때마다 skill-subscribe와 graphify 업데이트 확인이 돌아 하니스가 스스로 최신 상태를 유지합니다.</p>
     </div>
   </div>
 
   <p class="footer-note">
-    2026-07-30 기준 · <code>weedmo/skills</code> main 브랜치 · OMC / weed-cowork / document-skills / everything-claude-code, Codex 협업 스킬(refine-plan, goal-set, team-*), devlog 스킬과 관련 훅(codex-task-review, devlog-hook, tsg-bash-failure)은 정리되어 이 문서에 포함되지 않음.
+    2026-07-30 기준 · <code>weedmo/skills</code> main 브랜치 · OMC / weed-cowork / document-skills / everything-claude-code, Codex 협업 스킬(refine-plan, goal-set, team-*), devlog, type-graph, context-budget, merge-resolve, deploy-verify와 관련 훅들은 정리되어 이 문서에 포함되지 않음. 미사용 플러그인(ouroboros, ralph-loop, mattpocock-skills, code-review, frontend-design)과 로컬 스킬 5개는 사용자 settings.json에서 비활성화됨.
   </p>
 </div>
 
