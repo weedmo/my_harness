@@ -34,13 +34,12 @@ fan out with a workflow, but add adversarial verification gates).
       trivial (typo, 1-liner, obvious fix) → just do it directly (NO skill)
       small / sequential                   → single skill: tdd (mattpocock/superpowers) / systematic-debugging (superpowers)
       large / sequential + review matters   → subagent-driven-development (superpowers)
-                                              or team (OMC)
       large / parallel / audit / migration  → Workflow tool (ultracode)
       single goal, run until done           → ralph (ouroboros)
 
 [3] Apply RISK modifier (independent of clarity):
       high risk → add gates even when clear:
-                  grill-spec → refine-plan → then execute
+                  grill-spec → then execute
 ```
 
 ---
@@ -52,8 +51,8 @@ fan out with a workflow, but add adversarial verification gates).
 | Vague | — | — | **Interview first** (grill-spec / brainstorming), then re-judge |
 | Clear | Low | trivial / small | **Direct** or single skill (tdd (mattpocock/superpowers) / systematic-debugging (superpowers)) |
 | Clear | Low | large · parallel | **Workflow / ultracode** |
-| Clear | Low | large · sequential | **OMC team** or **subagent-driven-development** (autonomous) |
-| Clear | **High** | large | Autonomous + **verification gates** (grill-spec → refine-plan → execute) |
+| Clear | Low | large · sequential | **subagent-driven-development** (autonomous) |
+| Clear | **High** | large | Autonomous + **verification gates** (grill-spec → execute) |
 
 **Anti-pattern:** Running brainstorming's HARD-GATE or a workflow on a trivial fix.
 That is over-engineering and contradicts "Simplicity First". superpowers is NOT
