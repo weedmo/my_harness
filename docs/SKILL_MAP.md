@@ -77,26 +77,24 @@ All of these are *execution-layer* tools. They differ on **autonomy**,
 ultrawork). A workflow distributes over *space* (N agents, parallel — and may
 *contain* loops). They are different axes, not synonyms.
 
-**Goal vs engine:** a goal (goal-set → goal.md = testable exit criteria) is the
+**Goal vs engine:** a goal (testable exit criteria) is the
 *destination*. It steers any engine (loop or workflow) and tells it when to stop.
 Goal + workflow = the parallel engine gains a stopping condition and converges.
 
 ---
 
-## 4. The three frameworks compared
+## 4. The two frameworks compared
 
-| | **superpowers** | **OMC** (oh-my-claudecode) | **ouroboros** |
-| :-- | :-- | :-- | :-- |
-| Philosophy | design-first, human-gated | autonomous orchestration | spec-first + **evolutionary loop** |
-| Interview | **heavy** (HARD-GATE) | light (machine consensus) | **heavy** (Socratic + ambiguity scoring) |
-| Verification | human review | Codex consensus | **3-stage gate** (mechanical → semantic → multi-model) |
-| Differentiator | design approval gates | parallel agent team | **evaluate → evolve** self-improvement, replayable contract |
-| Loop | none (linear) | borrows ralph | **evolution loop is the core** |
-| Install status | installed (6.0.3) | vendored into weed-harness (runtime in `.omx`) | installed (0.42.5), ralph lives here |
+| | **superpowers** | **ouroboros** |
+| :-- | :-- | :-- |
+| Philosophy | design-first, human-gated | spec-first + **evolutionary loop** |
+| Interview | **heavy** (HARD-GATE) | **heavy** (Socratic + ambiguity scoring) |
+| Verification | human review | **3-stage gate** (mechanical → semantic → multi-model) |
+| Differentiator | design approval gates | **evaluate → evolve** self-improvement, replayable contract |
+| Loop | none (linear) | **evolution loop is the core** |
 
-**Camp note:** superpowers and ouroboros are both *interview-heavy* (clarify
-first). OMC is the *low-interview autonomous* camp. Picking by clarity:
-vague → superpowers/ouroboros interview; clear → OMC autonomous.
+**Camp note:** both frameworks are *interview-heavy* (clarify first). Picking by
+clarity: vague → interview first; clear → skip the heavy interview and execute.
 
 ---
 
