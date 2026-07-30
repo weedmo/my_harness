@@ -5,10 +5,8 @@
 # Usage:
 #   install.sh             # install all components
 #   install.sh hud         # install HUD (statusLine + hud/ copy)
-#   install.sh codex       # install codex plugin + custom SubagentStop hook
 #   install.sh understand  # install understand-anything plugin (codebase comprehension)
 #   install.sh hooks       # register weed-harness extra hooks in settings.json
-#   install.sh scripts     # copy team.sh + pipeline.sh to ~/.claude/scripts/
 #   install.sh status      # report what is/isn't installed (no writes)
 #
 # Resolves plugin root from CLAUDE_PLUGIN_ROOT (set by Claude Code) or
@@ -100,74 +98,6 @@ if existing != desired:
     ok "statusLine registered in settings.json"
   else
     skip "statusLine already configured"
-  fi
-}
-
-# ---------- step: codex ----------
-
-setup_codex() {
-  printf '\n[codex] OpenAI Codex plugin + custom hook\n'
-  if ! command -v claude >/dev/null 2>&1; then
-    warn "claude CLI not found — skipping codex plugin install (you can install manually later)"
-  else
-    if claude plugin marketplace list 2>/dev/null | grep -q "openai-codex"; then
-      skip "marketplace openai-codex already added"
-    else
-      log "adding marketplace openai/codex-plugin-cc..."
-      claude plugin marketplace add openai/codex-plugin-cc 2>&1 | sed 's/^/    /' || warn "marketplace add failed (may already exist)"
-    fi
-    if claude plugin list 2>/dev/null | grep -q "codex@openai-codex"; then
-      skip "codex@openai-codex already installed"
-    else
-      log "installing codex@openai-codex..."
-      claude plugin install codex@openai-codex 2>&1 | sed 's/^/    /' || warn "install failed"
-    fi
-  fi
-
-  # Register custom SubagentStop hook with rewakeMessage/Summary in user settings
-  local abs_script_path="${USER_HOME}/.claude/hooks/codex-task-review.sh"
-  local tilde_script_path="${TILDE_HOOKS_DIR}/codex-task-review.sh"
-  if [ ! -f "$abs_script_path" ]; then
-    # Copy from plugin if user doesn't have it yet
-    local plugin_script="${PLUGIN_ROOT}/hooks/codex-task-review.sh"
-    if [ -f "$plugin_script" ]; then
-      mkdir -p "$(dirname "$abs_script_path")"
-      cp "$plugin_script" "$abs_script_path"
-      chmod +x "$abs_script_path"
-      ok "copied codex-task-review.sh → $abs_script_path"
-    fi
-  fi
-
-  local result
-  result=$(mutate_settings "
-hooks = data.setdefault('hooks', {})
-subagent = hooks.setdefault('SubagentStop', [])
-desired_hook = {
-    'type': 'command',
-    'command': 'bash ${tilde_script_path}',
-    'asyncRewake': True,
-    'timeout': 600,
-    'rewakeMessage': 'Codex review of recent subagent changes:',
-    'rewakeSummary': 'Codex task review',
-}
-# Find any existing entry running codex-task-review.sh (match by basename)
-found = False
-for group in subagent:
-    for h in group.get('hooks', []):
-        if 'codex-task-review' in h.get('command', ''):
-            found = True
-            if h != desired_hook:
-                h.clear()
-                h.update(desired_hook)
-                mark()
-if not found:
-    subagent.append({'hooks': [desired_hook]})
-    mark()
-")
-  if [ "$result" = "CHANGED" ]; then
-    ok "codex SubagentStop hook configured (asyncRewake + rewakeMessage)"
-  else
-    skip "codex SubagentStop hook already configured"
   fi
 }
 
