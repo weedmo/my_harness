@@ -1,0 +1,30 @@
+{
+  "name": "auto-loop",
+  "version": "1.0.1",
+  "description": "Autonomous improvement loops - autocode (code improvement loop with PGE team mode) and auto_research (ML research loop with optional 23-stage pipeline).",
+  "author": {
+    "name": "weedmo",
+    "url": "https://github.com/weedmo"
+  },
+  "homepage": "https://github.com/weedmo/skills",
+  "repository": "https://github.com/weedmo/skills",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "loop",
+    "autonomous",
+    "research"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "auto-loop",
+    "shortDescription": "Autonomous code improvement and ML research loops",
+    "developerName": "weedmo",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "auto-loop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Autonomous improvement loops - autocode (code improvement loop with PGE team mode) and auto_research (ML research loop with optional 23-stage pipeline).",
   "author": {
     "name": "weedmo"

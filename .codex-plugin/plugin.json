@@ -1,0 +1,30 @@
+{
+  "name": "weed-harness",
+  "version": "2.5.3",
+  "description": "Core harness infra: setup, harness-sync, skill-subscribe, find-skills, workflow-plan. Some skills describe Claude-specific behavior (hooks, settings.json); treat those as Claude-oriented guidance in Codex.",
+  "author": {
+    "name": "weedmo",
+    "url": "https://github.com/weedmo"
+  },
+  "homepage": "https://github.com/weedmo/skills",
+  "repository": "https://github.com/weedmo/skills",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "skills",
+    "harness",
+    "productivity"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "weed-harness",
+    "shortDescription": "Core harness skills for setup, sync and skill management",
+    "developerName": "weedmo",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ]
+  }
+}

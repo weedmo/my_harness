@@ -1,0 +1,26 @@
+{
+  "name": "weed-plugins",
+  "version": "2.5.3",
+  "description": "weedmo's AI-CLI harness - installable skill packs (weed-harness, matt-loop, auto-loop, super-loop) for Claude Code, Codex, opencode and gemini-cli",
+  "type": "module",
+  "bin": {
+    "weed-plugins": "bin/install.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weedmo/skills.git"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "opencode",
+    "gemini-cli",
+    "skills",
+    "harness"
+  ],
+  "author": "weedmo",
+  "license": "MIT"
+}
