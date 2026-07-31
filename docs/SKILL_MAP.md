@@ -87,6 +87,8 @@ They are different axes, not synonyms.
 - **subagent-driven-development** (superpowers) — fresh impl agent + review per task
 - **executing-plans** (superpowers) — same, in a parallel session
 - **Workflow / ultracode** (native) — parallel agent fan-out, adversarial verify
+- **super-loop** (super-loop plugin) — gated loop over the superpowers pipeline:
+  brainstorm → plan → execute → verify (loop back on failure) → finish
 
 ### Debugging
 - **systematic-debugging** (superpowers) — disciplined debugging loop

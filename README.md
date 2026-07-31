@@ -7,6 +7,7 @@ One repo, per-loop plugins. A Claude Code / Codex harness marketplace maintained
 | `weed-harness` | repo root | Core harness infra: setup, harness-sync, skill-subscribe, find-skills, workflow-plan, hooks, HUD |
 | `matt-loop` | `plugins/matt-loop/` | matt-interview + matt-orchestrator (Codex-side interview → orchestrated implementation loop) |
 | `auto-loop` | `plugins/auto-loop/` | autocode + auto_research autonomous improvement loops |
+| `super-loop` | `plugins/super-loop/` | Superpowers-based gated development loop (brainstorm → plan → execute → verify → finish) |
 
 External loops (superpowers, graphify, …) are referenced, not vendored: `/setup claude` installs the superpowers plugin and the graphify skill; `/setup codex` installs matt-loop skills and graphify for Codex.
 
@@ -21,8 +22,9 @@ External loops (superpowers, graphify, …) are referenced, not vendored: `/setu
 # Install core harness (required)
 /plugin install weed-harness@weed-plugins
 
-# Optional: autonomous loops
+# Optional: loops
 /plugin install auto-loop@weed-plugins
+/plugin install super-loop@weed-plugins
 ```
 
 Or via CLI: `claude plugin marketplace add https://github.com/weedmo/skills.git` then `claude plugin install <name>@weed-plugins`.
@@ -76,6 +78,12 @@ Current limitation: Claude-specific hook automation and slash-command behavior a
 |-------|-------------|
 | `/autocode` | Autonomous code improvement loop with optional PGE team mode |
 | `/auto_research` | Autonomous ML research loop with deep-interview initialization |
+
+### super-loop
+
+| Skill | Description |
+|-------|-------------|
+| `/super-loop` | Gated loop over superpowers skills: brainstorm → plan → execute → verify (loop back on failure) → finish |
 
 ## Docs
 

@@ -210,7 +210,7 @@
 
   <div class="props">
     <div class="prop"><span class="k">📦 저장소</span><span class="v"><code>weedmo/skills</code> (구 autofree) → weed-harness 플러그인 소스</span></div>
-    <div class="prop"><span class="k">🧩 리포 플러그인</span><span class="v">3개 — weed-harness(5) · matt-loop(2, Codex) · auto-loop(2)</span></div>
+    <div class="prop"><span class="k">🧩 리포 플러그인</span><span class="v">4개 — weed-harness(5) · matt-loop(2, Codex) · auto-loop(2) · super-loop(1)</span></div>
     <div class="prop"><span class="k">🖥️ 로컬 스킬</span><span class="v">4개 활성 (<code>~/.claude/skills/</code>)</span></div>
     <div class="prop"><span class="k">🪝 훅 스크립트</span><span class="v">3개 + <code>hooks.json</code> (<code>hooks/</code>)</span></div>
     <div class="prop"><span class="k">📅 기준일</span><span class="v">2026-07-30 (OMC·weed-cowork 정리 완료 후)</span></div>
@@ -225,7 +225,7 @@
   </div>
 
   <h2>1. 리포 플러그인 — 하나의 repo, loop별 플러그인</h2>
-  <p class="section-note">2026-07-31 재편: repo는 하나(weedmo/skills)로 두고 marketplace에서 플러그인 3개를 발행합니다 — <strong>weed-harness</strong>(root, 공통 인프라 5개 스킬) · <strong>matt-loop</strong>(<code>plugins/matt-loop/</code>, Codex용) · <strong>auto-loop</strong>(<code>plugins/auto-loop/</code>, 자율 루프). 각 플러그인은 Claude에서 독립적으로 켜고 끌 수 있습니다. 옛 spec 파이프라인(to-prd, grill-spec)은 제거 — 스펙/플랜 작성은 superpowers(brainstorming, writing-plans)가 담당합니다.</p>
+  <p class="section-note">2026-07-31 재편: repo는 하나(weedmo/skills)로 두고 marketplace에서 플러그인 4개를 발행합니다 — <strong>weed-harness</strong>(root, 공통 인프라 5개 스킬) · <strong>matt-loop</strong>(<code>plugins/matt-loop/</code>, Codex용) · <strong>auto-loop</strong>(<code>plugins/auto-loop/</code>, 자율 루프) · <strong>super-loop</strong>(<code>plugins/super-loop/</code>, superpowers 기반 루프). 각 플러그인은 Claude에서 독립적으로 켜고 끌 수 있습니다. 옛 spec 파이프라인(to-prd, grill-spec)은 제거 — 스펙/플랜 작성은 superpowers(brainstorming, writing-plans)가 담당합니다.</p>
 
   <h3>📋 계획</h3>
   <div class="tablewrap">
@@ -244,6 +244,16 @@
       <td>자율 코드 개선 루프. 단일 에이전트 모드(순차 실험 + PIVOT/REFINE 판단)와 PGE(Plan-Generate-Execute) 팀 모드 지원. 서브커맨드: install / init / run / status / resume.</td></tr>
     <tr><td class="name">auto_research</td><td><span class="tag purple">루프</span></td>
       <td>ML 연구용 자율 실험 루프. 딥 인터뷰로 초기화하고, 선택적으로 23단계 연구 파이프라인(AutoResearchClaw) 실행. 문헌 검색·멀티에이전트 토론·품질 게이트 포함.</td></tr>
+  </table>
+  </div>
+
+  <h3>⚡ superpowers 루프 — super-loop 플러그인 (<code>plugins/super-loop/skills/</code>)</h3>
+  <p class="section-note">superpowers 스킬들을 게이트 루프로 엮는 glue. 방법론 자체는 외부 superpowers 플러그인이 소유하며 이 패키지는 순서·게이트·루프백 규칙만 담습니다.</p>
+  <div class="tablewrap">
+  <table>
+    <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
+    <tr><td class="name">super-loop</td><td><span class="tag purple">루프</span></td>
+      <td>brainstorming → writing-plans → 실행(subagent-driven/executing-plans) → verification → finishing을 게이트 루프로 실행. verification 실패 시 원인 단계로 루프백, 같은 게이트 3연속 실패 시 중단·보고.</td></tr>
   </table>
   </div>
 

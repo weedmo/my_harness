@@ -40,9 +40,10 @@ When syncing `settings.json`, vendor only portable harness config — skip machi
      - `.claude-plugin/plugin.json` → `"version"`
      - `.claude-plugin/marketplace.json` → top-level `"version"`
      - `.claude-plugin/marketplace.json` → the `weed-harness` entry's `version`
-   - The marketplace also publishes `matt-loop` and `auto-loop` (under `plugins/`).
-     They version independently: bump their `plugins/<name>/.claude-plugin/plugin.json`
-     and matching marketplace entry ONLY when their contents changed in this sync.
+   - The marketplace also publishes `matt-loop`, `auto-loop` and `super-loop`
+     (under `plugins/`). They version independently: bump their
+     `plugins/<name>/.claude-plugin/plugin.json` and matching marketplace entry
+     ONLY when their contents changed in this sync.
 
 5. **Commit & Push**:
    ```
@@ -93,7 +94,7 @@ When syncing `settings.json`, vendor only portable harness config — skip machi
    - Cache dir `~/.claude/plugins/cache/weed-plugins/weed-harness/X.Y.Z/` exists with `.claude-plugin/plugin.json` showing version X.Y.Z
    - `installed_plugins.json` entry for `weed-harness@weed-plugins` shows `"version": "X.Y.Z"` and matching `installPath`
 
-   If matt-loop or auto-loop versions were bumped in step 4, refresh their caches the
+   If any sub-plugin (matt-loop / auto-loop / super-loop) version was bumped in step 4, refresh their caches the
    same way (`~/.claude/plugins/cache/weed-plugins/<plugin>/<version>` copied from
    `$MARKETPLACE_DIR/plugins/<plugin>/`) and update their `installed_plugins.json`
    entries if installed.

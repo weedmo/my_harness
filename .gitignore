@@ -43,6 +43,8 @@ plans/
 !/plugins/matt-loop/**
 !/plugins/auto-loop/
 !/plugins/auto-loop/**
+!/plugins/super-loop/
+!/plugins/super-loop/**
 
 # Runtime & OMC state
 .omc/
