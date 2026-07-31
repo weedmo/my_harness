@@ -60,7 +60,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" status     # 현재 상태�
 
 ### `codex` — Codex 필수 스킬
 
-- **matt-interview / matt-orchestrator** — 플러그인의 `skills/matt-*`를 `~/.codex/skills/`로 복사 (내용 동일하면 skip)
+- **matt-interview / matt-orchestrator** — Codex 패키지(`plugins/weed-harness/skills/matt-*`)를 `~/.codex/skills/`로 복사 (내용 동일하면 skip). Claude 플러그인에는 노출되지 않음
 - **graphify** — `graphify install --platform codex`
 
 ### `understand`

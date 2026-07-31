@@ -14,7 +14,6 @@ Use the smallest set that resolves real ambiguity.
 | Test strategy or acceptance evidence is unclear | `$tdd` | Agree public test seams and behavioral examples; do not implement during the interview. |
 | A runnable answer is required | `$prototype` | Hand off one bounded design question to throwaway code, then resume with the finding. |
 | External technical facts are uncertain | `$research` | Gather primary-source evidence before asking the user to decide. |
-| Ready spec should become a tracker PRD | `$to-prd` | Use only after interview completion and explicit authorization to publish. |
 | Ready implementation is multi-track | `$matt-orchestrator` | Execute only after ambiguity and readiness gates pass. |
 
 Do not run skills ceremonially. The interview owns user decisions; supporting skills provide evidence, vocabulary, or a bounded experiment.

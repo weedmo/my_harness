@@ -141,10 +141,21 @@ setup_codex() {
   printf '\n[codex] required skills: matt-interview + matt-orchestrator + graphify\n'
   local codex_skills="${USER_HOME}/.codex/skills"
   mkdir -p "$codex_skills"
+  # matt-* live in the Codex package (plugins/weed-harness/skills). The Claude
+  # plugin cache excludes plugins/, so fall back to the marketplace clone.
+  local src_base=""
+  for c in "${PLUGIN_ROOT}/plugins/weed-harness/skills" \
+           "${USER_HOME}/.claude/plugins/marketplaces/weed-plugins/plugins/weed-harness/skills"; do
+    if [ -d "$c" ]; then src_base="$c"; break; fi
+  done
+  if [ -z "$src_base" ]; then
+    warn "codex package skills not found (plugin root or marketplace clone)"
+    return 1
+  fi
   for s in matt-interview matt-orchestrator; do
-    local src="${PLUGIN_ROOT}/skills/${s}"
+    local src="${src_base}/${s}"
     if [ ! -d "$src" ]; then
-      warn "$s not found in plugin at $src"
+      warn "$s not found in codex package at $src"
       continue
     fi
     if [ -d "$codex_skills/$s" ] && diff -rq "$src" "$codex_skills/$s" >/dev/null 2>&1; then

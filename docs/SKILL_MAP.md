@@ -1,8 +1,7 @@
 # Skill & Framework Routing Guide
 
 A decision aid for picking the right approach per task. Built from the installed
-harness (weed-harness + superpowers + ouroboros + understand-anything)
-and the native Workflow tool.
+harness (weed-harness + superpowers + graphify) and the native Workflow tool.
 
 > **Golden rule:** Ceremony scales to the task. Three *independent* inputs decide
 > the approach — never collapse them into one axis.
@@ -26,20 +25,19 @@ fan out with a workflow, but add adversarial verification gates).
 
 ```
 [1] Requirements clear?
-      ├─ NO  → clarify first: brainstorming / grill-me / grill-spec
+      ├─ NO  → clarify first: brainstorming (superpowers)
       │         (resolve ambiguity, THEN re-evaluate)
       └─ YES → skip heavy interview and execute
 
 [2] Now pick the EXECUTION ENGINE by scale:
       trivial (typo, 1-liner, obvious fix) → just do it directly (NO skill)
-      small / sequential                   → single skill: tdd (mattpocock/superpowers) / systematic-debugging (superpowers)
+      small / sequential                   → single skill: test-driven-development / systematic-debugging
       large / sequential + review matters   → subagent-driven-development (superpowers)
       large / parallel / audit / migration  → Workflow tool (ultracode)
-      single goal, run until done           → ralph (ouroboros)
 
 [3] Apply RISK modifier (independent of clarity):
       high risk → add gates even when clear:
-                  grill-spec → then execute
+                  verification-before-completion + /code-review before merging
 ```
 
 ---
@@ -48,11 +46,11 @@ fan out with a workflow, but add adversarial verification gates).
 
 | Clarity | Risk | Scale | Recommended path |
 | :-- | :-- | :-- | :-- |
-| Vague | — | — | **Interview first** (grill-spec / brainstorming), then re-judge |
-| Clear | Low | trivial / small | **Direct** or single skill (tdd (mattpocock/superpowers) / systematic-debugging (superpowers)) |
+| Vague | — | — | **brainstorming first**, then re-judge |
+| Clear | Low | trivial / small | **Direct** or single skill (test-driven-development / systematic-debugging) |
 | Clear | Low | large · parallel | **Workflow / ultracode** |
 | Clear | Low | large · sequential | **subagent-driven-development** (autonomous) |
-| Clear | **High** | large | Autonomous + **verification gates** (grill-spec → execute) |
+| Clear | **High** | large | Autonomous + **verification gates** (verification-before-completion → /code-review) |
 
 **Anti-pattern:** Running brainstorming's HARD-GATE or a workflow on a trivial fix.
 That is over-engineering and contradicts "Simplicity First". superpowers is NOT
@@ -71,54 +69,27 @@ All of these are *execution-layer* tools. They differ on **autonomy**,
 | **subagent-driven-development** | superpowers | model (me) | sequential, review-gated | large sequential, review quality matters, same session |
 | **executing-plans** | superpowers | model (me) | sequential, parallel session | large sequential, separate session |
 | **Workflow / ultracode** | native tool | **code (JS script)** | **massively parallel** fan-out | large, independent units, audits, migrations |
-| **ralph** | ouroboros | MCP loop | iterative (generations) | single goal, evolve until convergence |
 
-**Loop vs Workflow:** a loop repeats over *time* (1 context, N iterations — ralph,
-ultrawork). A workflow distributes over *space* (N agents, parallel — and may
-*contain* loops). They are different axes, not synonyms.
-
-**Goal vs engine:** a goal (testable exit criteria) is the
-*destination*. It steers any engine (loop or workflow) and tells it when to stop.
-Goal + workflow = the parallel engine gains a stopping condition and converges.
+**Loop vs Workflow:** a loop repeats over *time* (1 context, N iterations). A
+workflow distributes over *space* (N agents, parallel — and may *contain* loops).
+They are different axes, not synonyms.
 
 ---
 
-## 4. The two frameworks compared
-
-| | **superpowers** | **ouroboros** |
-| :-- | :-- | :-- |
-| Philosophy | design-first, human-gated | spec-first + **evolutionary loop** |
-| Interview | **heavy** (HARD-GATE) | **heavy** (Socratic + ambiguity scoring) |
-| Verification | human review | **3-stage gate** (mechanical → semantic → multi-model) |
-| Differentiator | design approval gates | **evaluate → evolve** self-improvement, replayable contract |
-| Loop | none (linear) | **evolution loop is the core** |
-
-**Camp note:** both frameworks are *interview-heavy* (clarify first). Picking by
-clarity: vague → interview first; clear → skip the heavy interview and execute.
-
----
-
-## 5. Skill catalog by category
+## 4. Skill catalog by category (Claude side)
 
 ### Design / planning (front of the pipeline)
 - **brainstorming** (superpowers) — idea → approved spec, HARD-GATE before any code
-- **grill-me** (mattpocock) — relentless interview to stress-test a plan/design
-- **grill-spec** (custom) — *adversarial verification* of an existing spec; writes
-  resolutions back into the file, re-commits
 - **writing-plans** (superpowers) — spec → multi-step implementation plan
-- **to-prd** — synthesize conversation into a PRD, publish to tracker (no interview)
-- **ouroboros: interview / seed** — Socratic interview → immutable spec
+- **workflow-plan** (weed-harness) — plan shaped to run on the Workflow tool
 
 ### Execution
 - **subagent-driven-development** (superpowers) — fresh impl agent + review per task
 - **executing-plans** (superpowers) — same, in a parallel session
 - **Workflow / ultracode** (native) — parallel agent fan-out, adversarial verify
-- **ralph** (ouroboros) — evolutionary loop until convergence
 
 ### Debugging
 - **systematic-debugging** (superpowers) — disciplined debugging loop
-- **diagnosing-bugs** (mattpocock) — diagnosis loop for hard bugs / perf regressions
-- **investigate** (gstack) — 4-phase, "Iron Law: no fix without root cause"
 
 ### Verification / quality
 - **verification-before-completion** (superpowers) — evidence before claiming done
@@ -129,27 +100,40 @@ clarity: vague → interview first; clear → skip the heavy interview and execu
 ### Infrastructure
 - **using-git-worktrees** (superpowers) — isolated workspace before feature work;
   prerequisite for parallel/subagent execution
-- **worktree-spawn** — deterministic PORT_BASE for parallel multi-port dev servers
+- **worktree-spawn** (weed-harness) — deterministic PORT_BASE for parallel
+  multi-port dev servers
 
 ### Architecture / knowledge
-- **improve-codebase-architecture** (mattpocock) — find deepening/refactor opportunities
-- **graphify** (standalone, `~/.claude/skills/graphify` via `graphify install`) — any input → knowledge graph (code/docs/papers/images)
+- **graphify** (standalone, `~/.claude/skills/graphify` via `graphify install`) —
+  any input → knowledge graph (code/docs/papers/images)
 - **understand-anything** — codebase → interactive knowledge graph
+
+---
+
+## 5. Codex side (separate skill set)
+
+Codex has its own required skills, installed by `/setup codex` and kept fresh by
+the `auto-update.sh` SessionStart hook:
+
+- **matt-interview** — Socratic interview → execution-ready spec (≤10% ambiguity)
+- **matt-orchestrator** — runs Matt Pocock skills via a supervised Orca task DAG
+- **graphify** (`graphify install --platform codex`)
+
+These live in `plugins/weed-harness/skills/` (the Codex package) and are NOT
+exposed to the Claude plugin.
 
 ---
 
 ## 6. The canonical pipeline (substantial work)
 
 ```
-brainstorming / grill-me      ← clarify (if vague)
+brainstorming                 ← clarify (if vague)
         ↓
-grill-spec                    ← adversarial verify of the spec (if risky)
-        ↓
-writing-plans / to-prd        ← plan / PRD
+writing-plans                 ← plan
         ↓
 using-git-worktrees           ← isolated workspace
         ↓
-EXECUTE  ── pick by scale ──→  subagent-driven / executing-plans / Workflow / ralph
+EXECUTE  ── pick by scale ──→  subagent-driven / executing-plans / Workflow
         ↓
 verification-before-completion + code-review
         ↓
@@ -169,4 +153,3 @@ Not every task uses every stage. Trivial work skips the whole thing — just do 
 - Running a workflow on tightly-coupled sequential tasks = **wasted parallelism**
   (use subagent-driven instead)
 - Autonomous execution on a vague spec = **fast path to confidently-wrong output**
-```

@@ -225,14 +225,12 @@
   </div>
 
   <h2>1. 리포 스킬 — weed-harness (<code>skills/</code>)</h2>
-  <p class="section-note">플러그인으로 패키징되는 10개 — Claude용 8개 + Codex 전용 2개(matt-*). Codex 협업 파이프라인(refine-plan, goal-set, team-*), devlog, type-graph, context-budget, merge-resolve, deploy-verify는 2026-07-30 정리에서 제거되었습니다.</p>
+  <p class="section-note">Claude 플러그인으로 패키징되는 7개. matt-* 2개는 Codex 패키지(<code>plugins/weed-harness/skills/</code>)로 분리되어 Claude에 노출되지 않습니다. 옛 spec 파이프라인(to-prd, grill-spec)은 2026-07-31 정리에서 제거 — 앞으로 스펙/플랜 작성은 superpowers(brainstorming, writing-plans)를 사용합니다.</p>
 
   <h3>📋 계획</h3>
   <div class="tablewrap">
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
-    <tr><td class="name">to-prd</td><td><span class="tag blue">계획</span></td>
-      <td>현재 대화 맥락을 PRD로 합성해 프로젝트 이슈 트래커에 게시. 인터뷰 없이 바로 문서화.</td></tr>
     <tr><td class="name">workflow-plan</td><td><span class="tag blue">계획</span></td>
       <td>Workflow 오케스트레이션 도구에 바로 얹을 수 있는 형태(phase / agent / parallel / pipeline / barrier 태깅)로 구현 계획을 작성.</td></tr>
   </table>
@@ -264,7 +262,8 @@
   </table>
   </div>
 
-  <h3>🤖 Codex 전용 스킬</h3>
+  <h3>🤖 Codex 전용 스킬 (<code>plugins/weed-harness/skills/</code>)</h3>
+  <p class="section-note">Codex 패키지에만 존재하며 Claude 플러그인 스킬 목록에는 나타나지 않습니다. <code>/setup codex</code>와 auto-update 훅이 <code>~/.codex/skills/</code>로 설치·동기화합니다.</p>
   <div class="tablewrap">
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
