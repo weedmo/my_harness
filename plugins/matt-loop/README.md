@@ -13,8 +13,8 @@ This directory is the Codex plugin package for the **matt loop**.
 
 ## Installation
 
-Normally you do not install this package directly: `/setup codex` (from the
-weed-harness plugin) copies these skills into `~/.codex/skills/`, and the
-`auto-update.sh` SessionStart hook keeps them in sync afterwards.
+Normally you do not install this package directly: cherry-pick the skills into
+`~/.codex/skills/` once, and the `auto-update.sh` SessionStart hook (registered
+by `/setup hooks`) keeps them in sync with the marketplace clone afterwards.
 
 Root installation instructions live in the repository `README.md`.

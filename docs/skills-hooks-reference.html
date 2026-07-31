@@ -264,7 +264,7 @@
     <tr><td class="name">harness-sync</td><td><span class="tag orange">유지관리</span></td>
       <td>로컬 <code>~/.claude/</code> 설정(hooks, skills, CLAUDE.md, settings.json 등)을 이 저장소로 동기화하고 버전 패치범프 → 커밋 → 태그 → 푸시 → GitHub Release → 플러그인 캐시 갱신까지 수행. "sync"라고 말하면 실행.</td></tr>
     <tr><td class="name">setup</td><td><span class="tag orange">유지관리</span></td>
-      <td>새 환경에 weed-harness를 셋업 — Claude 필수(superpowers+graphify)·Codex 필수(matt-*+graphify) 스킬 설치, statusLine HUD, 커스텀 훅 등록. 멱등이라 반복 실행해도 안전.</td></tr>
+      <td>터미널 UI + 기본 설정만 담당 — statusLine HUD 설치, 커스텀 훅(language-rule, auto-update) 등록. 스킬 설치는 하지 않음(skill-subscribe로 cherry-pick). 멱등이라 반복 실행해도 안전.</td></tr>
     <tr><td class="name">skill-subscribe</td><td><span class="tag orange">유지관리</span></td>
       <td>외부 GitHub 저장소에서 스킬 하나만 골라 <code>~/.claude/skills</code>에 설치하고 업스트림과 동기화 유지. SessionStart 훅(check.py)이 업데이트를 알림.</td></tr>
     <tr><td class="name">find-skills</td><td><span class="tag orange">유지관리</span></td>
@@ -273,14 +273,14 @@
   </div>
 
   <h3>🤖 Codex 전용 — matt-loop 플러그인 (<code>plugins/matt-loop/skills/</code>)</h3>
-  <p class="section-note">matt-loop 패키지에만 존재하며 Claude 플러그인 스킬 목록에는 나타나지 않습니다. <code>/setup codex</code>와 auto-update 훅이 <code>~/.codex/skills/</code>로 설치·동기화합니다.</p>
+  <p class="section-note">matt-loop 패키지에만 존재하며 Claude 플러그인 스킬 목록에는 나타나지 않습니다. <code>~/.codex/skills/</code>로 cherry-pick해 두면 auto-update 훅이 marketplace 클론과 동기화합니다.</p>
   <div class="tablewrap">
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
     <tr><td class="name">matt-interview</td><td><span class="tag brown">Codex</span></td>
       <td>개발자 대상 소크라테스식 인터뷰 — 코드베이스를 조사하고 요구사항을 벼려 구현 모호도를 10% 이하로 낮춘 실행 가능한 스펙을 만든 뒤 matt-orchestrator에 인계.</td></tr>
     <tr><td class="name">matt-orchestrator</td><td><span class="tag brown">Codex</span></td>
-      <td>Matt Pocock 엔지니어링 스킬들을 Orca 태스크 DAG로 조율해 구현·버그수정·리팩토링을 병렬 실행. 모호도가 10%를 넘으면 matt-interview로 복귀. <code>/setup codex</code>가 <code>~/.codex/skills/</code>에 설치.</td></tr>
+      <td>Matt Pocock 엔지니어링 스킬들을 Orca 태스크 DAG로 조율해 구현·버그수정·리팩토링을 병렬 실행. 모호도가 10%를 넘으면 matt-interview로 복귀. <code>~/.codex/skills/</code>에 cherry-pick해 사용.</td></tr>
   </table>
   </div>
 

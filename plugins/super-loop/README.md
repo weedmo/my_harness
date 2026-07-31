@@ -16,7 +16,7 @@ superpowers content.
 
 ## Requirements
 
-- superpowers plugin (`/setup claude` installs it)
+- superpowers plugin (`/plugin install superpowers@claude-plugins-official`; the auto-update hook keeps it updated)
 
 ## Install
 

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # weed-harness setup installer.
+# Scope: terminal UI (statusLine HUD) and basic user settings (hook
+# registration) ONLY. Skills are NOT installed here — cherry-pick them per
+# plugin with skill-subscribe; the auto-update.sh SessionStart hook keeps
+# required skills in sync afterwards.
 # Idempotent: each step checks current state and only writes if needed.
 #
 # Usage:
-#   install.sh             # install all components
+#   install.sh             # install all components (hud + hooks)
 #   install.sh hud         # install HUD (statusLine + hud/ copy)
-#   install.sh claude      # REQUIRED for Claude: superpowers plugin + graphify skill
-#   install.sh codex       # REQUIRED for Codex: matt-* skills + graphify skill
-#   install.sh understand  # install understand-anything plugin (codebase comprehension)
 #   install.sh hooks       # register weed-harness extra hooks in settings.json
 #   install.sh status      # report what is/isn't installed (no writes)
 #
@@ -87,111 +88,26 @@ setup_hud() {
     skip "HUD up to date at $target_hud"
   fi
 
-  # Register statusLine in settings.json
+  # Register statusLine in settings.json. Only claim it when unset or already
+  # pointing at weed-hud — never clobber a foreign statusLine (e.g. one managed
+  # by Orca or another tool).
   local result
   result=$(mutate_settings "
 existing = data.get('statusLine')
 desired = {'type': 'command', 'command': '${target_cmd}'}
-if existing != desired:
-    data['statusLine'] = desired
-    mark()
+cmd = (existing or {}).get('command', '') if isinstance(existing, dict) else ''
+if existing is None or 'weed-hud' in cmd:
+    if existing != desired:
+        data['statusLine'] = desired
+        mark()
+else:
+    print('FOREIGN')
 ")
-  if [ "$result" = "CHANGED" ]; then
-    ok "statusLine registered in settings.json"
-  else
-    skip "statusLine already configured"
-  fi
-}
-
-# ---------- helper: graphify ----------
-
-ensure_graphify() {
-  if command -v graphify >/dev/null 2>&1; then
-    skip "graphifyy already installed"
-    return 0
-  fi
-  log "installing graphifyy via pip..."
-  python3 -m pip install --user -q graphifyy 2>/dev/null || python -m pip install --user -q graphifyy 2>/dev/null || warn "graphifyy pip install failed"
-  command -v graphify >/dev/null 2>&1 && ok "graphifyy installed"
-}
-
-# ---------- step: claude (required: superpowers + graphify) ----------
-
-setup_claude() {
-  printf '\n[claude] required skills: superpowers plugin + graphify\n'
-  if command -v claude >/dev/null 2>&1; then
-    if claude plugin list 2>/dev/null | grep -q "superpowers@claude-plugins-official"; then
-      skip "superpowers already installed"
-    else
-      log "installing superpowers@claude-plugins-official..."
-      claude plugin install superpowers@claude-plugins-official 2>&1 | sed 's/^/    /' || warn "superpowers install failed"
-    fi
-  else
-    warn "claude CLI not found — cannot install superpowers"
-  fi
-  ensure_graphify
-  if command -v graphify >/dev/null 2>&1; then
-    if graphify install --platform claude >/dev/null 2>&1; then ok "graphify skill installed (claude)"; else warn "graphify install --platform claude failed"; fi
-  fi
-}
-
-# ---------- step: codex (required: matt-* skills + graphify) ----------
-
-setup_codex() {
-  printf '\n[codex] required skills: matt-interview + matt-orchestrator + graphify\n'
-  local codex_skills="${USER_HOME}/.codex/skills"
-  mkdir -p "$codex_skills"
-  # matt-* live in the matt-loop package (plugins/matt-loop/skills). The Claude
-  # plugin cache excludes plugins/, so fall back to the marketplace clone.
-  local src_base=""
-  for c in "${PLUGIN_ROOT}/plugins/matt-loop/skills" \
-           "${USER_HOME}/.claude/plugins/marketplaces/weed-plugins/plugins/matt-loop/skills"; do
-    if [ -d "$c" ]; then src_base="$c"; break; fi
-  done
-  if [ -z "$src_base" ]; then
-    warn "codex package skills not found (plugin root or marketplace clone)"
-    return 1
-  fi
-  for s in matt-interview matt-orchestrator; do
-    local src="${src_base}/${s}"
-    if [ ! -d "$src" ]; then
-      warn "$s not found in codex package at $src"
-      continue
-    fi
-    if [ -d "$codex_skills/$s" ] && diff -rq "$src" "$codex_skills/$s" >/dev/null 2>&1; then
-      skip "$s up to date in ~/.codex/skills"
-    else
-      rm -rf "${codex_skills:?}/${s}"
-      cp -r "$src" "$codex_skills/$s"
-      ok "installed $s -> ~/.codex/skills/$s"
-    fi
-  done
-  ensure_graphify
-  if command -v graphify >/dev/null 2>&1; then
-    if graphify install --platform codex >/dev/null 2>&1; then ok "graphify skill installed (codex)"; else warn "graphify install --platform codex failed"; fi
-  fi
-}
-
-# ---------- step: understand-anything ----------
-
-setup_understand() {
-  printf '\n[understand] understand-anything plugin (codebase comprehension)\n'
-  if ! command -v claude >/dev/null 2>&1; then
-    warn "claude CLI not found — skipping understand-anything install (install manually later)"
-    return 0
-  fi
-  if claude plugin marketplace list 2>/dev/null | grep -q "understand-anything"; then
-    skip "marketplace understand-anything already added"
-  else
-    log "adding marketplace Lum1104/Understand-Anything..."
-    claude plugin marketplace add Lum1104/Understand-Anything 2>&1 | sed 's/^/    /' || warn "marketplace add failed (may already exist)"
-  fi
-  if claude plugin list 2>/dev/null | grep -q "understand-anything@understand-anything"; then
-    skip "understand-anything@understand-anything already installed"
-  else
-    log "installing understand-anything..."
-    claude plugin install understand-anything 2>&1 | sed 's/^/    /' || warn "install failed"
-  fi
+  case "$result" in
+    *FOREIGN*) warn "statusLine is managed by another tool — left untouched (set it to 'node ${target_hud}' manually to use the weed HUD)" ;;
+    *CHANGED*) ok "statusLine registered in settings.json" ;;
+    *)         skip "statusLine already configured" ;;
+  esac
 }
 
 # ---------- step: extra hooks ----------
@@ -274,30 +190,17 @@ status() {
   printf '  SETTINGS:    %s\n' "$SETTINGS"
   printf '\n[hud]\n'
   if [ -f "${USER_HUD}/weed-hud.mjs" ]; then ok "hud/weed-hud.mjs present"; else warn "hud/weed-hud.mjs MISSING"; fi
-  python3 -c "
-import json
+  # Pass the path as argv (not inside -c code) so MSYS path conversion applies
+  # on Git Bash / Windows python; force UTF-8 stdout for the check marks.
+  PYTHONIOENCODING=utf-8 python3 - "$SETTINGS" <<'PY'
+import json, sys, pathlib
 try:
-    d=json.load(open('$SETTINGS'))
-    sl=d.get('statusLine')
-    print('  ' + ('✓ statusLine: ' + sl.get('command','?') if sl else '! statusLine NOT configured'))
+    d = json.loads(pathlib.Path(sys.argv[1]).read_text())
+    sl = d.get('statusLine')
+    print('  ' + ('✓ statusLine: ' + sl.get('command', '?') if sl else '! statusLine NOT configured'))
 except Exception as e:
     print('  ! could not read settings.json:', e)
-"
-  printf '\n[understand]\n'
-  if command -v claude >/dev/null 2>&1; then
-    if claude plugin list 2>/dev/null | grep -q understand-anything@understand-anything; then ok "understand-anything plugin installed"; else warn "understand-anything plugin NOT installed"; fi
-  else
-    warn "claude CLI not available — cannot check"
-  fi
-  printf '\n[claude required]\n'
-  if command -v claude >/dev/null 2>&1; then
-    if claude plugin list 2>/dev/null | grep -q superpowers@claude-plugins-official; then ok "superpowers installed"; else warn "superpowers NOT installed"; fi
-  fi
-  if command -v graphify >/dev/null 2>&1; then ok "graphifyy installed"; else warn "graphifyy NOT installed"; fi
-  printf '\n[codex required]\n'
-  for s in matt-interview matt-orchestrator; do
-    if [ -d "${USER_HOME}/.codex/skills/${s}" ]; then ok "$s present in ~/.codex/skills"; else warn "$s NOT installed for codex"; fi
-  done
+PY
   printf '\n[hooks]\n'
   for s in language-rule.sh auto-update.sh; do
     if grep -q "$s" "$SETTINGS" 2>/dev/null; then ok "$s registered"; else warn "$s NOT registered"; fi
@@ -312,21 +215,15 @@ cmd="${1:-all}"
 case "$cmd" in
   all)
     setup_hud
-    setup_claude
-    setup_codex
-    setup_understand
     setup_hooks
     printf '\nDone. Restart Claude Code to apply hooks/statusLine changes.\n'
     ;;
-  hud)        setup_hud ;;
-  claude)     setup_claude ;;
-  codex)      setup_codex ;;
-  understand) setup_understand ;;
-  hooks)      setup_hooks ;;
-  status)     status ;;
+  hud)    setup_hud ;;
+  hooks)  setup_hooks ;;
+  status) status ;;
   *)
     err "Unknown command: $cmd"
-    printf 'Usage: %s [all|hud|claude|codex|understand|hooks|status]\n' "$(basename "$0")"
+    printf 'Usage: %s [all|hud|hooks|status]\n' "$(basename "$0")"
     exit 1
     ;;
 esac

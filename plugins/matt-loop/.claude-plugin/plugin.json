@@ -1,7 +1,7 @@
 {
   "name": "matt-loop",
-  "version": "1.0.0",
-  "description": "Matt loop - Socratic interview to execution-ready spec (matt-interview) and supervised Matt Pocock skill orchestration (matt-orchestrator). Primarily consumed by Codex via /setup codex.",
+  "version": "1.0.1",
+  "description": "Matt loop - Socratic interview to execution-ready spec (matt-interview) and supervised Matt Pocock skill orchestration (matt-orchestrator). Codex-side; kept in sync by the auto-update hook.",
   "author": {
     "name": "weedmo"
   },

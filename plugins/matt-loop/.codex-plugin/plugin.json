@@ -1,6 +1,6 @@
 {
   "name": "matt-loop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Codex packaging for the matt loop: matt-interview (Socratic interview to execution-ready spec) and matt-orchestrator (supervised Matt Pocock skill orchestration).",
   "author": {
     "name": "weedmo",

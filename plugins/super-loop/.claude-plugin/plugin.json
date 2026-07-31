@@ -1,7 +1,7 @@
 {
   "name": "super-loop",
-  "version": "0.1.0",
-  "description": "Superpowers-based development loop - chains brainstorming, writing-plans, execution, verification and branch finishing into one gated loop. Requires the superpowers plugin (installed by /setup claude).",
+  "version": "0.1.1",
+  "description": "Superpowers-based development loop - chains brainstorming, writing-plans, execution, verification and branch finishing into one gated loop. Requires the superpowers plugin.",
   "author": {
     "name": "weedmo"
   },

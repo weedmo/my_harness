@@ -114,8 +114,8 @@ They are different axes, not synonyms.
 
 ## 5. Codex side (separate skill set)
 
-Codex has its own required skills, installed by `/setup codex` and kept fresh by
-the `auto-update.sh` SessionStart hook:
+Codex has its own required skills, cherry-picked into `~/.codex/skills/` and kept
+fresh by the `auto-update.sh` SessionStart hook:
 
 - **matt-interview** — Socratic interview → execution-ready spec (≤10% ambiguity)
 - **matt-orchestrator** — runs Matt Pocock skills via a supervised Orca task DAG

@@ -9,7 +9,7 @@ One repo, per-loop plugins. A Claude Code / Codex harness marketplace maintained
 | `auto-loop` | `plugins/auto-loop/` | autocode + auto_research autonomous improvement loops |
 | `super-loop` | `plugins/super-loop/` | Superpowers-based gated development loop (brainstorm → plan → execute → verify → finish) |
 
-External loops (superpowers, graphify, …) are referenced, not vendored: `/setup claude` installs the superpowers plugin and the graphify skill; `/setup codex` installs matt-loop skills and graphify for Codex.
+External loops (superpowers, graphify, …) are referenced, not vendored. Skills are cherry-picked per plugin (skill-subscribe) rather than bulk-installed; the `auto-update.sh` SessionStart hook keeps required skills (graphify claude/codex, superpowers, matt-*) up to date once they are present.
 
 ## Claude Code
 
@@ -29,7 +29,7 @@ External loops (superpowers, graphify, …) are referenced, not vendored: `/setu
 
 Or via CLI: `claude plugin marketplace add https://github.com/weedmo/skills.git` then `claude plugin install <name>@weed-plugins`.
 
-After installing, run `/setup` to install required skills (superpowers + graphify), the statusLine HUD, and the auto-update hook.
+After installing, run `/setup` to configure the statusLine HUD and register the custom hooks (language-rule, auto-update). Skills themselves are cherry-picked with skill-subscribe, not installed by setup.
 
 ## Codex
 
@@ -49,7 +49,7 @@ codex plugin add matt-loop@weed-plugins
 
 3. Start a new Codex session so the packaged skills are discovered.
 
-Alternatively, `/setup codex` from Claude copies the matt-loop skills into `~/.codex/skills/` directly and the `auto-update.sh` SessionStart hook keeps them in sync.
+Alternatively, cherry-pick the matt-loop skills into `~/.codex/skills/` directly — the `auto-update.sh` SessionStart hook keeps them in sync with the marketplace clone afterwards.
 
 Current limitation: Claude-specific hook automation and slash-command behavior are not part of the Codex package.
 
@@ -59,7 +59,7 @@ Current limitation: Claude-specific hook automation and slash-command behavior a
 
 | Skill | Description |
 |-------|-------------|
-| `/setup` | Environment bootstrap: required skills (Claude: superpowers+graphify / Codex: matt-loop+graphify), HUD, hooks |
+| `/setup` | Terminal UI + basic settings only: statusLine HUD, custom hooks (language-rule, auto-update) |
 | `/harness-sync` | "sync" — publish local config, patch-bump, tag, GitHub Release, refresh plugin cache |
 | `/skill-subscribe` | Cherry-pick a single skill from an external repo and track upstream updates |
 | `/find-skills` | Discover and install agent skills |

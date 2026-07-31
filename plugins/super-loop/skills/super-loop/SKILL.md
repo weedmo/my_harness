@@ -1,6 +1,6 @@
 ---
 name: super-loop
-description: "superpowers 기반 개발 루프 — brainstorming → writing-plans → 실행(subagent-driven/executing-plans) → verification → finishing을 하나의 게이트 루프로 실행. verification이 실패하면 원인 단계로 되돌아가 수렴할 때까지 반복. 트리거: '/super-loop', 'superpowers loop', 'superpowers 루프로 진행해줘'. superpowers 플러그인 필요 (/setup claude가 설치)."
+description: "superpowers 기반 개발 루프 — brainstorming → writing-plans → 실행(subagent-driven/executing-plans) → verification → finishing을 하나의 게이트 루프로 실행. verification이 실패하면 원인 단계로 되돌아가 수렴할 때까지 반복. 트리거: '/super-loop', 'superpowers loop', 'superpowers 루프로 진행해줘'. superpowers 플러그인 필요."
 ---
 
 # super-loop
@@ -12,7 +12,7 @@ superpowers 스킬들을 하나의 **게이트 루프**로 엮는 얇은 오케�
 
 ## 전제
 
-- superpowers 플러그인이 설치되어 있어야 한다 (`/setup claude`).
+- superpowers 플러그인이 설치되어 있어야 한다 (`/plugin install superpowers@claude-plugins-official`).
 - 격리가 필요한 작업이면 시작 전에 `superpowers:using-git-worktrees`.
 
 ## 루프
