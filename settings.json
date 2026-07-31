@@ -37,7 +37,8 @@
       "Read(./secrets/**)",
       "Bash(rm -rf:*)",
       "Bash(sudo:*)"
-    ]
+    ],
+    "defaultMode": "auto"
   },
   "hooks": {
     "PreToolUse": [],
@@ -79,30 +80,45 @@
     "command": "node /home/weed/.claude/hud/weed-hud.mjs"
   },
   "enabledPlugins": {
-    "weed-harness@weed-plugins": false,
-    "superpowers@claude-plugins-official": true,
+    "weed-harness@weed-plugins": true,
     "skill-creator@claude-plugins-official": true,
-    "playwright@claude-plugins-official": false,
-    "ouroboros@ouroboros": false
+    "code-review@claude-plugins-official": false,
+    "ralph-loop@claude-plugins-official": false,
+    "ouroboros@ouroboros": false,
+    "mattpocock-skills@mattpocock": false,
+    "frontend-design@claude-plugins-official": false,
+    "superpowers@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
     "weed-plugins": {
       "source": {
         "source": "git",
-        "url": "https://github.com/weedmo/my_harness.git"
+        "url": "https://github.com/weedmo/skills.git"
       }
     },
     "ouroboros": {
       "source": {
-        "source": "github",
-        "repo": "Q00/ouroboros"
+        "source": "git",
+        "url": "https://github.com/Q00/ouroboros.git"
       }
     }
   },
-  "alwaysThinkingEnabled": true,
+  "skillOverrides": {
+    "browse": "off",
+    "qa": "off",
+    "scrape": "off",
+    "diagram": "off",
+    "karpathy-guidelines": "off"
+  },
+  "autoUpdatesChannel": "latest",
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
-  "teammateMode": "in-process",
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true
 }

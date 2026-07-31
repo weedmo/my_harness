@@ -23,13 +23,21 @@ claude plugin install weed-harness@weed-plugins
 
 ## Codex
 
-Add the marketplace:
+### Quick Setup
+
+1. Add the marketplace:
 
 ```bash
-codex marketplace add weedmo/skills
+codex plugin marketplace add weedmo/skills
 ```
 
-The installed Codex CLI currently exposes `marketplace add`, but not a separate `install` subcommand. After adding the marketplace, restart Codex if needed and enable `weed-harness` from Codex's plugin UI.
+2. Install the plugin:
+
+```bash
+codex plugin add weed-harness@weed-plugins
+```
+
+3. Start a new Codex session so the packaged skills are discovered.
 
 The Codex package lives in `plugins/weed-harness/` and is independently installable because it carries copied `skills/` and `agents/` content inside the plugin directory.
 
