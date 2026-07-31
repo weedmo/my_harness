@@ -25,7 +25,7 @@ fi
 command -v claude >/dev/null 2>&1 && claude plugin update superpowers@claude-plugins-official >/dev/null 2>&1
 
 # --- matt-* skills for codex: re-sync from marketplace clone when changed ---
-SRC="$HOME/.claude/plugins/marketplaces/weed-plugins/plugins/weed-harness/skills"
+SRC="$HOME/.claude/plugins/marketplaces/weed-plugins/plugins/matt-loop/skills"
 DST="$HOME/.codex/skills"
 if [ -d "$DST" ]; then
   for s in matt-interview matt-orchestrator; do

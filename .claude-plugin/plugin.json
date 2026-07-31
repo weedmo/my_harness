@@ -1,7 +1,7 @@
 {
   "name": "weed-harness",
-  "version": "2.4.2",
-  "description": "Custom skills for Claude Code - productivity workflows",
+  "version": "2.5.0",
+  "description": "Core harness infra for Claude Code - setup, sync, skill subscription and workflow planning",
   "author": {
     "name": "weedmo"
   },

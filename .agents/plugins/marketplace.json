@@ -5,10 +5,10 @@
   },
   "plugins": [
     {
-      "name": "weed-harness",
+      "name": "matt-loop",
       "source": {
         "source": "local",
-        "path": "./plugins/weed-harness"
+        "path": "./plugins/matt-loop"
       },
       "policy": {
         "installation": "AVAILABLE",

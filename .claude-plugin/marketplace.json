@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "weed-plugins",
-  "description": "Weed's Claude Code harness - productivity skills and workflows",
-  "version": "2.4.2",
+  "description": "Weed's Claude Code harness - one repo, per-loop plugins",
+  "version": "2.5.0",
   "owner": {
     "name": "weedmo"
   },
@@ -10,8 +10,8 @@
     {
       "name": "weed-harness",
       "source": "./",
-      "description": "Custom skills and workflows for Claude Code - autonomous coding, research, and productivity",
-      "version": "2.4.2",
+      "description": "Core harness infra - setup, harness-sync, skill-subscribe, find-skills, workflow-plan, hooks and HUD",
+      "version": "2.5.0",
       "author": {
         "name": "weedmo"
       },
@@ -20,6 +20,35 @@
         "skills",
         "harness",
         "productivity"
+      ]
+    },
+    {
+      "name": "matt-loop",
+      "source": "./plugins/matt-loop",
+      "description": "Matt loop - matt-interview + matt-orchestrator (Codex-side; installed to ~/.codex/skills by /setup codex)",
+      "version": "1.0.0",
+      "author": {
+        "name": "weedmo"
+      },
+      "category": "productivity",
+      "tags": [
+        "codex",
+        "interview",
+        "loop"
+      ]
+    },
+    {
+      "name": "auto-loop",
+      "source": "./plugins/auto-loop",
+      "description": "Autonomous loops - autocode + auto_research",
+      "version": "1.0.0",
+      "author": {
+        "name": "weedmo"
+      },
+      "category": "productivity",
+      "tags": [
+        "loop",
+        "autonomous"
       ]
     }
   ]

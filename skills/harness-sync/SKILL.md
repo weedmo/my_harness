@@ -1,16 +1,18 @@
 ---
 name: harness-sync
-description: Sync the local ~/.claude/ config (hooks, skills, agents, CLAUDE.md, settings.json, hud) to the ~/autofree/ git repo, patch-bump the version, commit, tag, push, create a GitHub Release, and refresh the local plugin cache. Use when the user says "sync", "sync harness", "publish harness", or wants to release a new patch of weed-harness.
+description: Sync the local ~/.claude/ config (hooks, skills, agents, CLAUDE.md, settings.json, hud) to the weedmo/skills git repo, patch-bump the version, commit, tag, push, create a GitHub Release, and refresh the local plugin cache. Use when the user says "sync", "sync harness", "publish harness", or wants to release a new patch of weed-harness.
 ---
 
 # Harness Sync
 
-Publish local `~/.claude/` config changes to the `~/autofree/` git repo, cut a patch release, and refresh the local plugin cache so this machine actually runs the version just published.
+Publish local `~/.claude/` config changes to the weedmo/skills git repo (the checkout containing this skill), cut a patch release, and refresh the local plugin cache so this machine actually runs the version just published.
 
 ## Scope
 
 Source: `~/.claude/` (local active config)
-Target: `~/autofree/` (this git repo)
+Target: the weedmo/skills repo checkout (this git repo)
+
+When syncing `settings.json`, vendor only portable harness config — skip machine-specific entries (e.g. Orca-injected hook wrappers, local-directory marketplaces, absolute local paths).
 
 **Sync targets (repo-owned files only):**
 - `hooks/` — all `.sh` files and `hooks.json`
@@ -31,13 +33,16 @@ Target: `~/autofree/` (this git repo)
 
 3. **Copy changes** — Update repo files from local. For new skills directories in repo that don't exist locally, keep them (repo-only files are preserved).
 
-4. **Version bump** — Always patch bump:
+4. **Version bump** — Always patch bump the core plugin:
    - Read current version from `.claude-plugin/plugin.json`
    - Increment patch (e.g., `2.0.1` → `2.0.2`)
    - Update all 3 locations:
      - `.claude-plugin/plugin.json` → `"version"`
      - `.claude-plugin/marketplace.json` → top-level `"version"`
-     - `.claude-plugin/marketplace.json` → `plugins[0].version`
+     - `.claude-plugin/marketplace.json` → the `weed-harness` entry's `version`
+   - The marketplace also publishes `matt-loop` and `auto-loop` (under `plugins/`).
+     They version independently: bump their `plugins/<name>/.claude-plugin/plugin.json`
+     and matching marketplace entry ONLY when their contents changed in this sync.
 
 5. **Commit & Push**:
    ```
@@ -74,7 +79,7 @@ Target: `~/autofree/` (this git repo)
    data = json.loads(p.read_text())
    entry = data["plugins"]["weed-harness@weed-plugins"][0]
    entry["version"] = "X.Y.Z"
-   entry["installPath"] = f"/home/weed/.claude/plugins/cache/weed-plugins/weed-harness/X.Y.Z"
+   entry["installPath"] = str(pathlib.Path.home() / ".claude/plugins/cache/weed-plugins/weed-harness/X.Y.Z")
    entry["lastUpdated"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
    import subprocess
    entry["gitCommitSha"] = subprocess.check_output(["git","-C",str(pathlib.Path.home()/".claude/plugins/marketplaces/weed-plugins"),"rev-parse","HEAD"]).decode().strip()
@@ -87,5 +92,10 @@ Target: `~/autofree/` (this git repo)
    - Marketplace clone HEAD matches origin/main
    - Cache dir `~/.claude/plugins/cache/weed-plugins/weed-harness/X.Y.Z/` exists with `.claude-plugin/plugin.json` showing version X.Y.Z
    - `installed_plugins.json` entry for `weed-harness@weed-plugins` shows `"version": "X.Y.Z"` and matching `installPath`
+
+   If matt-loop or auto-loop versions were bumped in step 4, refresh their caches the
+   same way (`~/.claude/plugins/cache/weed-plugins/<plugin>/<version>` copied from
+   `$MARKETPLACE_DIR/plugins/<plugin>/`) and update their `installed_plugins.json`
+   entries if installed.
 
    Note: a Claude Code restart is required for skills/hooks/agents from the new version to be loaded. Report this in the final summary.

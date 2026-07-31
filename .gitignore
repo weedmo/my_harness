@@ -39,8 +39,10 @@ plans/
 /plugins/
 !/plugins/
 /plugins/*
-!/plugins/weed-harness/
-!/plugins/weed-harness/**
+!/plugins/matt-loop/
+!/plugins/matt-loop/**
+!/plugins/auto-loop/
+!/plugins/auto-loop/**
 
 # Runtime & OMC state
 .omc/

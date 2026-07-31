@@ -119,7 +119,7 @@ the `auto-update.sh` SessionStart hook:
 - **matt-orchestrator** — runs Matt Pocock skills via a supervised Orca task DAG
 - **graphify** (`graphify install --platform codex`)
 
-These live in `plugins/weed-harness/skills/` (the Codex package) and are NOT
+These live in `plugins/matt-loop/skills/` (the matt-loop package) and are NOT
 exposed to the Claude plugin.
 
 ---

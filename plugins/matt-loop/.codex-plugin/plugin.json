@@ -1,0 +1,37 @@
+{
+  "name": "matt-loop",
+  "version": "1.0.0",
+  "description": "Codex packaging for the matt loop: matt-interview (Socratic interview to execution-ready spec) and matt-orchestrator (supervised Matt Pocock skill orchestration).",
+  "author": {
+    "name": "weedmo",
+    "url": "https://github.com/weedmo"
+  },
+  "homepage": "https://github.com/weedmo/skills",
+  "repository": "https://github.com/weedmo/skills",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "skills",
+    "workflow",
+    "productivity"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "matt-loop",
+    "shortDescription": "Interview-driven spec + orchestrated implementation loop for Codex",
+    "longDescription": "Install matt-loop in Codex to get matt-interview (drives ambiguity below 10% and produces an execution-ready spec) and matt-orchestrator (runs Matt Pocock skills through a supervised Orca task DAG).",
+    "developerName": "weedmo",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Interview me about this feature until the spec is execution-ready.",
+      "Orchestrate the implementation of the ready spec with Matt skills."
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}

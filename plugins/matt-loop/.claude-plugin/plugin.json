@@ -1,0 +1,18 @@
+{
+  "name": "matt-loop",
+  "version": "1.0.0",
+  "description": "Matt loop - Socratic interview to execution-ready spec (matt-interview) and supervised Matt Pocock skill orchestration (matt-orchestrator). Primarily consumed by Codex via /setup codex.",
+  "author": {
+    "name": "weedmo"
+  },
+  "repository": "https://github.com/weedmo/skills",
+  "homepage": "https://github.com/weedmo/skills",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "interview",
+    "orchestration",
+    "loop"
+  ],
+  "skills": "./skills/"
+}
