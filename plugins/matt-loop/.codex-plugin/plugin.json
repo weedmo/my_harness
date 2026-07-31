@@ -1,7 +1,7 @@
 {
   "name": "matt-loop",
-  "version": "1.0.1",
-  "description": "Codex packaging for the matt loop: matt-interview (Socratic interview to execution-ready spec) and matt-orchestrator (supervised Matt Pocock skill orchestration).",
+  "version": "1.1.0",
+  "description": "Codex packaging for the matt loop: matt-interview (Socratic interview to execution-ready spec) and matt-orchestrator (supervised Matt Pocock skill orchestration), bundling the vendored Matt Pocock skills they route to (auto-synced from mattpocock/skills).",
   "author": {
     "name": "weedmo",
     "url": "https://github.com/weedmo"

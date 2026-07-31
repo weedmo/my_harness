@@ -90,4 +90,4 @@ For `interview-then-implement`, invoke `$matt-orchestrator` with the ready spec 
 
 For `orchestrator-reentry`, return the revised spec to the same orchestration run. Require the coordinator to compare revisions, invalidate affected tasks, rebuild dependencies, and reverify changed acceptance criteria before resuming writes.
 
-If the user explicitly chooses to publish issues, hand the ready conversation/spec to `$to-issues`; those external writes are not implicit.
+If the user explicitly chooses to publish issues, hand the ready conversation/spec to `$to-tickets`; those external writes are not implicit.

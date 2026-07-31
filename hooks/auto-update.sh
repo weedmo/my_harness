@@ -24,14 +24,17 @@ fi
 # --- superpowers plugin: best-effort update (no-op if command unsupported) ---
 command -v claude >/dev/null 2>&1 && claude plugin update superpowers@claude-plugins-official >/dev/null 2>&1
 
-# --- matt-* skills for codex: re-sync from marketplace clone when changed ---
+# --- matt-loop skills for codex: re-sync from marketplace clone when changed.
+# Covers matt-interview/matt-orchestrator AND the vendored mattpocock skills
+# (grilling, tdd, implement, ...) kept current by the sync-mattpocock workflow.
 SRC="$HOME/.claude/plugins/marketplaces/weed-plugins/plugins/matt-loop/skills"
 DST="$HOME/.codex/skills"
-if [ -d "$DST" ]; then
-  for s in matt-interview matt-orchestrator; do
-    if [ -d "$SRC/$s" ] && ! diff -rq "$SRC/$s" "$DST/$s" >/dev/null 2>&1; then
+if [ -d "$SRC" ] && [ -d "$DST" ]; then
+  for d in "$SRC"/*/; do
+    s="$(basename "$d")"
+    if ! diff -rq "$d" "$DST/$s" >/dev/null 2>&1; then
       rm -rf "${DST:?}/$s"
-      cp -r "$SRC/$s" "$DST/$s"
+      cp -r "$d" "$DST/$s"
       echo "[auto-update] codex skill $s refreshed"
     fi
   done

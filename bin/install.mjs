@@ -45,7 +45,7 @@ const PLUGINS = {
   },
   "matt-loop": {
     src: path.join(ROOT, "plugins", "matt-loop", "skills"),
-    desc: "matt-interview + matt-orchestrator (interview-driven implementation loop)",
+    desc: "matt-interview + matt-orchestrator + vendored Matt Pocock skills (interview-driven implementation loop)",
   },
   "auto-loop": {
     src: path.join(ROOT, "plugins", "auto-loop", "skills"),
