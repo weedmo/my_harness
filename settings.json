@@ -1,59 +1,16 @@
 {
-  "env": {
-    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "32000",
-    "DISABLE_NON_ESSENTIAL_MODEL_CALLS": "1",
-    "DISABLE_COST_WARNINGS": "1",
-    "MCP_TIMEOUT": "30000",
-    "MCP_TOOL_TIMEOUT": "60000",
-    "MAX_MCP_OUTPUT_TOKENS": "50000",
-    "BASH_DEFAULT_TIMEOUT_MS": "120000",
-    "BASH_MAX_TIMEOUT_MS": "600000",
-    "BASH_MAX_OUTPUT_LENGTH": "100000",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  },
   "permissions": {
-    "allow": [
-      "Bash(npm:*)",
-      "Bash(yarn:*)",
-      "Bash(node:*)",
-      "Bash(git:*)",
-      "Bash(docker:*)",
-      "Bash(python:*)",
-      "Bash(pip:*)",
-      "Read(**/*.json)",
-      "Read(**/*.js)",
-      "Read(**/*.ts)",
-      "Read(**/*.py)",
-      "Edit(**/*.js)",
-      "Edit(**/*.ts)",
-      "Edit(**/*.py)",
-      "Edit(**/*.json)",
-      "Write(**/*.js)",
-      "Write(**/*.ts)",
-      "Write(**/*.py)"
-    ],
-    "deny": [
-      "Read(./.env*)",
-      "Read(./secrets/**)",
-      "Bash(rm -rf:*)",
-      "Bash(sudo:*)"
-    ],
     "defaultMode": "auto"
   },
+  "model": "claude-fable-5[1m]",
+  "skillOverrides": {
+    "browse": "off",
+    "qa": "off",
+    "scrape": "off",
+    "diagram": "off",
+    "karpathy-guidelines": "off"
+  },
   "hooks": {
-    "PreToolUse": [],
-    "PostToolUse": [],
-    "SubagentStop": [],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/language-rule.sh"
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
@@ -73,11 +30,21 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/language-rule.sh"
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
     "type": "command",
-    "command": "node /home/weed/.claude/hud/weed-hud.mjs"
+    "command": "node ~/.claude/hud/weed-hud.mjs"
   },
   "enabledPlugins": {
     "weed-harness@weed-plugins": true,
@@ -87,7 +54,9 @@
     "ouroboros@ouroboros": false,
     "mattpocock-skills@mattpocock": false,
     "frontend-design@claude-plugins-official": false,
-    "superpowers@claude-plugins-official": true
+    "superpowers@claude-plugins-official": true,
+    "auto-loop@weed-plugins": true,
+    "super-loop@weed-plugins": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
@@ -100,6 +69,13 @@
       "source": {
         "source": "git",
         "url": "https://github.com/weedmo/skills.git"
+      },
+      "autoUpdate": true
+    },
+    "superpowers-dev": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/obra/superpowers.git"
       }
     },
     "ouroboros": {
@@ -109,15 +85,10 @@
       }
     }
   },
-  "skillOverrides": {
-    "browse": "off",
-    "qa": "off",
-    "scrape": "off",
-    "diagram": "off",
-    "karpathy-guidelines": "off"
-  },
   "autoUpdatesChannel": "latest",
+  "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
   "theme": "dark",
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true
