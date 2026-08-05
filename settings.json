@@ -55,8 +55,8 @@
     "mattpocock-skills@mattpocock": false,
     "frontend-design@claude-plugins-official": false,
     "superpowers@claude-plugins-official": true,
-    "auto-loop@weed-plugins": true,
-    "super-loop@weed-plugins": true
+    "auto-loop@weed-plugins": false,
+    "super-loop@weed-plugins": false
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
