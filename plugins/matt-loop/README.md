@@ -7,7 +7,7 @@ This directory is the Codex plugin package for the **matt loop**.
 - `.codex-plugin/plugin.json` for Codex plugin metadata
 - `.claude-plugin/plugin.json` so the package is also addressable from the Claude marketplace (not installed by default)
 - `skills/matt-interview` — Socratic interview that drives implementation ambiguity below 10% and produces an execution-ready spec
-- `skills/matt-orchestrator` — runs Matt Pocock skills through a supervised Orca task DAG, returning to matt-interview when ambiguity rises
+- `skills/matt-orchestrator` — runs Matt Pocock skills through a supervised task DAG on the platform's native subagent orchestration, returning to matt-interview when ambiguity rises
 - `skills/<everything else>` — vendored Matt Pocock skills the two skills above route to (grilling, tdd, implement, code-review, ...), copied verbatim from [mattpocock/skills](https://github.com/mattpocock/skills)
 - `mattpocock.lock.json` — pinned upstream commit and the list of vendored skills
 - `scripts/sync-upstream.sh` — re-vendors the pinned skill list from upstream and refreshes the lock file
