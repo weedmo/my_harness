@@ -6,7 +6,7 @@ for **Claude Code, Codex, opencode, and gemini-cli**.
 | Plugin | Where | What | Required |
 |--------|-------|------|----------|
 | `weed-harness` | repo root | Core harness infra: setup, harness-sync, skill-subscribe, find-skills, workflow-plan, hooks, HUD | **Yes — always installed** |
-| `matt-loop` | `plugins/matt-loop/` | matt-interview + matt-orchestrator + vendored Matt Pocock skills (interview-driven implementation loop) | optional |
+| `matt-loop` | `plugins/matt-loop/` | matt-auto + vendored Matt Pocock skills (human-in-the-loop conducted Matt flow) | optional |
 | `auto-loop` | `plugins/auto-loop/` | autocode + auto_research autonomous improvement loops | optional |
 | `super-loop` | `plugins/super-loop/` | Superpowers-based gated development loop (brainstorm → plan → execute → verify → finish) | optional |
 
@@ -109,9 +109,8 @@ workflow guidance.
 
 | Skill | Description |
 |-------|-------------|
-| `matt-interview` | Socratic interview → execution-ready spec (≤10% ambiguity) |
-| `matt-orchestrator` | Runs Matt Pocock skills via a supervised Orca task DAG |
-| vendored Matt Pocock skills | The upstream skills the two above route to: `grilling`, `grill-me`, `grill-with-docs`, `ask-matt`, `tdd`, `implement`, `diagnosing-bugs`, `codebase-design`, `domain-modeling`, `research`, `prototype`, `code-review`, `to-tickets`, `qa`, `request-refactor-plan`, `resolving-merge-conflicts`, `setup-matt-pocock-skills` |
+| `matt-auto` | Conductor for Matt Pocock's main flow (interview → spec → tickets → implementation) with human-in-the-loop gates |
+| vendored Matt Pocock skills | The upstream skills matt-auto conducts: `grilling`, `grill-me`, `grill-with-docs`, `ask-matt`, `to-spec`, `to-tickets`, `handoff`, `tdd`, `implement`, `diagnosing-bugs`, `codebase-design`, `domain-modeling`, `research`, `prototype`, `code-review`, `qa`, `request-refactor-plan`, `resolving-merge-conflicts`, `setup-matt-pocock-skills` |
 
 The vendored skills come from
 [mattpocock/skills](https://github.com/mattpocock/skills) and are auto-synced:

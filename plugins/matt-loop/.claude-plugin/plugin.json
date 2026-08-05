@@ -1,7 +1,7 @@
 {
   "name": "matt-loop",
-  "version": "1.1.0",
-  "description": "Matt loop - Socratic interview to execution-ready spec (matt-interview) and supervised Matt Pocock skill orchestration (matt-orchestrator), bundling the vendored Matt Pocock skills they route to (auto-synced from mattpocock/skills). Codex-side; kept in sync by the auto-update hook.",
+  "version": "1.2.0",
+  "description": "Matt loop - matt-auto drives Matt Pocock's main flow (interview, spec, tickets, implementation) with human-in-the-loop gates, bundling the vendored Matt Pocock skills it conducts (auto-synced from mattpocock/skills). Codex-side; kept in sync by the auto-update hook.",
   "author": {
     "name": "weedmo"
   },

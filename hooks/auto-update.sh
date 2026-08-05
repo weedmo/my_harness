@@ -25,8 +25,8 @@ fi
 command -v claude >/dev/null 2>&1 && claude plugin update superpowers@claude-plugins-official >/dev/null 2>&1
 
 # --- matt-loop skills for codex: re-sync from marketplace clone when changed.
-# Covers matt-interview/matt-orchestrator AND the vendored mattpocock skills
-# (grilling, tdd, implement, ...) kept current by the sync-mattpocock workflow.
+# Covers matt-auto AND the vendored mattpocock skills (grilling, tdd,
+# implement, ...) kept current by the sync-mattpocock workflow.
 SRC="$HOME/.claude/plugins/marketplaces/weed-plugins/plugins/matt-loop/skills"
 DST="$HOME/.codex/skills"
 if [ -d "$SRC" ] && [ -d "$DST" ]; then

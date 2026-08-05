@@ -25,8 +25,8 @@
     {
       "name": "matt-loop",
       "source": "./plugins/matt-loop",
-      "description": "Matt loop - matt-interview + matt-orchestrator plus the vendored Matt Pocock skills they route to (auto-synced from mattpocock/skills; kept in sync at ~/.codex/skills by the auto-update hook)",
-      "version": "1.1.0",
+      "description": "Matt loop - matt-auto (human-in-the-loop conductor for Matt Pocock's main flow) plus the vendored Matt Pocock skills it conducts (auto-synced from mattpocock/skills; kept in sync at ~/.codex/skills by the auto-update hook)",
+      "version": "1.2.0",
       "author": {
         "name": "weedmo"
       },

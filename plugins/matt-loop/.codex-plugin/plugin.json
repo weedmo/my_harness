@@ -1,7 +1,7 @@
 {
   "name": "matt-loop",
-  "version": "1.1.0",
-  "description": "Codex packaging for the matt loop: matt-interview (Socratic interview to execution-ready spec) and matt-orchestrator (supervised Matt Pocock skill orchestration), bundling the vendored Matt Pocock skills they route to (auto-synced from mattpocock/skills).",
+  "version": "1.2.0",
+  "description": "Codex packaging for the matt loop: matt-auto drives Matt Pocock's main flow (interview, spec, tickets, implementation) with human-in-the-loop gates, bundling the vendored Matt Pocock skills it conducts (auto-synced from mattpocock/skills).",
   "author": {
     "name": "weedmo",
     "url": "https://github.com/weedmo"
@@ -18,8 +18,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "matt-loop",
-    "shortDescription": "Interview-driven spec + orchestrated implementation loop for Codex",
-    "longDescription": "Install matt-loop in Codex to get matt-interview (drives ambiguity below 10% and produces an execution-ready spec) and matt-orchestrator (runs Matt Pocock skills through a supervised task DAG).",
+    "shortDescription": "Matt Pocock's full engineering flow with human-in-the-loop gates",
+    "longDescription": "Install matt-loop in Codex to get matt-auto, a conductor that drives Matt Pocock's main flow end to end — grilling interview, spec, tracer-bullet tickets, per-ticket implementation — pausing only where a human decision is required.",
     "developerName": "weedmo",
     "category": "Coding",
     "capabilities": [
@@ -28,8 +28,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Interview me about this feature until the spec is execution-ready.",
-      "Orchestrate the implementation of the ready spec with Matt skills."
+      "Use $matt-auto to take this idea through interview, spec, tickets, and implementation."
     ],
     "brandColor": "#2563EB",
     "screenshots": []

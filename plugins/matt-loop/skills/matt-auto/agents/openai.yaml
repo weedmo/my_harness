@@ -1,0 +1,4 @@
+interface:
+  display_name: "Matt Auto"
+  short_description: "Drive Matt Pocock's full flow with human-in-the-loop gates"
+  default_prompt: "Use $matt-auto to take this idea through interview, spec, tickets, and implementation."

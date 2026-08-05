@@ -4,9 +4,9 @@
 # Usage: sync-upstream.sh [upstream-checkout-dir]
 #   Without an argument, clones a fresh shallow copy of the upstream repo.
 #
-# Only the skills listed in SKILLS are managed; matt-interview and
-# matt-orchestrator are weedmo-authored and never touched. The upstream commit
-# is recorded in mattpocock.lock.json for provenance.
+# Only the skills listed in SKILLS are managed; matt-auto is weedmo-authored
+# and never touched. The upstream commit is recorded in mattpocock.lock.json
+# for provenance.
 set -euo pipefail
 
 REPO_URL="https://github.com/mattpocock/skills.git"
@@ -15,9 +15,9 @@ DEST="$PLUGIN_DIR/skills"
 LOCK="$PLUGIN_DIR/mattpocock.lock.json"
 PY="$(command -v python3 || command -v python)"
 
-# Union of the skills referenced by matt-interview and matt-orchestrator
-# routing (references/routing.md). qa and request-refactor-plan live under
-# skills/deprecated/ upstream but are still routed to by matt-orchestrator.
+# The skills matt-auto's flow (ask-matt's main flow) drives, plus standalone
+# skills kept for direct use. qa and request-refactor-plan live under
+# skills/deprecated/ upstream but are kept for direct invocation.
 SKILLS=(
   ask-matt
   codebase-design
@@ -27,6 +27,7 @@ SKILLS=(
   grill-me
   grill-with-docs
   grilling
+  handoff
   implement
   prototype
   qa
@@ -35,6 +36,7 @@ SKILLS=(
   resolving-merge-conflicts
   setup-matt-pocock-skills
   tdd
+  to-spec
   to-tickets
 )
 

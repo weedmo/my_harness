@@ -117,8 +117,7 @@ They are different axes, not synonyms.
 Codex has its own required skills, cherry-picked into `~/.codex/skills/` and kept
 fresh by the `auto-update.sh` SessionStart hook:
 
-- **matt-interview** — Socratic interview → execution-ready spec (≤10% ambiguity)
-- **matt-orchestrator** — runs Matt Pocock skills via a supervised Orca task DAG
+- **matt-auto** — conducts Matt Pocock's main flow (interview → spec → tickets → implementation) with human-in-the-loop gates
 - **graphify** (`graphify install --platform codex`)
 
 These live in `plugins/matt-loop/skills/` (the matt-loop package) and are NOT
