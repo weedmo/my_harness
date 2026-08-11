@@ -1,0 +1,169 @@
+<!--
+  Starting point for interview-report. Copy this file, then replace the
+  REPLACE-marked content. Keep the CSS as-is — it's the whole point of
+  bundling this template instead of redesigning the look every run.
+
+  Structure:
+    - .summary        the plain-language callout at the top (always present)
+    - .decisions       flat list, only when there are 5 or fewer questions
+    - <details>         one per topic group, only when there are more than 5
+    - .escalated       separate callout for anything the real user answered
+                        directly (delegate replied ESCALATE) — omit the whole
+                        block if nothing was escalated
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>REPLACE: idea/feature name — Interview Report</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #fbfbfa;
+    --text: #37352f;
+    --text-muted: #6b6b66;
+    --border: #e9e9e7;
+    --callout-bg: #e7f3f8;
+    --callout-border: #cbe6f2;
+    --escalated-bg: #fbf3db;
+    --escalated-border: #f0e2ab;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 48px 24px;
+    background: var(--bg-soft);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 48px;
+  }
+  h1 {
+    font-size: 2rem;
+    margin: 0 0 8px;
+  }
+  .meta {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 32px;
+  }
+  h2 {
+    font-size: 1.1rem;
+    margin: 40px 0 12px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  .summary {
+    background: var(--callout-bg);
+    border: 1px solid var(--callout-border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+  }
+  .summary .icon { margin-right: 8px; }
+  .escalated {
+    background: var(--escalated-bg);
+    border: 1px solid var(--escalated-border);
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+  .qa {
+    margin: 16px 0;
+    padding-left: 16px;
+    border-left: 2px solid var(--border);
+  }
+  .qa .q { font-weight: 600; margin-bottom: 4px; }
+  .qa .d { margin-bottom: 4px; }
+  .qa .r { color: var(--text-muted); font-size: 0.92rem; }
+  details {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 8px 0;
+    padding: 4px 16px;
+  }
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 12px 0;
+    list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.15s;
+  }
+  details[open] summary::before { transform: rotate(90deg); }
+  details[open] summary { border-bottom: 1px solid var(--border); }
+  .qa-list { padding: 8px 0 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>REPLACE: idea/feature name</h1>
+  <div class="meta">Interview report — REPLACE: date · REPLACE: N questions</div>
+
+  <div class="summary">
+    <span class="icon">💡</span>
+    REPLACE: 2–4 plain-language sentences. What got decided and why, written
+    for someone with zero context on the codebase or the interview itself.
+  </div>
+
+  <!-- ============================================================
+       CASE A — 5 or fewer questions: flat list, no grouping.
+       Delete this block if using CASE B instead.
+       ============================================================ -->
+  <h2>Decisions</h2>
+  <div class="decisions">
+    <div class="qa">
+      <div class="q">REPLACE: question, restated plainly</div>
+      <div class="d">REPLACE: the decision</div>
+      <div class="r">REPLACE: one-line rationale</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CASE B — more than 5 questions: group into named topic
+       sections. Name sections from what the interview actually
+       covered — don't force a fixed taxonomy. One <details> per
+       topic. Delete this block if using CASE A instead.
+       ============================================================ -->
+  <h2>Decisions</h2>
+  <details>
+    <summary>REPLACE: topic name — one-line plain-language takeaway</summary>
+    <div class="qa-list">
+      <div class="qa">
+        <div class="q">REPLACE: question, restated plainly</div>
+        <div class="d">REPLACE: the decision</div>
+        <div class="r">REPLACE: one-line rationale</div>
+      </div>
+      <!-- repeat .qa per question in this topic -->
+    </div>
+  </details>
+  <!-- repeat <details> per topic -->
+
+  <!-- ============================================================
+       Escalated decisions — only include this section if at least
+       one question was escalated to the real user instead of
+       answered by the delegate. Omit entirely otherwise.
+       ============================================================ -->
+  <h2>Escalated to you directly</h2>
+  <div class="escalated">
+    <div class="qa">
+      <div class="q">REPLACE: question</div>
+      <div class="d">REPLACE: your answer</div>
+      <div class="r">REPLACE: why this one was escalated</div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

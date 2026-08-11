@@ -15,14 +15,14 @@ The user settles the big frame in ordinary conversation *before* invoking this s
 - Invoke each stage's skill and follow it exactly. Do not reimplement, merge, or "improve" a stage.
 - Wherever a sub-skill puts a question to "the user" — interview questions, seam check, ticket-breakdown quiz — route it to the decision delegate, unless it is material (see Escalation).
 - Discoverable facts are still looked up in the environment, never asked. This is grilling's rule; only *decisions* go to the delegate.
-- Do not add gates, scores, or artifacts the vendored skills don't define. The only artifacts are theirs: `CONTEXT.md`/ADRs, the spec on the tracker, and tickets.
+- Do not add gates or scores the vendored skills don't define. Artifacts are theirs — `CONTEXT.md`/ADRs, the spec on the tracker, and tickets — plus exactly two matt-auto reports on top: the `--yolo` decision log and the `$interview-report` HTML. Don't invent a third.
 
 ## Pipeline
 
 1. **Precondition** — if `docs/agents/issue-tracker.md` is missing, run `$setup-matt-pocock-skills` first.
 2. **Pick effort (human)** — ask the user which reasoning effort the delegate should run at (low / medium / high / xhigh / max; recommend **high**). This is the only upfront human input. Skip this in `--yolo` mode — default to **high** and continue.
 3. **Spawn the decision delegate** — one subagent at the chosen effort, kept for the whole pipeline. Give it: a summary of the big-frame conversation so far, access to the codebase, and the delegate brief below. Keep the same delegate conversation alive across stages so its decisions stay consistent; if the platform only supports one-shot subagents, carry the running Q&A log into each new delegate call instead.
-4. **Interview** — `$grill-with-docs` in a codebase, `$grill-me` otherwise, exactly as written — one question at a time with a recommended answer — but each question goes to the delegate, not the user. Record every question → decision + rationale; this log is shown to the user verbatim at confirm. If a question needs a runnable answer, detour via `$prototype` and fold what you learned back in.
+4. **Interview** — `$grill-with-docs` in a codebase, `$grill-me` otherwise, exactly as written — one question at a time with a recommended answer — but each question goes to the delegate, not the user. Record every question → decision + rationale; this log is shown to the user verbatim at confirm. If a question needs a runnable answer, detour via `$prototype` and fold what you learned back in. Once the interview concludes, run `$interview-report` on the finished log — this applies in both default and `--yolo` mode, since both run the interview.
 5. **Size branch** — fits one session? Present the interview log to the user for confirm (the small path's only gate, since it produces no tickets), then run `$implement` right here (it drives `$tdd`, then `$code-review`, then commits) and finish. Otherwise continue. In `--yolo` mode, skip this confirm too: write the interview log to the decision log and go straight to `$implement`.
 6. **Spec** — `$to-spec`, its seam check answered by the delegate. to-spec publishes the spec as written; if the later confirm changes decisions, update the published spec.
 7. **Tickets** — `$to-tickets`: run its breakdown quiz (granularity, blocking edges, merge/split) with the delegate and iterate to approval, but **hold publication** until step 8.
@@ -68,5 +68,5 @@ Invoke as `/matt-auto --yolo` to run the whole pipeline unattended, start to fin
 - Running `--yolo` without a decision log file, or letting it fall behind → it's the only place mid-pipeline decisions are visible when nothing is presented live.
 - Asking the user mid-pipeline about non-material decisions → that is the delegate's job now; the user opted out of those questions.
 - Scoring ambiguity percentages or inventing readiness gates → no Matt skill does this. Drop it.
-- Writing specs or notes outside the tracker and `CONTEXT.md`/ADRs → wrong artifact system.
+- Writing specs or notes outside the tracker, `CONTEXT.md`/ADRs, the `--yolo` decision log, or `$interview-report`'s output → wrong artifact system.
 - Running several implementation workers in parallel → Matt's loop is one ticket per fresh context.

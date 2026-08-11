@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "weed-plugins",
   "description": "Weed's Claude Code harness - one repo, per-loop plugins",
-  "version": "2.5.8",
+  "version": "2.5.9",
   "owner": {
     "name": "weedmo"
   },
@@ -11,7 +11,7 @@
       "name": "weed-harness",
       "source": "./",
       "description": "Core harness infra - setup, harness-sync, skill-subscribe, find-skills, workflow-plan, hooks and HUD",
-      "version": "2.5.8",
+      "version": "2.5.9",
       "author": {
         "name": "weedmo"
       },
@@ -26,7 +26,7 @@
       "name": "matt-loop",
       "source": "./plugins/matt-loop",
       "description": "Matt loop - matt-auto (conductor for Matt Pocock's main flow with a decision delegate and a single confirm before tickets publish) plus the vendored Matt Pocock skills it conducts (auto-synced from mattpocock/skills; kept in sync at ~/.codex/skills by the auto-update hook)",
-      "version": "1.2.3",
+      "version": "1.2.4",
       "author": {
         "name": "weedmo"
       },
