@@ -1,6 +1,6 @@
 {
   "name": "matt-loop",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Codex packaging for the matt loop: matt-auto drives Matt Pocock's main flow (interview, spec, tickets, implementation) with a high-effort decision delegate and a single human confirm before tickets publish, bundling the vendored Matt Pocock skills it conducts (auto-synced from mattpocock/skills).",
   "author": {
     "name": "weedmo",
