@@ -1,6 +1,6 @@
 {
   "name": "weed-harness",
-  "version": "2.5.6",
+  "version": "2.5.7",
   "description": "Core harness infra for Claude Code - setup, sync, skill subscription and workflow planning",
   "author": {
     "name": "weedmo"
