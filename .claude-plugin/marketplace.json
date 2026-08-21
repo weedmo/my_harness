@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "weed-plugins",
   "description": "Weed's Claude Code harness - one repo, per-loop plugins",
-  "version": "2.5.10",
+  "version": "2.5.11",
   "owner": {
     "name": "weedmo"
   },
@@ -11,7 +11,7 @@
       "name": "weed-harness",
       "source": "./",
       "description": "Claude Code setup for the statusLine HUD and opt-in hooks",
-      "version": "2.5.10",
+      "version": "2.5.11",
       "author": {
         "name": "weedmo"
       },
@@ -25,8 +25,8 @@
     {
       "name": "matt-loop",
       "source": "./plugins/matt-loop",
-      "description": "Matt loop - matt-auto with automatic OpenCode model routing, a decision delegate, and a single confirm before tickets publish, plus the vendored Matt Pocock skills it conducts",
-      "version": "1.2.5",
+      "description": "Matt loop - matt-auto, PR babysitting, and conflict resolution with automatic OpenCode model routing, plus vendored Matt Pocock skills",
+      "version": "1.2.6",
       "author": {
         "name": "weedmo"
       },

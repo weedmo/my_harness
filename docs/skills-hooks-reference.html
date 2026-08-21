@@ -247,13 +247,17 @@
   </table>
   </div>
 
-  <h3>🤖 Codex 전용 — matt-loop 플러그인 (<code>plugins/matt-loop/skills/</code>)</h3>
-  <p class="section-note">matt-loop 패키지에만 존재하며 Claude 플러그인 스킬 목록에는 나타나지 않습니다. <code>~/.codex/skills/</code>로 cherry-pick해 두면 auto-update 훅이 marketplace 클론과 동기화합니다.</p>
+  <h3>🤖 크로스 에이전트 — matt-loop 플러그인 (<code>plugins/matt-loop/skills/</code>)</h3>
+  <p class="section-note">Codex, OpenCode, Claude Code, Gemini CLI에 설치할 수 있습니다. OpenCode에서는 별도 task-tier agent가 자동 모델 라우팅을 제공합니다.</p>
   <div class="tablewrap">
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
     <tr><td class="name">matt-auto</td><td><span class="tag brown">Codex</span></td>
-      <td>Matt Pocock 메인 플로우(grilling 인터뷰 → spec → 티켓 → 티켓별 구현)를 처음부터 끝까지 지휘. 사람의 결정이 필요한 지점(인터뷰 답변, seam 확인, 티켓 승인, 에스컬레이션)에서만 멈춤. <code>~/.codex/skills/</code>에 cherry-pick해 사용.</td></tr>
+      <td>Matt Pocock 메인 플로우(grilling 인터뷰 → spec → 티켓 → 티켓별 구현)를 처음부터 끝까지 지휘. OpenCode에서는 작업별 모델을 자동 라우팅.</td></tr>
+    <tr><td class="name">pr-babysit</td><td><span class="tag brown">PR</span></td>
+      <td>열린 PR 하나를 격리된 worktree에서 CI와 리뷰가 완료될 때까지 관리. 명시적으로 요청하지 않으면 merge하지 않음.</td></tr>
+    <tr><td class="name">resolving-merge-conflicts</td><td><span class="tag brown">Git</span></td>
+      <td>진행 중인 merge/rebase 충돌을 해결. OpenCode에서 단독 호출하면 deep 모델로 자동 라우팅.</td></tr>
   </table>
   </div>
 

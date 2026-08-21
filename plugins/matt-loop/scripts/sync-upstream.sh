@@ -4,9 +4,9 @@
 # Usage: sync-upstream.sh [upstream-checkout-dir]
 #   Without an argument, clones a fresh shallow copy of the upstream repo.
 #
-# Only the skills listed in SKILLS are managed; matt-auto is weedmo-authored
-# and never touched. The upstream commit is recorded in mattpocock.lock.json
-# for provenance.
+# Only the skills listed in SKILLS are managed. matt-auto, pr-babysit, and the
+# routed resolving-merge-conflicts fork are weedmo-authored and never touched.
+# The upstream commit is recorded in mattpocock.lock.json for provenance.
 set -euo pipefail
 
 REPO_URL="https://github.com/mattpocock/skills.git"
@@ -33,7 +33,6 @@ SKILLS=(
   qa
   request-refactor-plan
   research
-  resolving-merge-conflicts
   setup-matt-pocock-skills
   tdd
   to-spec

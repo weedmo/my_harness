@@ -47,6 +47,7 @@ Use these installed subagent types when they are available. Classify from the ac
 
 - Default to `matt-default` when two routes are plausible. Use `matt-deep` for the decision delegate because it makes design decisions across the whole pipeline.
 - `matt-large-context` performs the broad analysis; hand any resulting focused implementation to `matt-default` or `matt-deep`.
+- If `matt-large-context` cannot start because the Google provider, Gemini credentials, model, or quota is unavailable, retry the analysis with `matt-deep`. Split oversized repositories, documents, or logs into coherent chunks, ask `matt-deep` to summarize each chunk with source references, then synthesize those summaries in a final `matt-deep` call. This fallback does not require Gemini CLI. In free-only mode, use the same chunking process with `matt-free` and never cross into a paid route.
 - If a fast agent reports that the task exceeds its scope, retry once with `matt-default`. If the default agent identifies a genuinely difficult reasoning problem, retry once with `matt-deep`. Do not use `xhigh` or `max` automatically.
 - In `--free` mode, use `matt-free-fast` for Fast tasks and `matt-free` for every other route. Never mix paid routes into a free-only run.
 - If a named routing agent is unavailable or fails because its provider/model is unavailable, fall back to the platform's normal subagent and report the fallback. Do not silently choose a different provider.

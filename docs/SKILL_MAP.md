@@ -108,16 +108,18 @@ They are different axes, not synonyms.
 
 ---
 
-## 5. Codex side (separate skill set)
+## 5. Cross-agent loop skills
 
-Codex has its own required skills, cherry-picked into `~/.codex/skills/` and kept
-fresh by the `auto-update.sh` SessionStart hook:
+The matt-loop package installs on Codex, OpenCode, Claude Code, and Gemini CLI.
+OpenCode additionally installs task-tier routing agents:
 
 - **matt-auto** — conducts Matt Pocock's main flow (interview → spec → tickets → implementation) with human-in-the-loop gates
+- **pr-babysit** — shepherds one open PR through review and CI without merging it
+- **resolving-merge-conflicts** — resolves an active merge/rebase; direct OpenCode use routes to a deep model
 - **graphify** (`graphify install --platform codex`)
 
-These live in `plugins/matt-loop/skills/` (the matt-loop package) and are NOT
-exposed to the Claude plugin.
+These live in `plugins/matt-loop/skills/`. Native plugin and npx installation
+availability differs by platform; see the repository README.
 
 ---
 

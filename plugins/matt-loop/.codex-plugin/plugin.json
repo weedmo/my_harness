@@ -1,7 +1,7 @@
 {
   "name": "matt-loop",
-  "version": "1.2.5",
-  "description": "Codex packaging for the matt loop: matt-auto drives Matt Pocock's main flow with a decision delegate and a single human confirm before tickets publish, bundling the vendored Matt Pocock skills it conducts.",
+  "version": "1.2.6",
+  "description": "Codex packaging for matt-auto, PR babysitting, routed conflict resolution, and the vendored Matt Pocock skills.",
   "author": {
     "name": "weedmo",
     "url": "https://github.com/weedmo"

@@ -1,7 +1,7 @@
 {
   "name": "matt-loop",
-  "version": "1.2.5",
-  "description": "Matt loop - matt-auto drives Matt Pocock's main flow with automatic OpenCode model routing, a decision delegate, and a single human confirm before tickets publish, bundling the vendored Matt Pocock skills it conducts.",
+  "version": "1.2.6",
+  "description": "Matt loop - matt-auto, PR babysitting, and conflict resolution with automatic OpenCode model routing, plus the vendored Matt Pocock skills it conducts.",
   "author": {
     "name": "weedmo"
   },

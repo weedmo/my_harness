@@ -102,7 +102,9 @@ workflow guidance.
 | Skill | Description |
 |-------|-------------|
 | `matt-auto` | Conductor for Matt Pocock's main flow (interview → spec → tickets → implementation) with human-in-the-loop gates and automatic OpenCode model routing |
-| vendored Matt Pocock skills | The upstream skills matt-auto conducts: `grilling`, `grill-me`, `grill-with-docs`, `ask-matt`, `to-spec`, `to-tickets`, `handoff`, `tdd`, `implement`, `diagnosing-bugs`, `codebase-design`, `domain-modeling`, `research`, `prototype`, `code-review`, `qa`, `request-refactor-plan`, `resolving-merge-conflicts`, `setup-matt-pocock-skills` |
+| `pr-babysit` | Shepherd one open GitHub PR through CI and review with automatic OpenCode model routing |
+| `resolving-merge-conflicts` | Resolve an active merge/rebase conflict; direct OpenCode use routes to a deep model |
+| vendored Matt Pocock skills | The remaining upstream skills matt-auto conducts: `grilling`, `grill-me`, `grill-with-docs`, `ask-matt`, `to-spec`, `to-tickets`, `handoff`, `tdd`, `implement`, `diagnosing-bugs`, `codebase-design`, `domain-modeling`, `research`, `prototype`, `code-review`, `qa`, `request-refactor-plan`, `setup-matt-pocock-skills` |
 
 The vendored skills come from
 [mattpocock/skills](https://github.com/mattpocock/skills) and are auto-synced:

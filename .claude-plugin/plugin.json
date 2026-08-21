@@ -1,6 +1,6 @@
 {
   "name": "weed-harness",
-  "version": "2.5.10",
+  "version": "2.5.11",
   "description": "Claude Code setup for the statusLine HUD and opt-in hooks",
   "author": {
     "name": "weedmo"
