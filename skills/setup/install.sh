@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # weed-harness setup installer.
 # Scope: terminal UI (statusLine HUD) and basic user settings (hook
-# registration) ONLY. Skills are NOT installed here — cherry-pick them per
-# plugin with skill-subscribe; the auto-update.sh SessionStart hook keeps
-# required skills in sync afterwards.
+# registration) ONLY. Other skills and plugins use their native installer; the
+# auto-update.sh SessionStart hook keeps supported dependencies in sync.
 # Idempotent: each step checks current state and only writes if needed.
 #
 # Usage:
@@ -114,6 +113,32 @@ else:
 
 setup_hooks() {
   printf '\n[hooks] register weed-harness user-level hooks\n'
+
+  local cleanup_result
+  cleanup_result=$(mutate_settings "
+hooks = data.get('hooks', {})
+groups = hooks.get('SessionStart', [])
+changed_groups = []
+for group in groups:
+    commands = group.get('hooks', [])
+    kept = [h for h in commands if 'skill-subscribe/scripts/check.py' not in h.get('command', '')]
+    if len(kept) != len(commands):
+        mark()
+    if kept or not commands:
+        if len(kept) != len(commands):
+            group = dict(group)
+            group['hooks'] = kept
+        changed_groups.append(group)
+if len(changed_groups) != len(groups):
+    mark()
+if changed_groups:
+    hooks['SessionStart'] = changed_groups
+elif 'SessionStart' in hooks and groups:
+    del hooks['SessionStart']
+")
+  if [ "$cleanup_result" = "CHANGED" ]; then
+    ok "removed legacy skill-subscribe SessionStart hook"
+  fi
 
   # Each entry: event matcher script_basename
   # matcher empty (-) means no matcher

@@ -1,7 +1,7 @@
 # Skill & Framework Routing Guide
 
 A decision aid for picking the right approach per task. Built from the installed
-harness (weed-harness + superpowers + graphify) and the native Workflow tool.
+harness (superpowers + graphify) and the native Workflow tool.
 
 > **Golden rule:** Ceremony scales to the task. Three *independent* inputs decide
 > the approach — never collapse them into one axis.
@@ -81,15 +81,11 @@ They are different axes, not synonyms.
 ### Design / planning (front of the pipeline)
 - **brainstorming** (superpowers) — idea → approved spec, HARD-GATE before any code
 - **writing-plans** (superpowers) — spec → multi-step implementation plan
-- **workflow-plan** (weed-harness) — plan shaped to run on the Workflow tool
 
 ### Execution
 - **subagent-driven-development** (superpowers) — fresh impl agent + review per task
 - **executing-plans** (superpowers) — same, in a parallel session
 - **Workflow / ultracode** (native) — parallel agent fan-out, adversarial verify
-- **super-loop** (super-loop plugin) — gated loop over the superpowers pipeline:
-  brainstorm → plan → execute → verify (loop back on failure) → finish
-
 ### Debugging
 - **systematic-debugging** (superpowers) — disciplined debugging loop
 

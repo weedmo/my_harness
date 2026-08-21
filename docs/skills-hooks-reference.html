@@ -210,7 +210,7 @@
 
   <div class="props">
     <div class="prop"><span class="k">📦 저장소</span><span class="v"><code>weedmo/skills</code> (구 autofree) → weed-harness 플러그인 소스</span></div>
-    <div class="prop"><span class="k">🧩 리포 플러그인</span><span class="v">4개 — weed-harness(5) · matt-loop(2, Codex) · auto-loop(2) · super-loop(1)</span></div>
+    <div class="prop"><span class="k">🧩 리포 플러그인</span><span class="v">3개 — weed-harness(Claude 전용 setup) · matt-loop · auto-loop</span></div>
     <div class="prop"><span class="k">🖥️ 로컬 스킬</span><span class="v">4개 활성 (<code>~/.claude/skills/</code>)</span></div>
     <div class="prop"><span class="k">🪝 훅 스크립트</span><span class="v">3개 + <code>hooks.json</code> (<code>hooks/</code>)</span></div>
     <div class="prop"><span class="k">📅 기준일</span><span class="v">2026-07-30 (OMC·weed-cowork 정리 완료 후)</span></div>
@@ -219,22 +219,13 @@
   <div class="callout">
     <span class="ico">💡</span>
     <div>
-      <p><strong>스킬은 3계층으로 나뉩니다.</strong> ① 이 저장소의 <code>skills/</code> — weed-harness 플러그인으로 배포되는 스킬, ② <code>~/.claude/skills/</code> — 플러그인과 무관하게 로컬에 직접 설치된 스킬, ③ superpowers·ouroboros 등 다른 플러그인이 제공하는 스킬(이 문서 범위 밖).</p>
+      <p><strong>스킬은 3계층으로 나뉩니다.</strong> ① 이 저장소의 <code>skills/</code> — Claude Code 전용 weed-harness setup, ② <code>~/.claude/skills/</code> — 플러그인과 무관하게 로컬에 직접 설치된 스킬, ③ superpowers·ouroboros 등 다른 플러그인이 제공하는 스킬(이 문서 범위 밖).</p>
       <p>훅은 이 저장소의 <code>hooks/</code>에 스크립트로 보관되고, <code>settings.json</code>(사용자 전역)과 <code>hooks.json</code>(플러그인)에 이벤트별로 등록되어 실행됩니다.</p>
     </div>
   </div>
 
   <h2>1. 리포 플러그인 — 하나의 repo, loop별 플러그인</h2>
-  <p class="section-note">2026-07-31 재편: repo는 하나(weedmo/skills)로 두고 marketplace에서 플러그인 4개를 발행합니다 — <strong>weed-harness</strong>(root, 공통 인프라 5개 스킬) · <strong>matt-loop</strong>(<code>plugins/matt-loop/</code>, Codex용) · <strong>auto-loop</strong>(<code>plugins/auto-loop/</code>, 자율 루프) · <strong>super-loop</strong>(<code>plugins/super-loop/</code>, superpowers 기반 루프). 각 플러그인은 Claude에서 독립적으로 켜고 끌 수 있습니다. 옛 spec 파이프라인(to-prd, grill-spec)은 제거 — 스펙/플랜 작성은 superpowers(brainstorming, writing-plans)가 담당합니다.</p>
-
-  <h3>📋 계획</h3>
-  <div class="tablewrap">
-  <table>
-    <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
-    <tr><td class="name">workflow-plan</td><td><span class="tag blue">계획</span></td>
-      <td>Workflow 오케스트레이션 도구에 바로 얹을 수 있는 형태(phase / agent / parallel / pipeline / barrier 태깅)로 구현 계획을 작성.</td></tr>
-  </table>
-  </div>
+  <p class="section-note">repo는 하나(weedmo/skills)로 두고 세 패키지를 발행합니다 — <strong>weed-harness</strong>(root, Claude Code 전용 setup·hooks·HUD) · <strong>matt-loop</strong>(<code>plugins/matt-loop/</code>) · <strong>auto-loop</strong>(<code>plugins/auto-loop/</code>, 자율 루프). Codex marketplace에는 두 loop 플러그인만 노출됩니다.</p>
 
   <h3>🔁 자율 루프 — auto-loop 플러그인 (<code>plugins/auto-loop/skills/</code>)</h3>
   <div class="tablewrap">
@@ -247,28 +238,12 @@
   </table>
   </div>
 
-  <h3>⚡ superpowers 루프 — super-loop 플러그인 (<code>plugins/super-loop/skills/</code>)</h3>
-  <p class="section-note">superpowers 스킬들을 게이트 루프로 엮는 glue. 방법론 자체는 외부 superpowers 플러그인이 소유하며 이 패키지는 순서·게이트·루프백 규칙만 담습니다.</p>
+  <h3>📝 Claude Code 설정</h3>
   <div class="tablewrap">
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
-    <tr><td class="name">super-loop</td><td><span class="tag purple">루프</span></td>
-      <td>brainstorming → writing-plans → 실행(subagent-driven/executing-plans) → verification → finishing을 게이트 루프로 실행. verification 실패 시 원인 단계로 루프백, 같은 게이트 3연속 실패 시 중단·보고.</td></tr>
-  </table>
-  </div>
-
-  <h3>📝 유지관리</h3>
-  <div class="tablewrap">
-  <table>
-    <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
-    <tr><td class="name">harness-sync</td><td><span class="tag orange">유지관리</span></td>
-      <td>로컬 <code>~/.claude/</code> 설정(hooks, skills, CLAUDE.md, settings.json 등)을 이 저장소로 동기화하고 버전 패치범프 → 커밋 → 태그 → 푸시 → GitHub Release → 플러그인 캐시 갱신까지 수행. "sync"라고 말하면 실행.</td></tr>
     <tr><td class="name">setup</td><td><span class="tag orange">유지관리</span></td>
-      <td>터미널 UI + 기본 설정만 담당 — statusLine HUD 설치, 커스텀 훅(language-rule, auto-update) 등록. 스킬 설치는 하지 않음(skill-subscribe로 cherry-pick). 멱등이라 반복 실행해도 안전.</td></tr>
-    <tr><td class="name">skill-subscribe</td><td><span class="tag orange">유지관리</span></td>
-      <td>외부 GitHub 저장소에서 스킬 하나만 골라 <code>~/.claude/skills</code>에 설치하고 업스트림과 동기화 유지. SessionStart 훅(check.py)이 업데이트를 알림.</td></tr>
-    <tr><td class="name">find-skills</td><td><span class="tag orange">유지관리</span></td>
-      <td>"X를 하는 스킬 있나?" 같은 질문에 설치 가능한 스킬을 탐색·설치하도록 도움.</td></tr>
+      <td>Claude Code 전용. 터미널 UI + 기본 설정만 담당 — statusLine HUD 설치, 커스텀 훅(language-rule, auto-update) 등록. 스킬 설치는 하지 않으며 멱등이라 반복 실행해도 안전.</td></tr>
   </table>
   </div>
 
@@ -324,7 +299,7 @@
         <li><strong><code>settings.json</code> (사용자 전역)</strong> — 모든 세션에 적용:
           <ul class="notion">
             <li><span class="tag blue">UserPromptSubmit</span> <code>language-rule.sh</code></li>
-            <li><span class="tag green">SessionStart</span> <code>skill-subscribe/scripts/check.py --hook</code> (업스트림 스킬 업데이트 확인) + <code>auto-update.sh</code> (필수 스킬 자동 업데이트)</li>
+            <li><span class="tag green">SessionStart</span> <code>auto-update.sh</code> (필수 스킬 자동 업데이트)</li>
           </ul>
         </li>
         <li><strong><code>hooks.json</code> (플러그인)</strong> — Codex 리뷰 훅 제거 후 빈 선언. 플러그인이 자동 등록하는 훅은 없음.</li>
@@ -337,7 +312,7 @@
   <div class="callout">
     <span class="ico">🔄</span>
     <div>
-      <p><strong>훅이 만드는 자동화.</strong> 매 프롬프트마다 language-rule이 언어 규칙을 상기시키고, <code>/graphify</code> 실행 후에는 CLAUDE.md에 운용 섹션이 자동 주입됩니다. 세션이 시작될 때마다 auto-update가 필수 스킬(graphify claude+codex, superpowers, matt-*)을 자동으로 최신화하고, skill-subscribe가 구독 스킬 업데이트를 알립니다.</p>
+      <p><strong>훅이 만드는 자동화.</strong> 매 프롬프트마다 language-rule이 언어 규칙을 상기시키고, <code>/graphify</code> 실행 후에는 CLAUDE.md에 운용 섹션이 자동 주입됩니다. 세션이 시작될 때마다 auto-update가 필수 스킬(graphify claude+codex, superpowers, matt-*)을 자동으로 최신화합니다.</p>
     </div>
   </div>
 

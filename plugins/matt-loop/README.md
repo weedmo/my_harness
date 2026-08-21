@@ -6,7 +6,8 @@ This directory is the Codex plugin package for the **matt loop**.
 
 - `.codex-plugin/plugin.json` for Codex plugin metadata
 - `.claude-plugin/plugin.json` so the package is also addressable from the Claude marketplace (not installed by default)
-- `skills/matt-auto` — conductor that drives Matt Pocock's main flow end to end (grilling interview → spec → tracer-bullet tickets → per-ticket implementation); a high-effort decision delegate answers implementation-level questions, material decisions escalate to the human, and the human confirms once before tickets publish
+- `skills/matt-auto` — conductor that drives Matt Pocock's main flow end to end (grilling interview → spec → tracer-bullet tickets → per-ticket implementation); a decision delegate answers implementation-level questions, material decisions escalate to the human, and the human confirms once before tickets publish
+- `opencode/agents/` — task-tier agents installed only for OpenCode; matt-auto routes fast, ordinary, deep, large-context, and explicitly free-only work to the configured models
 - `skills/<everything else>` — vendored Matt Pocock skills matt-auto conducts (grilling, to-spec, to-tickets, implement, code-review, ...), copied verbatim from [mattpocock/skills](https://github.com/mattpocock/skills) and still directly invocable for partial work
 - `mattpocock.lock.json` — pinned upstream commit and the list of vendored skills
 - `scripts/sync-upstream.sh` — re-vendors the pinned skill list from upstream and refreshes the lock file
@@ -25,6 +26,7 @@ next sync. matt-auto is weedmo-authored and is never touched by the sync.
 
 Normally you do not install this package directly: cherry-pick the skills into
 `~/.codex/skills/` once, and the `auto-update.sh` SessionStart hook (registered
-by `/setup hooks`) keeps them in sync with the marketplace clone afterwards.
+by `/setup hooks` in Claude Code) keeps them in sync with the marketplace clone
+afterwards.
 
 Root installation instructions live in the repository `README.md`.

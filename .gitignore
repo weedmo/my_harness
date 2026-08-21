@@ -43,8 +43,6 @@ plans/
 !/plugins/matt-loop/**
 !/plugins/auto-loop/
 !/plugins/auto-loop/**
-!/plugins/super-loop/
-!/plugins/super-loop/**
 
 # Runtime & OMC state
 .omc/
@@ -76,7 +74,5 @@ research/
 skills/learned/
 skills/skill-stocktake/
 
-# eval scratch (skill-creator workspaces)
-skills/workflow-plan-workspace/
 # vendored gstack browse: exclude heavy test fixtures (28M) from harness release
 skills/browse/test/

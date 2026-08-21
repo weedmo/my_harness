@@ -1,11 +1,11 @@
 ---
 name: setup
-description: "weed-harness 사용자 환경 셋업 — 터미널 UI(statusLine HUD)와 기본 설정(custom hooks 등록: language-rule, auto-update)만 담당. 스킬/플러그인 설치는 하지 않음(skill-subscribe로 cherry-pick). 멱등(idempotent)이라 여러 번 실행해도 안전. 트리거: '/setup', 'setup hud', 'setup hooks', 'statusLine 등록'."
+description: "Claude Code 전용 weed-harness 사용자 환경 셋업 — 터미널 UI(statusLine HUD)와 기본 설정(custom hooks 등록: language-rule, auto-update)만 담당. 스킬/플러그인 설치는 하지 않음. 멱등(idempotent)이라 여러 번 실행해도 안전. 트리거: '/setup', 'setup hud', 'setup hooks', 'statusLine 등록'."
 ---
 
 # weed-harness setup
 
-플러그인을 처음 설치한 사용자가 weed-harness의 **사용자-레벨 기본 설정**을 한 번에 적용하기 위한 skill.
+Claude Code 플러그인을 처음 설치한 사용자가 weed-harness의 **사용자-레벨 기본 설정**을 한 번에 적용하기 위한 skill. Codex, OpenCode, Gemini CLI에서는 사용하지 않는다.
 
 ## 범위 (중요)
 
@@ -14,7 +14,7 @@ setup은 **터미널 UI와 기본 설정만** 다룬다:
 - **`statusLine` HUD** — 터미널 하단 상태줄
 - **custom hooks 등록** — language-rule(언어 규칙), auto-update(필수 스킬 자동 최신화)
 
-**스킬/플러그인 설치는 setup의 책임이 아니다.** 각 loop 플러그인(super-loop, auto-loop, matt-loop 등)의 스킬은 통째로 플러그인을 설치하기보다 **skill-subscribe로 필요한 스킬만 cherry-pick**해서 등록하는 것이 효율적이다. 한 번 가져온 필수 스킬(graphify, matt-* 등)의 최신화는 auto-update.sh 훅이 세션 시작마다 수행한다.
+**스킬/플러그인 설치는 setup의 책임이 아니다.** 각 loop 플러그인(auto-loop, matt-loop 등)은 해당 플랫폼의 네이티브 플러그인 시스템이나 저장소의 npx 설치기를 사용한다. 지원되는 의존성의 최신화는 auto-update.sh 훅이 세션 시작마다 수행한다.
 
 ## 왜 필요한가
 
@@ -39,8 +39,8 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" status   # 현재 상태만
    - "setup hud", "statusLine 등록해줘" → `install.sh hud`
    - "setup hooks", "hook 등록" → `install.sh hooks`
    - "setup status", "뭐 설치되어 있어?" → `install.sh status`
-   - 스킬 설치 요청("superpowers 설치", "matt skill 가져와" 등)이면 setup이 아니라
-     **skill-subscribe**(cherry-pick) 또는 `/plugin install`로 안내
+    - 스킬 설치 요청("superpowers 설치", "matt skill 가져와" 등)이면 setup이 아니라
+      `/plugin install` 또는 저장소의 npx 설치기로 안내
 
 2. 해당 명령을 Bash 도구로 실행. 출력은 그대로 사용자에게 보여줌.
 

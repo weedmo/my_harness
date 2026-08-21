@@ -1,7 +1,7 @@
 {
   "name": "weed-harness",
-  "version": "2.5.9",
-  "description": "Core harness infra for Claude Code - setup, sync, skill subscription and workflow planning",
+  "version": "2.5.10",
+  "description": "Claude Code setup for the statusLine HUD and opt-in hooks",
   "author": {
     "name": "weedmo"
   },

@@ -5,9 +5,10 @@
 //
 //   npx github:weedmo/skills                 # interactive
 //   npx github:weedmo/skills --yes           # everything, everywhere
-//   npx github:weedmo/skills --platforms claude-code,codex --plugins super-loop
+//   npx github:weedmo/skills --platforms claude-code,codex --plugins auto-loop
 //
-// weed-harness is always installed (required). Other plugins are opt-in.
+// Claude Code setup is always installed when that platform is selected. Loop
+// plugins are opt-in and available on every platform.
 
 import fs from "node:fs";
 import os from "node:os";
@@ -28,8 +29,8 @@ const PLATFORMS = {
     note: "native SKILL.md discovery; restart Codex to pick up new skills.",
   },
   opencode: {
-    dir: (home) => path.join(home, ".config", "opencode", "skill"),
-    note: "native SKILL.md discovery (skill/ directory).",
+    dir: (home) => path.join(home, ".config", "opencode", "skills"),
+    note: "native SKILL.md discovery (skills/ directory).",
   },
   "gemini-cli": {
     dir: (home) => path.join(home, ".gemini", "skills"),
@@ -41,7 +42,8 @@ const PLUGINS = {
   "weed-harness": {
     required: true,
     src: path.join(ROOT, "skills"),
-    desc: "core harness infra (setup, harness-sync, skill-subscribe, find-skills, workflow-plan)",
+    desc: "Claude Code setup (HUD and hooks)",
+    platforms: ["claude-code"],
   },
   "matt-loop": {
     src: path.join(ROOT, "plugins", "matt-loop", "skills"),
@@ -51,11 +53,23 @@ const PLUGINS = {
     src: path.join(ROOT, "plugins", "auto-loop", "skills"),
     desc: "autocode + auto_research (autonomous improvement loops)",
   },
-  "super-loop": {
-    src: path.join(ROOT, "plugins", "super-loop", "skills"),
-    desc: "superpowers-based gated development loop",
+};
+
+const OPENCODE_ASSETS = {
+  "matt-loop": {
+    src: path.join(ROOT, "plugins", "matt-loop", "opencode", "agents"),
+    dir: (home) => path.join(home, ".config", "opencode", "agents"),
+    desc: "model-routing agents",
   },
 };
+
+const LEGACY_SKILLS = [
+  "find-skills",
+  "harness-sync",
+  "skill-subscribe",
+  "super-loop",
+  "workflow-plan",
+];
 
 // ---------- args ----------
 
@@ -73,7 +87,7 @@ Usage: npx github:weedmo/skills [options]
 
 Options:
   --platforms <a,b|all>  Platforms to install to: ${Object.keys(PLATFORMS).join(", ")}
-  --plugins <a,b|all|none>  Extra plugins besides weed-harness (always installed)
+  --plugins <a,b|all|none>  Optional loop plugins (Claude Code setup is automatic)
   --yes                  Non-interactive; defaults to all platforms + all plugins
   --dry-run              Show what would be installed without writing
   --home <dir>           Override home directory (mainly for testing)
@@ -129,12 +143,10 @@ if (flag("yes") || opt("platforms") || opt("plugins")) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   platforms = await promptList(rl, "Install to which platforms?", platformNames, {});
   const descs = Object.fromEntries(optionalPlugins.map((p) => [p, PLUGINS[p].desc]));
-  console.log("\nweed-harness is required and always installed.");
+  console.log("\nClaude Code setup is installed automatically when that platform is selected.");
   plugins = await promptList(rl, "Install which additional plugins?", optionalPlugins, descs);
   rl.close();
 }
-
-plugins = ["weed-harness", ...plugins];
 
 // ---------- install ----------
 
@@ -146,14 +158,83 @@ function skillDirs(src) {
     .map((e) => e.name);
 }
 
-console.log(`\n${DRY ? "[dry-run] " : ""}Installing ${plugins.join(", ")} → ${platforms.join(", ")}\n`);
+function installedSkillName(platform, skill) {
+  if (platform !== "opencode") return skill;
+  return skill.replaceAll("_", "-");
+}
+
+function normalizeOpenCodeSkill(skillDir, sourceName, installedName) {
+  if (sourceName === installedName) return;
+  const skillFile = path.join(skillDir, "SKILL.md");
+  const content = fs.readFileSync(skillFile, "utf8");
+  fs.writeFileSync(
+    skillFile,
+    content.replace(/^name:\s*.*$/m, `name: ${installedName}`),
+  );
+}
+
+function cleanupLegacyClaudeHook(home) {
+  const settingsPath = path.join(home, ".claude", "settings.json");
+  if (!fs.existsSync(settingsPath)) return;
+  const data = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+  const groups = data.hooks?.SessionStart;
+  if (!Array.isArray(groups)) return;
+  let changed = false;
+  const cleanedGroups = [];
+  for (const group of groups) {
+    const hooks = Array.isArray(group.hooks) ? group.hooks : [];
+    const cleanedHooks = hooks.filter((hook) => {
+      const legacy = String(hook.command || "").includes("skill-subscribe/scripts/check.py");
+      if (legacy) changed = true;
+      return !legacy;
+    });
+    if (cleanedHooks.length > 0 || hooks.length === 0) {
+      cleanedGroups.push(cleanedHooks.length === hooks.length ? group : { ...group, hooks: cleanedHooks });
+    }
+  }
+  if (!changed) return;
+  if (cleanedGroups.length > 0) data.hooks.SessionStart = cleanedGroups;
+  else delete data.hooks.SessionStart;
+  if (DRY) console.log("  - legacy skill-subscribe SessionStart hook");
+  else fs.writeFileSync(settingsPath, `${JSON.stringify(data, null, 2)}\n`);
+}
+
+console.log(`\n${DRY ? "[dry-run] " : ""}Installing selected packages → ${platforms.join(", ")}\n`);
 
 let failures = 0;
 for (const platform of platforms) {
   const dest = PLATFORMS[platform].dir(HOME);
-  console.log(`[${platform}] ${dest}`);
-  for (const plugin of plugins) {
-    const { src } = PLUGINS[plugin];
+  const platformPlugins = platform === "claude-code"
+    ? ["weed-harness", ...plugins]
+    : plugins;
+  console.log(`[${platform}] ${dest} (${platformPlugins.join(", ") || "cleanup only"})`);
+  const legacySkills = platform === "claude-code"
+    ? LEGACY_SKILLS
+    : [...LEGACY_SKILLS, "setup"];
+  const legacyDirs = platform === "opencode"
+    ? [dest, path.join(HOME, ".config", "opencode", "skill")]
+    : [dest];
+  for (const legacyDir of legacyDirs) {
+    for (const skill of legacySkills) {
+      const legacyPath = path.join(legacyDir, skill);
+      if (DRY) {
+        console.log(`  - legacy ${legacyPath}`);
+      } else {
+        fs.rmSync(legacyPath, { recursive: true, force: true });
+      }
+    }
+  }
+  if (platform === "claude-code") {
+    try {
+      cleanupLegacyClaudeHook(HOME);
+    } catch (err) {
+      console.log(`  ✗ legacy hook cleanup: ${err.message}`);
+      failures++;
+    }
+  }
+  for (const plugin of platformPlugins) {
+    const { src, platforms: supportedPlatforms } = PLUGINS[plugin];
+    if (supportedPlatforms && !supportedPlatforms.includes(platform)) continue;
     const skills = skillDirs(src);
     if (skills.length === 0) {
       console.log(`  ! ${plugin}: no skills found at ${src}`);
@@ -161,18 +242,48 @@ for (const platform of platforms) {
       continue;
     }
     for (const skill of skills) {
+      const installedName = installedSkillName(platform, skill);
       const from = path.join(src, skill);
-      const to = path.join(dest, skill);
+      const to = path.join(dest, installedName);
       try {
         if (!DRY) {
           fs.mkdirSync(dest, { recursive: true });
           fs.rmSync(to, { recursive: true, force: true });
           fs.cpSync(from, to, { recursive: true });
+          if (platform === "opencode") {
+            normalizeOpenCodeSkill(to, skill, installedName);
+          }
         }
-        console.log(`  ✓ ${plugin}/${skill}`);
+        const renamed = skill === installedName ? "" : ` → ${installedName}`;
+        console.log(`  ✓ ${plugin}/${skill}${renamed}`);
       } catch (err) {
         console.log(`  ✗ ${plugin}/${skill}: ${err.message}`);
         failures++;
+      }
+    }
+  }
+  if (platform === "opencode" && !DRY) {
+    for (const plugin of platformPlugins) {
+      const assets = OPENCODE_ASSETS[plugin];
+      if (!assets || !fs.existsSync(assets.src)) continue;
+      const assetDest = assets.dir(HOME);
+      try {
+        fs.mkdirSync(assetDest, { recursive: true });
+        for (const entry of fs.readdirSync(assets.src, { withFileTypes: true })) {
+          if (!entry.isFile()) continue;
+          fs.cpSync(path.join(assets.src, entry.name), path.join(assetDest, entry.name));
+        }
+        console.log(`  ✓ ${plugin}/${assets.desc}`);
+      } catch (err) {
+        console.log(`  ✗ ${plugin}/${assets.desc}: ${err.message}`);
+        failures++;
+      }
+    }
+  } else if (platform === "opencode") {
+    for (const plugin of platformPlugins) {
+      const assets = OPENCODE_ASSETS[plugin];
+      if (assets && fs.existsSync(assets.src)) {
+        console.log(`  ✓ ${plugin}/${assets.desc}`);
       }
     }
   }

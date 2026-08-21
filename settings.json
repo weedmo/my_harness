@@ -16,15 +16,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ~/.claude/skills/skill-subscribe/scripts/check.py --hook",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "bash ~/.claude/hooks/auto-update.sh",
             "timeout": 60
           }
@@ -55,8 +46,7 @@
     "mattpocock-skills@mattpocock": false,
     "frontend-design@claude-plugins-official": false,
     "superpowers@claude-plugins-official": true,
-    "auto-loop@weed-plugins": false,
-    "super-loop@weed-plugins": false
+    "auto-loop@weed-plugins": false
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {

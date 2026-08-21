@@ -96,10 +96,6 @@ When reviewing code and finding issues:
 3. Never say "수정할까요?" or "진행할까요?" — just fix it.
 4. The Edit/Write PostToolUse hook will trigger auto-review on your fixes.
 
-## Sync Workflow
-
-When the user says **"sync"**, invoke the `/harness-sync` skill.
-
 # graphify
 - **graphify** (`~/.claude/skills/graphify/SKILL.md`) - any input to knowledge graph. Trigger: `/graphify`
 When the user types `/graphify`, invoke the Skill tool with `skill: "graphify"` before doing anything else.
