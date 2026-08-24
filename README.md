@@ -1,7 +1,7 @@
 # weed-plugins
 
 One repo, per-loop plugins. An AI-CLI harness by weedmo — installable skill packs
-for **Claude Code, Codex, opencode, and gemini-cli**.
+for **Claude Code, Codex, opencode, gemini-cli, and Orca**.
 
 | Plugin | Where | What | Required |
 |--------|-------|------|----------|
@@ -42,8 +42,9 @@ npx github:weedmo/skills --yes --dry-run
 |----------|-----------------|-------|
 | `claude-code` | `~/.claude/skills/` | Installs the Claude-only `setup` skill plus selected loop plugins. If you already installed these via `/plugin install`, skip this platform to avoid duplicates. |
 | `codex` | `~/.codex/skills/` | Native SKILL.md discovery. Restart Codex after install. |
-| `opencode` | `~/.config/opencode/skills/` | Native SKILL.md discovery. Invalid underscores in skill IDs are normalized to hyphens (for example, `auto_research` → `auto-research`). matt-loop also installs routing agents under `~/.config/opencode/agents/`. |
+| `opencode` | `~/.config/opencode/skills/` | Native SKILL.md discovery. Invalid underscores in skill IDs are normalized to hyphens (for example, `auto_research` → `auto-research`). matt-loop also installs routing agents under `~/.config/opencode/agents/` and slash commands for every Matt Loop skill under `~/.config/opencode/command/`. |
 | `gemini-cli` | `~/.gemini/skills/` | No native skill discovery — reference the skill files from `~/.gemini/GEMINI.md` yourself. |
+| `orca` | `~/.agents/skills/` | Universal agent-skills directory; Orca exposes these skills to every agent it drives. Skip this platform if you installed the plugins natively via Claude/Codex (see [Orca](#orca) below) to avoid duplicates. |
 
 Re-running the installer overwrites installed skills with the latest versions,
 so it doubles as an updater (`npx github:weedmo/skills --yes` pulls the current
@@ -84,6 +85,26 @@ marketplace (`.agents/plugins/marketplace.json`) lists both loop plugins.
 
 opencode and gemini-cli have no compatible plugin marketplace — use the npx
 installer for those.
+
+### Orca
+
+Orca (the multi-agent IDE) has no skill plugin format of its own yet — its
+current plugin manifest (`orca-plugin.json`) does not accept skill
+contributions. Instead, Orca discovers and manages skills from the native
+plugin systems and skill directories of the agents it drives:
+
+| Orca skill source | How these plugins get there |
+|-------------------|------------------------------|
+| Claude plugin installs (`~/.claude/plugins/`) | `/plugin install <name>@weed-plugins` — Orca reads each install's `.claude-plugin/plugin.json` `skills` field |
+| Codex plugin cache (`~/.codex/plugins/cache/`) | `codex plugin add <name>@weed-plugins` — Orca reads `.codex-plugin/plugin.json` |
+| OpenCode home skills (`~/.config/opencode/skills/`) | npx installer with `--platforms opencode` |
+| Agent-skills home (`~/.agents/skills/`) | npx installer with `--platforms orca` — exposed to **every** Orca agent |
+
+So the recommended Orca setup is simply the native plugin installs above
+(Claude + Codex), plus `--platforms opencode` or `--platforms orca` for the
+rest. Orca then tracks these skills in its Skills UI, per agent, and flags
+stale copies. Pick ONE channel per platform — native plugin install or npx
+copy — to avoid duplicate skill entries.
 
 Current limitation: Claude-specific hook automation and slash-command behavior
 ship only with the Claude plugin; on other platforms the skills act as

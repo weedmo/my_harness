@@ -36,6 +36,10 @@ const PLATFORMS = {
     dir: (home) => path.join(home, ".gemini", "skills"),
     note: "no native skill discovery - reference the skill files from ~/.gemini/GEMINI.md yourself.",
   },
+  orca: {
+    dir: (home) => path.join(home, ".agents", "skills"),
+    note: "universal agent-skills directory; Orca exposes these skills to every agent it drives. Orca also auto-discovers plugins installed via Claude (/plugin install) and Codex (codex plugin add) - skip this platform if you use those to avoid duplicate skills.",
+  },
 };
 
 const PLUGINS = {
@@ -56,11 +60,13 @@ const PLUGINS = {
 };
 
 const OPENCODE_ASSETS = {
-  "matt-loop": {
-    src: path.join(ROOT, "plugins", "matt-loop", "opencode", "agents"),
-    dir: (home) => path.join(home, ".config", "opencode", "agents"),
-    desc: "model-routing agents",
-  },
+  "matt-loop": [
+    {
+      src: path.join(ROOT, "plugins", "matt-loop", "opencode", "agents"),
+      dir: (home) => path.join(home, ".config", "opencode", "agents"),
+      desc: "model-routing agents",
+    },
+  ],
 };
 
 const LEGACY_SKILLS = [
@@ -173,6 +179,18 @@ function normalizeOpenCodeSkill(skillDir, sourceName, installedName) {
   );
 }
 
+function installOpenCodeCommands(plugin, home) {
+  if (plugin !== "matt-loop") return;
+  const commandDir = path.join(home, ".config", "opencode", "command");
+  const skills = skillDirs(PLUGINS[plugin].src);
+  fs.mkdirSync(commandDir, { recursive: true });
+  for (const skill of skills) {
+    const command = `---\ndescription: Run the Matt Loop ${skill} workflow.\n---\n\nUse the \`${skill}\` skill to complete this request:\n\n$ARGUMENTS\n`;
+    fs.writeFileSync(path.join(commandDir, `${skill}.md`), command);
+  }
+  console.log(`  ✓ ${plugin}/skill slash commands`);
+}
+
 function cleanupLegacyClaudeHook(home) {
   const settingsPath = path.join(home, ".claude", "settings.json");
   if (!fs.existsSync(settingsPath)) return;
@@ -264,26 +282,37 @@ for (const platform of platforms) {
   }
   if (platform === "opencode" && !DRY) {
     for (const plugin of platformPlugins) {
-      const assets = OPENCODE_ASSETS[plugin];
-      if (!assets || !fs.existsSync(assets.src)) continue;
-      const assetDest = assets.dir(HOME);
-      try {
-        fs.mkdirSync(assetDest, { recursive: true });
-        for (const entry of fs.readdirSync(assets.src, { withFileTypes: true })) {
-          if (!entry.isFile()) continue;
-          fs.cpSync(path.join(assets.src, entry.name), path.join(assetDest, entry.name));
+      for (const assets of OPENCODE_ASSETS[plugin] || []) {
+        if (!fs.existsSync(assets.src)) continue;
+        const assetDest = assets.dir(HOME);
+        try {
+          fs.mkdirSync(assetDest, { recursive: true });
+          for (const entry of fs.readdirSync(assets.src, { withFileTypes: true })) {
+            if (!entry.isFile()) continue;
+            fs.cpSync(path.join(assets.src, entry.name), path.join(assetDest, entry.name));
+          }
+          console.log(`  ✓ ${plugin}/${assets.desc}`);
+        } catch (err) {
+          console.log(`  ✗ ${plugin}/${assets.desc}: ${err.message}`);
+          failures++;
         }
-        console.log(`  ✓ ${plugin}/${assets.desc}`);
+      }
+      try {
+        installOpenCodeCommands(plugin, HOME);
       } catch (err) {
-        console.log(`  ✗ ${plugin}/${assets.desc}: ${err.message}`);
+        console.log(`  ✗ ${plugin}/skill slash commands: ${err.message}`);
         failures++;
       }
     }
   } else if (platform === "opencode") {
     for (const plugin of platformPlugins) {
-      const assets = OPENCODE_ASSETS[plugin];
-      if (assets && fs.existsSync(assets.src)) {
-        console.log(`  ✓ ${plugin}/${assets.desc}`);
+      for (const assets of OPENCODE_ASSETS[plugin] || []) {
+        if (fs.existsSync(assets.src)) {
+          console.log(`  ✓ ${plugin}/${assets.desc}`);
+        }
+      }
+      if (plugin === "matt-loop") {
+        console.log(`  ✓ ${plugin}/skill slash commands`);
       }
     }
   }
