@@ -1,6 +1,6 @@
 {
   "name": "matt-loop",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Codex packaging for matt-auto, PR babysitting, routed conflict resolution, and the vendored Matt Pocock skills.",
   "author": {
     "name": "weedmo",

@@ -42,6 +42,8 @@ From the user (ask if either is missing):
    - Still clean → merge it (`gh pr merge`) and continue.
    - No longer clean — an earlier PR you just landed opened a fresh clash — re-run this one PR's prep alone (rebase onto the new tip, resolve, checks, push, wait CI) before merging it. Expect this on queues with overlapping files; it isn't a sign step 2 did anything wrong, just that the ground moved.
 
+   **With the unlazy skill installed** (check `~/.claude/skills/unlazy`, `~/.codex/skills/unlazy`, or `~/.agents/skills/unlazy` for `scripts/gate-check.mjs`; skip when absent), write one ledger per PR at step 2 — `.unlazy/pr-queue/<n>.GATES.md`, same three gates as pr-babysit's merge-ready ledger (required checks pass, `mergeable == MERGEABLE`, no changes-requested) — approve it yourself (you authored the commands), and make `gate-check.mjs --reverify` printing `ALL MET` the precondition for each `gh pr merge`. Because `--reverify` re-executes against GitHub's *current* state, this mechanizes the re-check-before-land rule: step 2's stale prep can never justify a merge. An escalated material clash becomes `ABANDON: <id> <reason>` on that PR's ledger — it stays an explicit handoff in the final report, never a silently skipped PR.
+
 5. **Clean up** — remove the worktrees created in step 2.
 
 6. **Report** — landing order actually used, every conflict and its resolution, everything escalated and how it was answered, final CI state, and the target branch's new tip.
@@ -54,7 +56,7 @@ A conflict is material — stop, and put it to the real user with a recommended 
 
 - Resolving a material clash yourself because `$resolving-merge-conflicts` says never abort → that rule is about not giving up on a merge, not about skipping escalation. Both hold at once.
 - Merging in step 4 before step 3's confirm → the target branch is shared; that confirm is the only gate before a hard-to-reverse action.
-- Trusting step 2's prep in step 4 without rechecking against the current tip → the target moves every time a PR lands, so "clean five minutes ago" doesn't mean clean now.
+- Trusting step 2's prep in step 4 without rechecking against the current tip → the target moves every time a PR lands, so "clean five minutes ago" doesn't mean clean now. (With unlazy installed, `--reverify` before each merge is what makes this recheck real.)
 - Reordering the queue "for convenience" (e.g. easiest-first) → the order encodes a decision (dependency, priority) that isn't yours to make.
 - Fixing a CI check that was already red before your rebase touched the branch → out of scope; flag it, don't silently fix unrelated failures.
 - Running PR preps one at a time "to be safe" → the isolated worktrees exist precisely so this doesn't need to be serial. Serialize only step 4.
