@@ -1,6 +1,6 @@
 {
   "repo": "https://github.com/mattpocock/skills.git",
-  "commit": "2ab958093e83e0ec752e6c1c5932da465bf23e0c",
+  "commit": "6654f6b60cd9d5be8b54c6fafe44346dabeb3b76",
   "skills": [
     "ask-matt",
     "codebase-design",
@@ -12,9 +12,8 @@
     "grilling",
     "handoff",
     "implement",
+    "improve-codebase-architecture",
     "prototype",
-    "qa",
-    "request-refactor-plan",
     "research",
     "setup-matt-pocock-skills",
     "tdd",

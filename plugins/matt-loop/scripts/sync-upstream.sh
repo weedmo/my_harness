@@ -29,6 +29,7 @@ SKILLS=(
   grilling
   handoff
   implement
+  improve-codebase-architecture
   prototype
   qa
   request-refactor-plan
