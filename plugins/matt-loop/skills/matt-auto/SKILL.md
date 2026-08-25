@@ -36,6 +36,41 @@ The user settles the big frame in ordinary conversation *before* invoking this s
 
    **Per-ticket gates (when the unlazy skill is installed)** — check `~/.claude/skills/unlazy`, `~/.codex/skills/unlazy`, or `~/.agents/skills/unlazy` for `scripts/gate-check.mjs` once at loop start; skip this entirely when absent. Before dispatching a ticket, derive `.unlazy/matt-auto/<ticket>.GATES.md` from the ticket's acceptance criteria: one gate per independently required outcome, runnable (`CHECK:`/`EXPECT:`, typically the repo's own test/build commands) wherever a command can decide it, manual otherwise. Tell the subagent the ledger path defines "done" for its ticket. When the subagent returns, run `gate-check.mjs --reverify` on that ledger yourself — the subagent's own claim is not completion. Unmet gates go back to the same subagent route with the unmet ids (max 2 retries, then escalate to the user as a handoff). Mark the ticket complete only on `ALL MET`. This changes ticket *verification* only — the design stages (interview, spec, tickets, confirm) gain no new gates, and gates never replace escalation. Keep `.unlazy/` in the project's ignore rules.
 
+## Progress board
+
+Keep one pipeline board visible for the whole run so the user always sees what is happening, what the full range is, and where the run currently sits. It is the same plain markdown table on every platform (Claude Code, Codex, OpenCode) — no platform-specific UI, so the format never diverges.
+
+Print the board as ordinary assistant output (1) when the pipeline starts, (2) at every stage transition, (3) on every escalation, and (4) in step 9 whenever a ticket changes state:
+
+| # | Stage | Skill / route | Status |
+|---|---|---|---|
+| 1 | Precondition | setup-matt-pocock-skills | ✅ |
+| 2 | Routing | — | ✅ |
+| 3 | Delegate | matt-deep | ✅ |
+| 4 | Interview | grill-with-docs → delegate | 🔄 Q7: error-handling seam |
+| 5 | Size branch | — | ⏳ |
+| 6 | Spec | to-spec | ⏳ |
+| 7 | Tickets | to-tickets | ⏳ |
+| 8 | Confirm | human | ⏳ |
+| 9 | Implement loop | per-ticket routing | ⏳ |
+
+- Statuses: `✅` done · `🔄` in progress (append a short note of what exactly, e.g. the current interview question) · `⏳` pending · `⏭️` skipped, with why (`small path`, `--yolo`) · `⛔` waiting on an escalation answer.
+- Skill / route names the vendored skill driving the stage and, once known, the routed agent (e.g. `$implement → matt-default`).
+- Small path (step 5 fits one session): mark 6–9 `⏭️ small path` and the board ends at step 5.
+
+During step 9, add a ticket board under the pipeline board and update it as the frontier moves:
+
+| Ticket | Route | Gates | Status |
+|---|---|---|---|
+| Add auth seam (#12) | matt-default | 3/3 | ✅ |
+| Wire CLI flags (#13) | matt-fast | 1/3 | 🔄 retry 1/2 |
+| Docs pass (#14) | — | — | ⏳ blocked by #13 |
+
+- Gates is the unlazy ledger tally from the latest `--reverify` (`met/total`); `—` when unlazy is absent.
+- In `--yolo` mode, also append one stage-transition line per board update to the decision log so the file carries the same timeline; the board itself still prints to the terminal.
+
+The board is display, not an artifact: never write it to its own file, and never let it stand in for a stage's own output.
+
 ## Model routing (OpenCode)
 
 Use these installed subagent types when they are available. Classify from the actual task, not keyword matching, and use the lowest tier that is clearly sufficient:
@@ -91,3 +126,4 @@ Invoke as `/matt-auto --yolo` to run the whole pipeline unattended, start to fin
 - Marking a ticket complete while its unlazy ledger has unmet gates, or trusting the subagent's "done" instead of running `--reverify` → the ledger exists precisely because a confident done report is not evidence.
 - Writing specs or notes outside the tracker, `CONTEXT.md`/ADRs, the `--yolo` decision log, or `$interview-report`'s output → wrong artifact system.
 - Running several implementation workers in parallel → Matt's loop is one ticket per fresh context.
+- Letting the progress board go stale, inventing a per-platform format for it, or writing it to a file → one uniform markdown table, reprinted at every transition, display only.
