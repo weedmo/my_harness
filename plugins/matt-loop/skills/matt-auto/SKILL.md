@@ -15,7 +15,7 @@ The user settles the big frame in ordinary conversation *before* invoking this s
 - Invoke each stage's skill and follow it exactly. Do not reimplement, merge, or "improve" a stage.
 - Wherever a sub-skill puts a question to "the user" — interview questions, seam check, ticket-breakdown quiz — route it to the decision delegate, unless it is material (see Escalation).
 - Discoverable facts are still looked up in the environment, never asked. This is grilling's rule; only *decisions* go to the delegate.
-- Do not add gates or scores the vendored skills don't define. Artifacts are theirs — `CONTEXT.md`/ADRs, the spec on the tracker, and tickets — plus exactly two matt-auto reports on top: the `--yolo` decision log and the `$interview-report` HTML. Don't invent a third.
+- Do not add gates or scores the vendored skills don't define. Artifacts are theirs — `CONTEXT.md`/ADRs, the spec on the tracker, and tickets — plus exactly two matt-auto reports on top: the `--yolo` decision log and the `$interview-report` HTML. Don't invent a third. The single sanctioned exception is the implement loop's per-ticket verification ledger (step 9), which is working state under `.unlazy/`, not a report, and exists only when the unlazy skill is installed.
 
 ## Pipeline
 
@@ -33,6 +33,8 @@ The user settles the big frame in ordinary conversation *before* invoking this s
    - the ticket breakdown (title / blocked-by / what it delivers).
    On approval, publish the tickets per to-tickets. On change requests, rework from the affected stage with the delegate and re-confirm. Skip this step entirely in `--yolo` mode: publish the tickets per to-tickets as soon as step 7's breakdown is approved by the delegate, and write the confirm package to the decision log instead of presenting it.
 9. **Implement loop** — work the frontier: pick a ticket whose blockers are all done and dispatch it to a fresh-context subagent whose prompt is "read ticket <ref>, then use $implement to build it; report open decisions back instead of guessing". With OpenCode routing, classify the ticket using Model routing and dispatch the matching agent; otherwise use the platform's normal implementation subagent. One ticket at a time. Repeat until no tickets remain, then report: tickets completed, commits made, verification results, and everything the delegate decided or escalated along the way.
+
+   **Per-ticket gates (when the unlazy skill is installed)** — check `~/.claude/skills/unlazy`, `~/.codex/skills/unlazy`, or `~/.agents/skills/unlazy` for `scripts/gate-check.mjs` once at loop start; skip this entirely when absent. Before dispatching a ticket, derive `.unlazy/matt-auto/<ticket>.GATES.md` from the ticket's acceptance criteria: one gate per independently required outcome, runnable (`CHECK:`/`EXPECT:`, typically the repo's own test/build commands) wherever a command can decide it, manual otherwise. Tell the subagent the ledger path defines "done" for its ticket. When the subagent returns, run `gate-check.mjs --reverify` on that ledger yourself — the subagent's own claim is not completion. Unmet gates go back to the same subagent route with the unmet ids (max 2 retries, then escalate to the user as a handoff). Mark the ticket complete only on `ALL MET`. This changes ticket *verification* only — the design stages (interview, spec, tickets, confirm) gain no new gates, and gates never replace escalation. Keep `.unlazy/` in the project's ignore rules.
 
 ## Model routing (OpenCode)
 
@@ -85,6 +87,7 @@ Invoke as `/matt-auto --yolo` to run the whole pipeline unattended, start to fin
 - Treating `--yolo` as license to skip escalation too → it removes the effort question and the pre-publish confirm, nothing else. A material decision still stops the pipeline and goes to the real user.
 - Running `--yolo` without a decision log file, or letting it fall behind → it's the only place mid-pipeline decisions are visible when nothing is presented live.
 - Asking the user mid-pipeline about non-material decisions → that is the delegate's job now; the user opted out of those questions.
-- Scoring ambiguity percentages or inventing readiness gates → no Matt skill does this. Drop it.
+- Scoring ambiguity percentages or inventing readiness gates → no Matt skill does this. Drop it. (Step 9's per-ticket unlazy ledger is the one sanctioned exception, and it verifies implementation, never design readiness.)
+- Marking a ticket complete while its unlazy ledger has unmet gates, or trusting the subagent's "done" instead of running `--reverify` → the ledger exists precisely because a confident done report is not evidence.
 - Writing specs or notes outside the tracker, `CONTEXT.md`/ADRs, the `--yolo` decision log, or `$interview-report`'s output → wrong artifact system.
 - Running several implementation workers in parallel → Matt's loop is one ticket per fresh context.

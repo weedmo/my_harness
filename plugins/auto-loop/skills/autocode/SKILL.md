@@ -16,6 +16,8 @@ Autonomous experiment loop for code improvement with two execution modes:
 
 Both modes support bounded iterations, quality gates, self-learning from past failures,
 and an optional 23-stage research pipeline via [AutoResearchClaw](https://github.com/aiming-lab/AutoResearchClaw).
+When the [unlazy](https://github.com/Leonxlnx/unlazy) skill is installed, quality gates and
+termination are backed by runnable gates (measured evidence) instead of self-assessment — see 2D+.
 
 Inspired by [autoresearch](https://github.com/karpathy/autoresearch) — same pattern, generalized beyond ML training.
 
@@ -239,6 +241,7 @@ Create `$AUTOCODE_DIR/program.md` with the gathered information:
 - **quality_gate_stages**: [5, 9, 20]
 - **lessons_enabled**: true
 - **researchclaw_available**: {true|false}
+- **unlazy_gates**: {true|false, set in 2D+}
 
 ## Plateau Detection
 
@@ -257,6 +260,31 @@ Also initialize:
 - `$AUTOCODE_DIR/analysis/` directory
 - `$AUTOCODE_DIR/lessons/` directory
 - `$AUTOCODE_DIR/checkpoint.json` with initial state
+
+#### 2D+: Runnable Completion Gates (unlazy)
+
+Replace self-assessed completion with runnable gates when the [unlazy](https://github.com/Leonxlnx/unlazy) skill is installed. Detect it:
+
+```bash
+UNLAZY_DIR=""
+for d in "$HOME/.claude/skills/unlazy" "$HOME/.codex/skills/unlazy" "$HOME/.agents/skills/unlazy"; do
+  [ -f "$d/scripts/gate-check.mjs" ] && UNLAZY_DIR="$d" && break
+done
+```
+
+If not found, ask the user once whether to install it (`npx skills add Leonxlnx/unlazy -g`). If they decline, set `unlazy_gates: false` and keep the prompt-level quality gates below — nothing else changes.
+
+If found, generate `$AUTOCODE_DIR/GATES.md` alongside program.md:
+
+1. Write small verification scripts under `$AUTOCODE_DIR/verify/` (portable Node, no third-party deps). Each script re-measures independently, asserts, and prints a success-only marker:
+   - `verify-guard.mjs` — runs the guard command; prints `autocode gate passed: guard` only on exit 0.
+   - `verify-metric.mjs` — runs the metric command on the current best state, checks the value is finite, and compares it against `best_metric` in checkpoint.json (tolerance from program.md); prints `autocode gate passed: metric`. This re-measures the claim — it never trusts the recorded number.
+   - `verify-target.mjs` — only when `performance_target` is set; re-measures and asserts the target is reached in the configured direction; prints `autocode gate passed: target`.
+2. Write one gate per script in `GATES.md` using unlazy's leaf template (`CHECK:` / `EXPECT:` / `EVIDENCE: pending`), `EXPECT:` being the success-only marker.
+3. Thresholds and commands live in program.md/checkpoint.json, which the scripts read — iterations never rewrite `CHECK:` lines, so the one-time approval below keeps the loop autonomous.
+4. Show the user the generated `GATES.md` and every `verify/*.mjs`, then — with their explicit consent — run `node "$UNLAZY_DIR/scripts/gate-check.mjs" --approve $AUTOCODE_DIR/GATES.md` once. Follow unlazy's own security rules: treat `CHECK:` as code the user must have read.
+
+Do not install unlazy's Stop hook automatically. Offer it once when starting an unattended bounded run; install only on explicit consent, and uninstall (`--uninstall`) when the run completes.
 
 Add `.autocode/` to `.gitignore` if not already there (ask user first).
 
@@ -547,11 +575,12 @@ python -c "from researchclaw.experiment.validator import validate_code; ..."
 At configurable stages (default: 5, 9, 20):
 
 1. **Automated assessment**:
-   - If researchclaw installed: `python -c "from researchclaw.experiment.validator import validate_code; ..."`
-   - If not installed: Claude Code performs inline assessment — guard passes, metric direction correct, no regressions in kept changes.
+   - If `unlazy_gates: true`: run `node "$UNLAZY_DIR/scripts/gate-check.mjs" --reverify $AUTOCODE_DIR/GATES.md`. The gate passes only on `ALL MET` — measured evidence, not the loop's own claim. A failed gate is a real signal: feed it into 3F as a stall/degradation input instead of arguing with it.
+   - Else if researchclaw installed: `python -c "from researchclaw.experiment.validator import validate_code; ..."`
+   - Otherwise: Claude Code performs inline assessment — guard passes, metric direction correct, no regressions in kept changes.
 
 2. **User approval** (via `AskUserQuestion`):
-   - Show current state: iteration, metric value, improvement %, kept/discarded counts.
+   - Show current state: iteration, metric value, improvement %, kept/discarded counts (plus the gate report when `unlazy_gates: true`).
    - Options: [Approve and continue] [Adjust strategy] [Stop here]
    - If `auto_approve` flag is set in program.md, skip user prompt and auto-approve if guards pass.
 
@@ -631,6 +660,8 @@ If an experiment exceeds the time budget: kill the process, treat as `crash`, re
 
 - **Bounded** (`max_iterations > 0`): Stop after N iterations. Generate final summary.
 - **Unlimited** (`max_iterations == 0`): Run until manually interrupted. Never pause to ask "should I continue?".
+
+When `unlazy_gates: true`, a final summary may only be composed after `--reverify` reports `ALL MET`. If a gate cannot be met, do not delete or soften it — record `ABANDON: <id> <reason>` in the ledger and end the run as an explicit handoff, reporting the abandoned gate ids in place of a success claim. Include the measured gate report (met/unmet/abandoned counts) in the summary.
 
 **Final summary** (generated at termination):
 ```
@@ -774,6 +805,8 @@ After each outer loop cycle:
 - Otherwise → Re-enter Inner Loop (3P-C) with new/updated architecture
 
 #### 3P-F: Termination and Summary
+
+When `unlazy_gates: true`, apply the same rule as 3M before terminating: run `--reverify` on `$AUTOCODE_DIR/GATES.md`, compose the summary only on `ALL MET`, and otherwise end as an explicit `ABANDON` handoff with the gate report. In particular, `reason="target_reached"` must be backed by the target gate's measured evidence, never by the Evaluator's judgment alone.
 
 Update state: `active=false`, `inner_loop.phase="terminated"`
 

@@ -13,6 +13,8 @@ quality gates, PIVOT/REFINE decision logic, literature search, and self-learning
 
 Built on [AutoResearchClaw](https://github.com/aiming-lab/AutoResearchClaw) when installed;
 falls back to direct Claude Code execution with ML domain knowledge otherwise.
+When the [unlazy](https://github.com/Leonxlnx/unlazy) skill is installed, quality gates and
+termination are backed by runnable gates (measured evidence) instead of self-assessment — see 2E+.
 
 Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) — specialized for ML
 research with deep-interview initialization and adaptive experiment strategy.
@@ -259,6 +261,7 @@ After interview completes, present 23-stage pipeline via `AskUserQuestion` with 
 - **lessons_enabled**: true
 - **auto_approve_gates**: false
 - **experiment_mode**: sandbox
+- **unlazy_gates**: {true|false, set in 2E+}
 ```
 
 Also initialize:
@@ -268,6 +271,32 @@ Also initialize:
 
 Add `.auto_research/` to `.gitignore` if not already there.
 Delete `$RESEARCH_DIR/interview_state.json` after successful save.
+
+#### Phase 2E+: Runnable Completion Gates (unlazy)
+
+Replace self-assessed completion with runnable gates when the [unlazy](https://github.com/Leonxlnx/unlazy) skill is installed. Detect it:
+
+```bash
+UNLAZY_DIR=""
+for d in "$HOME/.claude/skills/unlazy" "$HOME/.codex/skills/unlazy" "$HOME/.agents/skills/unlazy"; do
+  [ -f "$d/scripts/gate-check.mjs" ] && UNLAZY_DIR="$d" && break
+done
+```
+
+If not found, ask the user once whether to install it (`npx skills add Leonxlnx/unlazy -g`). If they decline, set `unlazy_gates: false` and keep the prompt-level quality gates — nothing else changes.
+
+If found, generate `$RESEARCH_DIR/GATES.md` from the Evaluation Protocol:
+
+1. Write verification scripts under `$RESEARCH_DIR/verify/` (portable Node, no third-party deps). Each re-measures independently and prints a success-only marker:
+   - `verify-guard.mjs` — runs the guard command; prints `auto_research gate passed: guard` on exit 0.
+   - `verify-metric.mjs` — runs the metric command on the best commit's state, checks the value is finite and matches `best_metric` in checkpoint.json within tolerance; prints `auto_research gate passed: metric`. Re-measure the claim — never trust the recorded number.
+   - `verify-resources.mjs` — only when a VRAM/resource policy is set; runs the resource command and asserts the policy; prints `auto_research gate passed: resources`.
+   - `verify-target.mjs` — only when a success threshold is set; re-measures and asserts it in the configured direction; prints `auto_research gate passed: target`.
+2. Write one gate per script in `GATES.md` (unlazy leaf format: `CHECK:` / `EXPECT:` / `EVIDENCE: pending`).
+3. Commands and thresholds live in research_program.md/checkpoint.json, which the scripts read — iterations never rewrite `CHECK:` lines, so a single approval keeps the loop autonomous.
+4. Show the user `GATES.md` and every `verify/*.mjs`, then — with their explicit consent — run `node "$UNLAZY_DIR/scripts/gate-check.mjs" --approve $RESEARCH_DIR/GATES.md` once. Follow unlazy's security rules: `CHECK:` is code the user must have read.
+
+Do not install unlazy's Stop hook automatically; offer it once for unattended bounded runs and remove it (`--uninstall`) when the run completes.
 
 Present via `AskUserQuestion`: [Approve and save] [Edit and regenerate] [Restart interview]
 
@@ -390,9 +419,11 @@ If researchclaw available, use `researchclaw.pipeline.stage_impls._analysis` for
 
 At stages 5, 9, 20:
 
-1. **Automated assessment**: researchclaw validator (if installed) or Claude Code inline check.
+1. **Automated assessment**:
+   - If `unlazy_gates: true`: run `node "$UNLAZY_DIR/scripts/gate-check.mjs" --reverify $RESEARCH_DIR/GATES.md`. The gate passes only on `ALL MET` — measured evidence, not the loop's own claim. A failed gate feeds 3F as a stall/degradation signal; do not argue with it.
+   - Else: researchclaw validator (if installed) or Claude Code inline check.
 2. **User approval** via `AskUserQuestion` (unless `auto_approve_gates: true`):
-   - Show: iteration, metric, improvement %, category breakdown.
+   - Show: iteration, metric, improvement %, category breakdown (plus the gate report when `unlazy_gates: true`).
    - Options: [Approve] [Adjust strategy] [Stop]
 
 #### 3H: Self-Learning (MetaClaw-style)
@@ -435,6 +466,8 @@ After each stage, write `checkpoint.json`:
 
 - **Bounded** (`max_iterations > 0`): Stop after N iterations. Generate final summary.
 - **Unlimited** (`max_iterations == 0`): Run until manually interrupted.
+
+When `unlazy_gates: true`, compose the final summary only after `--reverify` reports `ALL MET`. If a gate cannot be met, do not delete or soften it — record `ABANDON: <id> <reason>` in the ledger and end the run as an explicit handoff, reporting the abandoned gate ids instead of a success claim. Include the measured gate report (met/unmet/abandoned) in the summary.
 
 **Final summary**:
 ```
