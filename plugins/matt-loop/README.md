@@ -6,7 +6,7 @@ This directory is the Codex plugin package for the **matt loop**.
 
 - `.codex-plugin/plugin.json` for Codex plugin metadata
 - `.claude-plugin/plugin.json` so the package is also addressable from the Claude marketplace (not installed by default)
-- `skills/matt-auto` — conductor that drives Matt Pocock's main flow end to end (grilling interview → spec → tracer-bullet tickets → per-ticket implementation); a decision delegate answers implementation-level questions, material decisions escalate to the human, and the human confirms once before tickets publish
+- `skills/matt-auto` — conductor that drives Matt Pocock's main flow end to end (grilling interview → spec → tracer-bullet tickets → per-ticket implementation); a decision delegate answers implementation-level questions, material decisions escalate to the human, and the human confirms once before tickets publish; with `--dev` / `--main` / `--pr <base>` it also opens a PR against that base and shepherds it to merge-ready (pr-babysit, conflict resolution, push)
 - `skills/pr-babysit` — shepherds one GitHub PR through review and CI without merging it
 - `skills/resolving-merge-conflicts` — routed fork of the upstream conflict-resolution skill
 - `opencode/agents/` — task-tier agents installed only for OpenCode; authored skills route fast, ordinary, deep, large-context, and explicitly free-only work to the configured models, with chunked OpenAI fallback when Gemini is unavailable

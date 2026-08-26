@@ -113,7 +113,7 @@ They are different axes, not synonyms.
 The matt-loop package installs on Codex, OpenCode, Claude Code, and Gemini CLI.
 OpenCode additionally installs task-tier routing agents:
 
-- **matt-auto** — conducts Matt Pocock's main flow (interview → spec → tickets → implementation) with human-in-the-loop gates
+- **matt-auto** — conducts Matt Pocock's main flow (interview → spec → tickets → implementation → optional PR via `--dev`/`--main`) with human-in-the-loop gates
 - **pr-babysit** — shepherds one open PR through review and CI without merging it
 - **resolving-merge-conflicts** — resolves an active merge/rebase; direct OpenCode use routes to a deep model
 - **graphify** (`graphify install --platform codex`)
