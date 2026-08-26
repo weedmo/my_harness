@@ -1,6 +1,6 @@
 ---
 name: pr-babysit
-description: Use when the user wants you to babysit, watch, monitor, or shepherd one open GitHub PR until it is merge-ready by handling its checks, review feedback, and PR-caused failures. Does not merge unless explicitly requested. On OpenCode, direct invocation automatically routes work by complexity.
+description: Use when the user wants you to babysit, watch, monitor, or shepherd one open GitHub PR until it is merge-ready by handling its checks, review feedback, and PR-caused failures. Does not merge unless explicitly requested. On OpenCode and Claude Code, direct invocation automatically routes work by complexity (model and reasoning effort).
 ---
 
 # PR Babysit
@@ -30,9 +30,9 @@ When the [unlazy](https://github.com/Leonxlnx/unlazy) skill is installed (check 
 
 You authored these commands, so approve the ledger yourself (`gate-check.mjs --approve`) and run it between cycles. Wire gate failures to the existing machinery: G1 red → the fix cycle (step 5), G2 unmergeable → dispatch `$resolving-merge-conflicts` in the isolated worktree, G3 changes-requested → address the review feedback. A stop condition that is not merge-readiness (external blocker, material decision, repeated failure) becomes `ABANDON: <id> <reason>` — the run ends as an honest handoff, never as a quiet success. Report merge-ready only after `--reverify` prints `ALL MET`; unresolved-but-nonblocking review threads still go in the report as before.
 
-## OpenCode standalone routing
+## Standalone routing (OpenCode, Claude Code)
 
-When invoked directly and the OpenCode `matt-*` subagent types are available, delegate the whole coordinator workflow to `matt-default` before inspecting or modifying the PR. In free-only mode use `matt-free`. Include the user request, repository path, PR reference, and: `ROUTED_EXECUTION=1; use $pr-babysit and shepherd this PR to merge-ready.` Wait for the routed coordinator and do not duplicate its work.
+When invoked directly and the `matt-*` subagent types are available (OpenCode, or the `matt-loop:matt-*` agents on Claude Code — each fixes its own model and reasoning effort, so never add a `model` override), delegate the whole coordinator workflow to `matt-default` before inspecting or modifying the PR. In free-only mode use `matt-free`. Include the user request, repository path, PR reference, and: `ROUTED_EXECUTION=1; use $pr-babysit and shepherd this PR to merge-ready.` Wait for the routed coordinator and do not duplicate its work.
 
 If `ROUTED_EXECUTION=1` is already present, execute the workflow and route fresh-context subtasks as follows:
 
@@ -41,7 +41,7 @@ If `ROUTED_EXECUTION=1` is already present, execute the workflow and route fresh
 | Read-only status/check inspection or a mechanical fix | `matt-fast` |
 | Normal CI diagnosis, review response, or focused implementation | `matt-default` |
 | Difficult CI failure, semantic conflict, architecture-sensitive review | `matt-deep` |
-| Very large logs or repository-wide evidence gathering | `matt-large-context`, then hand the focused fix to default or deep |
+| Very large logs or repository-wide evidence gathering | `matt-large-context` (OpenCode) or chunked `matt-max` (Claude Code), then hand the focused fix to default or deep |
 
 Default to `matt-default` when uncertain. Escalate fast → default → deep only when the lower tier reports a concrete scope or reasoning limit. Include `ROUTED_EXECUTION=1` in every routed child prompt, especially when invoking `$resolving-merge-conflicts`, so child skills execute instead of routing recursively. In free-only mode use `matt-free-fast` for fast work and `matt-free` for everything else; if either free agent is unavailable, stop and report the blocker rather than falling back to a potentially paid model. In normal routing, unavailable named agents may fall back to the platform's normal agent if the fallback is reported.
 

@@ -111,11 +111,11 @@ They are different axes, not synonyms.
 ## 5. Cross-agent loop skills
 
 The matt-loop package installs on Codex, OpenCode, Claude Code, and Gemini CLI.
-OpenCode additionally installs task-tier routing agents:
+OpenCode and Claude Code additionally get task-tier routing agents (`matt-fast` / `matt-default` / `matt-deep`, plus `matt-max` fable/xhigh on Claude Code), each fixing model and reasoning effort:
 
 - **matt-auto** — conducts Matt Pocock's main flow (interview → spec → tickets → implementation → optional PR via `--dev`/`--main`) with human-in-the-loop gates
 - **pr-babysit** — shepherds one open PR through review and CI without merging it
-- **resolving-merge-conflicts** — resolves an active merge/rebase; direct OpenCode use routes to a deep model
+- **resolving-merge-conflicts** — resolves an active merge/rebase; direct OpenCode / Claude Code use routes to a deep model
 - **graphify** (`graphify install --platform codex`)
 
 These live in `plugins/matt-loop/skills/`. Native plugin and npx installation

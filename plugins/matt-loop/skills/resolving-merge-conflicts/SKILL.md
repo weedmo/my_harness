@@ -1,11 +1,11 @@
 ---
 name: resolving-merge-conflicts
-description: "Use when you need to resolve an in-progress git merge/rebase conflict. On OpenCode, direct invocation automatically routes semantic conflict resolution to a deep model."
+description: "Use when you need to resolve an in-progress git merge/rebase conflict. On OpenCode and Claude Code, direct invocation automatically routes semantic conflict resolution to a deep model."
 ---
 
-## OpenCode standalone routing
+## Standalone routing (OpenCode, Claude Code)
 
-When this skill is invoked directly and the OpenCode `matt-*` subagent types are available, delegate the entire workflow before inspecting or editing conflicts:
+When this skill is invoked directly and the `matt-*` subagent types are available (OpenCode, or the `matt-loop:matt-*` agents on Claude Code — each fixes its own model and reasoning effort, so never add a `model` override), delegate the entire workflow before inspecting or editing conflicts:
 
 - Use `matt-deep` by default.
 - Use `matt-free` instead when the user explicitly requested free-only models. If that agent is unavailable, stop and report the blocker; never fall back to a potentially paid model.

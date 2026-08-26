@@ -9,11 +9,11 @@ This directory is the Codex plugin package for the **matt loop**.
 - `skills/matt-auto` — conductor that drives Matt Pocock's main flow end to end (grilling interview → spec → tracer-bullet tickets → per-ticket implementation); a decision delegate answers implementation-level questions, material decisions escalate to the human, and the human confirms once before tickets publish; with `--dev` / `--main` / `--pr <base>` it also opens a PR against that base and shepherds it to merge-ready (pr-babysit, conflict resolution, push)
 - `skills/pr-babysit` — shepherds one GitHub PR through review and CI without merging it
 - `skills/resolving-merge-conflicts` — routed fork of the upstream conflict-resolution skill
+- `agents/` — task-tier routing agents for Claude Code (`matt-loop:matt-fast` haiku/low, `matt-default` sonnet/medium, `matt-deep` opus/high, `matt-max` fable/xhigh); each fixes model and reasoning effort, so matt-auto, pr-babysit, and resolving-merge-conflicts route by task without an effort picker
 - `opencode/agents/` — task-tier agents installed only for OpenCode; authored skills route fast, ordinary, deep, large-context, and explicitly free-only work to the configured models, with chunked OpenAI fallback when Gemini is unavailable
 - Remaining skill directories are vendored from [mattpocock/skills](https://github.com/mattpocock/skills) and remain directly invocable for partial work
 - `mattpocock.lock.json` — pinned upstream commit and the list of vendored skills
 - `scripts/sync-upstream.sh` — re-vendors the pinned skill list from upstream and refreshes the lock file
-- `agents/` for packaged agent guidance
 - `AGENTS.md` with Codex-specific notes
 
 ## Upstream sync
