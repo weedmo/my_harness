@@ -26,7 +26,7 @@
       "name": "matt-loop",
       "source": "./plugins/matt-loop",
       "description": "Matt loop - matt-auto, PR babysitting, and conflict resolution with automatic OpenCode model routing, plus vendored Matt Pocock skills",
-      "version": "1.9.0",
+      "version": "1.9.1",
       "author": {
         "name": "weedmo"
       },
