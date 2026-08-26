@@ -47,6 +47,10 @@ Default to `matt-default` when uncertain. Escalate fast → default → deep onl
 
 If `matt-large-context` fails because the Google provider, Gemini credentials, model, or quota is unavailable, retry with `matt-deep`; Gemini CLI is not required. Split oversized CI logs or repository evidence into coherent chunks, preserve check names and source links in each chunk summary, and synthesize them with a final `matt-deep` call. In free-only mode use `matt-free` for this chunked fallback instead.
 
+## Running as an Orca worker
+
+When the prompt names an Orca task and dispatch id (matt-auto `--orca`, step 10), execute the workflow as usual with `ROUTED_EXECUTION=1`, and add the Orca lifecycle: ask blocking questions with `orca orchestration ask`, send material decisions as `escalation` messages, and finish exactly once with `orca orchestration send --type worker_done --task-id <task_id> --dispatch-id <dispatch_id> --outcome succeeded|failed` whose body carries the merge-ready ledger tally and the stop condition. A stop that is not merge-ready is `--outcome failed` with the unmet ids; never report it only in prose. The coordinator re-verifies its own ship ledger after your report.
+
 ## Workflow
 
 1. **Identify the PR.** Use the supplied number/URL, or infer the PR for the current branch with `gh pr view`. If inference is ambiguous, ask for the PR reference.

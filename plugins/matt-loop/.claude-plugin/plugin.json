@@ -1,6 +1,6 @@
 {
   "name": "matt-loop",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Matt loop - matt-auto, PR babysitting, and conflict resolution with automatic model/effort routing on OpenCode and Claude Code, plus the vendored Matt Pocock skills it conducts.",
   "author": {
     "name": "weedmo"
