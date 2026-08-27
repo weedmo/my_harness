@@ -1,7 +1,7 @@
 {
   "name": "matt-loop",
-  "version": "1.9.1",
-  "description": "Codex packaging for matt-auto, PR babysitting, routed conflict resolution, and the vendored Matt Pocock skills.",
+  "version": "1.10.0",
+  "description": "Codex packaging for matt-auto, PR babysitting, routed conflict resolution, automatic Codex model/effort routing, and the vendored Matt Pocock skills.",
   "author": {
     "name": "weedmo",
     "url": "https://github.com/weedmo"

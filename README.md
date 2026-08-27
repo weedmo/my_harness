@@ -122,8 +122,8 @@ workflow guidance.
 
 | Skill | Description |
 |-------|-------------|
-| `matt-auto` | Conductor for Matt Pocock's main flow (interview → spec → tickets → implementation) with human-in-the-loop gates and automatic model/effort routing on OpenCode and Claude Code; `--dev` / `--main` / `--pr <base>` also opens a PR and shepherds it to merge-ready via pr-babysit; `--orca` runs independent tickets in parallel as Orca-orchestrated workers in their own worktrees |
-| `pr-babysit` | Shepherd one open GitHub PR through CI and review with automatic model/effort routing on OpenCode and Claude Code |
+| `matt-auto` | Conductor for Matt Pocock's main flow (interview → spec → tickets → implementation) with human-in-the-loop gates and automatic model/effort routing on Codex, OpenCode, and Claude Code; `--dev` / `--main` / `--pr <base>` also opens a PR and shepherds it to merge-ready via pr-babysit; `--orca` runs independent tickets in parallel as Orca-orchestrated workers in their own worktrees |
+| `pr-babysit` | Shepherd one open GitHub PR through CI and review with automatic model/effort routing on Codex, OpenCode, and Claude Code |
 | `resolving-merge-conflicts` | Resolve an active merge/rebase conflict; direct OpenCode / Claude Code use routes to a deep model |
 | vendored Matt Pocock skills | The remaining upstream skills matt-auto conducts: `grilling`, `grill-me`, `grill-with-docs`, `ask-matt`, `to-spec`, `to-tickets`, `handoff`, `tdd`, `implement`, `diagnosing-bugs`, `codebase-design`, `domain-modeling`, `research`, `prototype`, `code-review`, `qa`, `request-refactor-plan`, `setup-matt-pocock-skills` |
 

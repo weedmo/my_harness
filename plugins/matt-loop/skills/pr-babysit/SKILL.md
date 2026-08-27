@@ -1,6 +1,6 @@
 ---
 name: pr-babysit
-description: Use when the user wants you to babysit, watch, monitor, or shepherd one open GitHub PR until it is merge-ready by handling its checks, review feedback, and PR-caused failures. Does not merge unless explicitly requested. On OpenCode and Claude Code, direct invocation automatically routes work by complexity (model and reasoning effort).
+description: Use when the user wants you to babysit, watch, monitor, or shepherd one open GitHub PR until it is merge-ready by handling its checks, review feedback, and PR-caused failures. Does not merge unless explicitly requested. On Codex, OpenCode, and Claude Code, direct invocation automatically routes work by complexity (model and reasoning effort).
 ---
 
 # PR Babysit
@@ -30,9 +30,9 @@ When the [unlazy](https://github.com/Leonxlnx/unlazy) skill is installed (check 
 
 You authored these commands, so approve the ledger yourself (`gate-check.mjs --approve`) and run it between cycles. Wire gate failures to the existing machinery: G1 red → the fix cycle (step 5), G2 unmergeable → dispatch `$resolving-merge-conflicts` in the isolated worktree, G3 changes-requested → address the review feedback. A stop condition that is not merge-readiness (external blocker, material decision, repeated failure) becomes `ABANDON: <id> <reason>` — the run ends as an honest handoff, never as a quiet success. Report merge-ready only after `--reverify` prints `ALL MET`; unresolved-but-nonblocking review threads still go in the report as before.
 
-## Standalone routing (OpenCode, Claude Code)
+## Standalone routing (Codex, OpenCode, Claude Code)
 
-When invoked directly and the `matt-*` subagent types are available (OpenCode, or the `matt-loop:matt-*` agents on Claude Code — each fixes its own model and reasoning effort, so never add a `model` override), delegate the whole coordinator workflow to `matt-default` before inspecting or modifying the PR. In free-only mode use `matt-free`. Include the user request, repository path, PR reference, and: `ROUTED_EXECUTION=1; use $pr-babysit and shepherd this PR to merge-ready.` Wait for the routed coordinator and do not duplicate its work.
+When invoked directly, delegate the whole coordinator workflow to the Default route before inspecting or modifying the PR. On Codex, use `spawn_agent` with `model: "gpt-5.6-terra"`, `reasoning_effort: "medium"`, and `fork_turns: "none"`. On OpenCode use `matt-default`; on Claude Code use `matt-loop:matt-default` without an additional model override. In free-only OpenCode mode use `matt-free`. Include the user request, repository path, PR reference, and: `ROUTED_EXECUTION=1; use $pr-babysit and shepherd this PR to merge-ready.` Wait for the routed coordinator and do not duplicate its work.
 
 If `ROUTED_EXECUTION=1` is already present, execute the workflow and route fresh-context subtasks as follows:
 
@@ -41,9 +41,9 @@ If `ROUTED_EXECUTION=1` is already present, execute the workflow and route fresh
 | Read-only status/check inspection or a mechanical fix | `matt-fast` |
 | Normal CI diagnosis, review response, or focused implementation | `matt-default` |
 | Difficult CI failure, semantic conflict, architecture-sensitive review | `matt-deep` |
-| Very large logs or repository-wide evidence gathering | `matt-large-context` (OpenCode) or chunked `matt-max` (Claude Code), then hand the focused fix to default or deep |
+| Very large logs or repository-wide evidence gathering | `matt-large-context` (OpenCode) or chunked `matt-max` (Codex/Claude Code), then hand the focused fix to default or deep |
 
-Default to `matt-default` when uncertain. Escalate fast → default → deep only when the lower tier reports a concrete scope or reasoning limit. Include `ROUTED_EXECUTION=1` in every routed child prompt, especially when invoking `$resolving-merge-conflicts`, so child skills execute instead of routing recursively. In free-only mode use `matt-free-fast` for fast work and `matt-free` for everything else; if either free agent is unavailable, stop and report the blocker rather than falling back to a potentially paid model. In normal routing, unavailable named agents may fall back to the platform's normal agent if the fallback is reported.
+Default to `matt-default` when uncertain. On Codex, map Fast → `gpt-5.6-luna/low`, Default → `gpt-5.6-terra/medium`, Deep → `gpt-5.6-sol/high`, and Max → `gpt-5.6-sol/max`; use `fork_turns: "none"` and put all required PR/repository context in each child prompt. Escalate fast → default → deep only when the lower tier reports a concrete scope or reasoning limit; Max is only a retry after Deep reports that the task exceeds it. Include `ROUTED_EXECUTION=1` in every routed child prompt, especially when invoking `$resolving-merge-conflicts`, so child skills execute instead of routing recursively. In free-only mode use `matt-free-fast` for fast work and `matt-free` for everything else; if either free agent is unavailable, stop and report the blocker rather than falling back to a potentially paid model. In normal routing, unavailable named agents or Codex model overrides may fall back to the platform's normal agent if the fallback is reported.
 
 If `matt-large-context` fails because the Google provider, Gemini credentials, model, or quota is unavailable, retry with `matt-deep`; Gemini CLI is not required. Split oversized CI logs or repository evidence into coherent chunks, preserve check names and source links in each chunk summary, and synthesize them with a final `matt-deep` call. In free-only mode use `matt-free` for this chunked fallback instead.
 
