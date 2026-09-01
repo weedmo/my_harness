@@ -48,8 +48,19 @@ Load the `artifact-diagramming` skill first, then build one Artifact page contai
   two alternatives side by side (design-it-twice) with a short tradeoff table and
   a recommendation; otherwise one proposal is fine.
 - **Decision list** — each open question as a row: question / options / your pick / why.
-Use mermaid or inline SVG per the diagramming skill's guidance. Publish and hand the
-user the link.
+Use mermaid or inline SVG per the diagramming skill's guidance.
+
+Theme check (MANDATORY before every publish): the page must be legible in both
+light and dark viewer themes. Define the complete palette as CSS tokens on bare
+`:root` (light values), redefine only the tokens under
+`@media (prefers-color-scheme: dark)` guarded as `:root:not([data-theme="light"])`,
+and again under `:root[data-theme="dark"]`; give `body` an explicit token
+background. Never let any color's only definition live inside one theme block,
+and never hardcode text/stroke colors in diagrams (SVG included) that assume one
+background — that is the dark-background-with-black-text bug. Scan the stylesheet
+for this before publishing.
+
+Publish and hand the user the link.
 
 ### 4. Understanding loop
 The user reads the diagram and reacts. Each round:
