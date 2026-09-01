@@ -60,19 +60,42 @@ and never hardcode text/stroke colors in diagrams (SVG included) that assume one
 background — that is the dark-background-with-black-text bug. Scan the stylesheet
 for this before publishing.
 
-Publish and hand the user the link.
+Make the page itself editable (load the `artifact-capabilities` skill first —
+it is the authority; declare only what its roster serves):
+- Declare `capabilities: {artifact: {}}` on the first publish.
+- Decision-list cells and description blocks are editable in place: keep the
+  design state as data embedded in the page, render from it, and on an explicit
+  save action (a visible "저장" button, not on every keystroke) regenerate the
+  full document from that state and call `artifact.publish(html)`. Never
+  serialize the live DOM. `await claude.use("artifact")` can resolve `null` —
+  then hide the editing affordances and the page stays a plain view.
+
+Publish and hand the user the link, telling them the three ways to respond:
+chat, selecting any part of the page and commenting, or editing the text
+directly and pressing 저장.
 
 ### 4. Understanding loop
-The user reads the diagram and reacts. Each round:
-- Apply their feedback to the same Artifact (same file path → same URL).
-- Answer questions by pointing at the diagram, updating it if the answer revealed
-  a gap in it.
-- Keep decision-list rows updated as decisions get made.
+Feedback arrives three ways; treat all of them as design input:
+- **Chat** — as before.
+- **Artifact comments** — the user selects part of the page and comments.
+  Threads sent to Claude wake this session (the publish arms auto-replies);
+  plain comments don't, so also check `Artifact(action: "comments")` when the
+  user says they left notes. Apply the feedback to the diagram, reply briefly
+  with what changed, and resolve the threads you handled.
+- **In-page edits** — the user's 저장 publishes a new version. A republish
+  notification means the local file is behind: re-read the live version
+  (`action: "read"`), merge its state into your file, and build every later
+  update on top of it. A publish conflict is the same signal — merge onto the
+  handed-back version, never force.
+Each round: apply feedback to the same Artifact (same file path → same URL),
+answer questions by pointing at the diagram, keep decision-list rows updated.
 Repeat until the user confirms the design is understood and settled. If they go
 quiet mid-loop, the design is NOT confirmed — wait or ask, don't advance.
 
 ### 5. Spec
-Once confirmed, write the spec as a local markdown file (Korean prose,
+Before writing, re-read the live artifact (`action: "read"`) — the user may have
+edited decisions in place since your last publish; the live version is the
+source of truth. Then write the spec as a local markdown file (Korean prose,
 English code identifiers), default
 `docs/design/<topic>.md` in the repo (create the directory if needed; if the repo
 has an existing spec/docs convention, follow it instead). Contents:
