@@ -13,6 +13,10 @@ Hard rules:
 - The user's explicit confirmation ("확정", "이해됐어", "이걸로 가자") is the only
   thing that moves the flow from design to spec. Do not self-declare the design done.
 - One Artifact URL for the whole session — republish the same file, never fork a new one.
+- All deliverables are written in Korean: the Artifact page (headings, labels,
+  descriptions, decision tables) and the spec document. Identifiers that refer to
+  real code — module/function/file names, diagram node names, commands — stay in
+  English as they appear in the codebase.
 
 ## Flow
 
@@ -57,7 +61,8 @@ Repeat until the user confirms the design is understood and settled. If they go
 quiet mid-loop, the design is NOT confirmed — wait or ask, don't advance.
 
 ### 5. Spec
-Once confirmed, write the spec as a local markdown file (English), default
+Once confirmed, write the spec as a local markdown file (Korean prose,
+English code identifiers), default
 `docs/design/<topic>.md` in the repo (create the directory if needed; if the repo
 has an existing spec/docs convention, follow it instead). Contents:
 - Goal and non-goals
