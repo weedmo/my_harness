@@ -18,7 +18,15 @@
       tickets?: [ { id, title, status, blockedBy, blocker: { reason, detail },
                     gates: { met, total }, route, estimateMin, actualMin,
                     startedAt, note,
-                    worker: { model, effort, dispatchId, worktree } } ],
+                    worker: { model, effort, dispatchId, worktree },
+                    acceptance: [text], steps: [ { name, status, note } ],
+                    gateList: [ { id, text, status, check, expect, actual } ],
+                    files: [ { path, added, removed } ],
+                    commits: [ { sha, subject } ] } ],
+      review?: { status, skill, note,
+                 passes: [ { id, name, status, findings, note } ] },
+      pr?: { number, url, base, branch, status, cycles, note,
+             checks: [ { name, status, detail } ] },
       outcome?: { baseRef, headRef, branch, note,
                   files: [ { path, status, kind, added, removed, note } ] } }
   `outcome` is the final run's shipped-changes panel: omit it entirely on the
@@ -379,7 +387,7 @@
 
   /* ── execution flow: waves left to right, tickets as nodes ──── */
   .flow-wrap { overflow-x: auto; padding-bottom: 4px; margin-top: 14px; }
-  .flow { display: flex; align-items: stretch; gap: 0; min-width: min-content; }
+  .flow { display: flex; align-items: flex-start; gap: 0; min-width: min-content; }
   .wcol { display: flex; flex-direction: column; gap: 8px; min-width: 196px; max-width: 260px; }
   .wcol .whead {
     display: flex; align-items: center; gap: 6px;
@@ -387,7 +395,7 @@
     padding-bottom: 2px;
   }
   .wcol .wdur { margin-left: auto; font-variant-numeric: tabular-nums; }
-  .conn { flex: 0 0 34px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .conn { flex: 0 0 34px; align-self: flex-start; margin-top: 38px; display: flex; align-items: center; justify-content: center; position: relative; height: 20px; }
   .conn::before {
     content: "";
     position: absolute;
@@ -426,6 +434,90 @@
   }
   .tnode .nwhy { font-size: 11px; color: var(--flagged); margin: 6px 0 0; }
   .tnode .nnote { font-size: 11px; color: var(--muted-foreground); margin: 6px 0 0; }
+
+  /* long runs: finished waves shrink to a stub so the live one stays on screen */
+  .wcol.collapsed { min-width: 74px; max-width: 74px; }
+  .wcol.collapsed .tnode, .wcol.collapsed .why { display: none; }
+  .wcol .wtoggle {
+    font: inherit; font-size: 11px;
+    color: var(--muted-foreground);
+    background: transparent; border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px; cursor: pointer; text-align: left;
+    white-space: pre-line; line-height: 1.35;
+  }
+  .wcol .wtoggle:hover { color: var(--foreground); border-color: var(--muted-foreground); }
+  .flow-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .flow-head .spacer { margin-left: auto; }
+
+  /* ── ticket detail modal ────────────────────────────────────── */
+  .tnode { cursor: pointer; }
+  .tnode:hover { border-color: var(--muted-foreground); }
+  .modal-back {
+    position: fixed; inset: 0;
+    background: rgb(0 0 0 / 0.55);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+    z-index: 40;
+  }
+  .modal {
+    width: min(680px, 100%);
+    background: var(--background);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 20px 22px 24px;
+  }
+  .modal .mhead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .modal h2 { font-size: 1.1rem; margin: 0; }
+  .modal .mid { font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); }
+  .modal .mclose { margin-left: auto; font: inherit; font-size: 12px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--muted-foreground); height: 28px; padding: 0 10px; cursor: pointer; }
+  .modal .mclose:hover { background: var(--accent); color: var(--foreground); }
+  .msec { margin-top: 18px; }
+  .msec > h3 {
+    font-size: 11px; font-weight: 600; color: var(--muted-foreground);
+    margin: 0 0 8px; letter-spacing: 0.04em;
+  }
+  .kv { display: grid; grid-template-columns: 96px 1fr; gap: 4px 12px; font-size: 13px; }
+  .kv dt { color: var(--muted-foreground); font-size: 12px; }
+  .kv dd { margin: 0; }
+  .kv dd.mono { font-family: var(--font-mono); font-size: 12px; }
+  .steps { display: flex; flex-direction: column; gap: 6px; }
+  .step { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+  .step .sdot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); flex: none; align-self: center; }
+  .step.done .sdot { background: var(--done); }
+  .step.in-progress .sdot { background: var(--progress); }
+  .step.blocked .sdot, .step.failed .sdot { background: var(--flagged); }
+  .step .snote { color: var(--muted-foreground); font-size: 12px; }
+  .glist { display: flex; flex-direction: column; gap: 8px; }
+  .gate {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .gate.met { border-left-color: var(--done); }
+  .gate.unmet { border-left-color: var(--flagged); }
+  .gate.manual { border-left-color: var(--escalated); }
+  .gate .gid { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); margin-right: 6px; }
+  .gate .gcmd { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); margin-top: 4px; word-break: break-all; }
+  .gate .gcmp { font-size: 12px; margin-top: 4px; }
+  .mfiles { font-size: 12px; }
+  .mfiles div { display: flex; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--border); }
+  .mfiles div:last-child { border-bottom: 0; }
+  .mfiles .p { font-family: var(--font-mono); word-break: break-all; flex: 1 1 auto; }
+
+  /* ── review + PR lanes at the end of the flow ───────────────── */
+  .lane { min-width: 220px; max-width: 300px; display: flex; flex-direction: column; gap: 8px; }
+  .lane .lhead { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-foreground); padding-bottom: 2px; }
+  .checkrow { display: flex; align-items: baseline; gap: 8px; font-size: 12px; padding: 3px 0; }
+  .checkrow .cdot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); flex: none; align-self: center; }
+  .checkrow.ok .cdot, .checkrow.done .cdot { background: var(--done); }
+  .checkrow.failed .cdot { background: var(--flagged); }
+  .checkrow.pending .cdot { background: var(--escalated); }
+  .checkrow .cdetail { color: var(--muted-foreground); }
+  .tnode .plink { font-size: 11px; color: var(--progress); word-break: break-all; }
 
   /* ── decision review, behind a disclosure ───────────────────── */
   .disclosure-wrap { margin-top: 18px; }
@@ -956,6 +1048,13 @@
     } else if (tk.note) {
       node.appendChild(el("p", "nnote", tk.note));
     }
+    node.setAttribute("role", "button");
+    node.setAttribute("tabindex", "0");
+    node.title = "클릭하면 이 티켓의 상세를 봅니다";
+    node.addEventListener("click", function () { openTicket(tk); });
+    node.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openTicket(tk); }
+    });
     return node;
   }
 
@@ -977,42 +1076,309 @@
     return waves;
   }
 
+  // ── ticket detail modal ────────────────────────────────────
+  // A node is a summary; the modal is what actually happened inside one ticket
+  // — who ran it, on what, through which steps, against which gates.
+  var GATE_STATUS_LABEL = { "met": "충족", "unmet": "미충족", "manual": "수동 확인", "pending": "대기" };
+
+  function kvRow(dl, key, value, mono) {
+    if (!value) return;
+    dl.appendChild(el("dt", null, key));
+    dl.appendChild(el("dd", mono ? "mono" : null, value));
+  }
+
+  function section(title) {
+    var s = el("div", "msec");
+    s.appendChild(el("h3", null, title));
+    return s;
+  }
+
+  function openTicket(tk) {
+    var back = el("div", "modal-back");
+    var box = el("div", "modal");
+    box.addEventListener("click", function (e) { e.stopPropagation(); });
+
+    var head = el("div", "mhead");
+    head.appendChild(el("span", "mid", tk.id || ""));
+    head.appendChild(el("h2", null, tk.title || ""));
+    var st = tk.status || "pending";
+    head.appendChild(el("span", "badge " + (TICKET_STATUS_LABEL[st] ? st : "pending"),
+      TICKET_STATUS_LABEL[st] || st));
+    var close = el("button", "mclose", "닫기 (Esc)");
+    head.appendChild(close);
+    box.appendChild(head);
+
+    if (tk.status === "blocked") {
+      var b = tk.blocker || {};
+      var blk = el("div", "blocker");
+      blk.appendChild(el("div", "why", "막힘 — " + (BLOCKER_REASON_LABEL[b.reason] || b.reason || "이유 미기재")));
+      if (b.detail) blk.appendChild(el("p", "detail", b.detail));
+      box.appendChild(blk);
+    }
+
+    var who = section("워커");
+    var dl = el("dl", "kv");
+    kvRow(dl, "라우트", tk.route);
+    var w = tk.worker || {};
+    kvRow(dl, "모델", [w.model, w.effort].filter(Boolean).join(" / "), true);
+    kvRow(dl, "디스패치", w.dispatchId, true);
+    kvRow(dl, "워크트리", w.worktree, true);
+    var timing = [];
+    if (tk.estimateMin) timing.push("예상 " + fmtMinutes(tk.estimateMin));
+    if (tk.actualMin) timing.push("실제 " + fmtMinutes(tk.actualMin));
+    else if (tk.startedAt && tk.status === "in-progress") timing.push("경과 " + fmtMinutes(minutesSince(tk.startedAt)));
+    kvRow(dl, "시간", timing.join(" · "));
+    if (tk.blockedBy && tk.blockedBy.length) kvRow(dl, "선행", tk.blockedBy.join(", "), true);
+    who.appendChild(dl);
+    box.appendChild(who);
+
+    if (tk.acceptance && tk.acceptance.length) {
+      var acc = section("완료 조건");
+      var ul = el("ul");
+      ul.style.margin = "0";
+      ul.style.paddingLeft = "18px";
+      ul.style.fontSize = "13px";
+      tk.acceptance.forEach(function (a) { ul.appendChild(el("li", null, a)); });
+      acc.appendChild(ul);
+      box.appendChild(acc);
+    }
+
+    if (tk.steps && tk.steps.length) {
+      var stp = section("이 티켓 안에서 일어난 일");
+      var list = el("div", "steps");
+      tk.steps.forEach(function (s) {
+        var row = el("div", "step " + (s.status || "pending"));
+        row.appendChild(el("span", "sdot"));
+        row.appendChild(el("span", null, s.name));
+        if (s.note) row.appendChild(el("span", "snote", s.note));
+        list.appendChild(row);
+      });
+      stp.appendChild(list);
+      box.appendChild(stp);
+    }
+
+    if (tk.gateList && tk.gateList.length) {
+      var g = section("게이트" + (tk.gates && tk.gates.total ? " " + (tk.gates.met || 0) + "/" + tk.gates.total : ""));
+      var gl = el("div", "glist");
+      tk.gateList.forEach(function (gt) {
+        var row = el("div", "gate " + (gt.status || "pending"));
+        var line = el("div");
+        line.appendChild(el("span", "gid", gt.id || ""));
+        line.appendChild(el("span", null, gt.text || ""));
+        line.appendChild(el("span", " badge " + (gt.status === "met" ? "done" : gt.status === "unmet" ? "flagged" : "escalated"),
+          GATE_STATUS_LABEL[gt.status] || gt.status || ""));
+        row.appendChild(line);
+        if (gt.check) row.appendChild(el("div", "gcmd", "CHECK: " + gt.check));
+        if (gt.expect || gt.actual) {
+          row.appendChild(el("div", "gcmp",
+            (gt.expect ? "기대 " + gt.expect : "") + (gt.actual ? " · 실제 " + gt.actual : "")));
+        }
+        gl.appendChild(row);
+      });
+      g.appendChild(gl);
+      box.appendChild(g);
+    }
+
+    if (tk.files && tk.files.length) {
+      var f = section("건드린 파일");
+      var fl = el("div", "mfiles");
+      tk.files.forEach(function (fi) {
+        var row = el("div");
+        row.appendChild(el("span", "p", fi.path));
+        row.appendChild(el("span", "add", fi.added ? "+" + fi.added : ""));
+        row.appendChild(el("span", "del", fi.removed ? "−" + fi.removed : ""));
+        fl.appendChild(row);
+      });
+      f.appendChild(fl);
+      box.appendChild(f);
+    }
+
+    if (tk.commits && tk.commits.length) {
+      var c = section("커밋");
+      var cl = el("div", "mfiles");
+      tk.commits.forEach(function (cm) {
+        var row = el("div");
+        row.appendChild(el("span", "p", cm.sha || ""));
+        row.appendChild(el("span", null, cm.subject || ""));
+        cl.appendChild(row);
+      });
+      c.appendChild(cl);
+      box.appendChild(c);
+    }
+
+    if (tk.note) box.appendChild(el("p", "note", tk.note));
+
+    back.appendChild(box);
+    function dismiss() {
+      if (back.parentNode) back.parentNode.removeChild(back);
+      document.removeEventListener("keydown", onKey);
+    }
+    function onKey(e) { if (e.key === "Escape") dismiss(); }
+    back.addEventListener("click", dismiss);
+    close.addEventListener("click", dismiss);
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(back);
+  }
+
+  function laneNode(title, status, rows, extra) {
+    var node = el("div", "tnode " + (status || "pending"));
+    var head = el("div", "nhead");
+    head.appendChild(el("span", "ndot"));
+    head.appendChild(el("span", "ntitle", title));
+    node.appendChild(head);
+    if (extra) node.appendChild(extra);
+    (rows || []).forEach(function (r) { node.appendChild(r); });
+    return node;
+  }
+
+  function checkRow(c) {
+    var row = el("div", "checkrow " + (c.status || "pending"));
+    row.appendChild(el("span", "cdot"));
+    row.appendChild(el("span", null, c.name || ""));
+    if (c.detail) row.appendChild(el("span", "cdetail", c.detail));
+    return row;
+  }
+
+  // The run does not end at the last ticket: review and, in ship mode, the PR
+  // are stages of the same left-to-right flow, not an afterthought in prose.
+  function renderReviewLane() {
+    var r = data.review;
+    if (!r) return null;
+    var lane = el("div", "wcol lane");
+    var lh = el("div", "lhead");
+    lh.appendChild(el("span", null, "리뷰"));
+    lh.appendChild(el("span", "badge " + (r.status === "done" ? "done" : r.status === "blocked" ? "flagged" : "in-progress"),
+      TICKET_STATUS_LABEL[r.status] || r.status || "대기"));
+    lane.appendChild(lh);
+    (r.passes || []).forEach(function (pass) {
+      var rows = [];
+      if (typeof pass.findings === "number") {
+        rows.push(el("div", "nnote", pass.findings ? "지적 " + pass.findings + "건" : "지적 없음"));
+      }
+      if (pass.note) rows.push(el("p", "nnote", pass.note));
+      lane.appendChild(laneNode(pass.name || pass.id, pass.status, rows));
+    });
+    if (r.skill) lane.appendChild(el("div", "nagent", r.skill));
+    if (r.note) lane.appendChild(el("p", "why", r.note));
+    return lane;
+  }
+
+  function renderPrLane() {
+    var pr = data.pr;
+    if (!pr) return null;
+    var lane = el("div", "wcol lane");
+    var lh = el("div", "lhead");
+    lh.appendChild(el("span", null, "PR"));
+    lh.appendChild(el("span", "badge " + (pr.status === "done" ? "done" : pr.status === "blocked" ? "flagged" : "in-progress"),
+      TICKET_STATUS_LABEL[pr.status] || pr.status || "대기"));
+    if (pr.cycles) lh.appendChild(el("span", "wdur", "사이클 " + pr.cycles));
+    lane.appendChild(lh);
+
+    var rows = [];
+    if (pr.branch && pr.base) rows.push(el("div", "nagent", pr.branch + " → " + pr.base));
+    (pr.checks || []).forEach(function (c) { rows.push(checkRow(c)); });
+    if (pr.url) rows.push(el("div", "plink", pr.url));
+    if (pr.note) rows.push(el("p", "nnote", pr.note));
+    lane.appendChild(laneNode(pr.number ? "#" + pr.number : "PR", pr.status, rows));
+    return lane;
+  }
+
   function renderFlow(host) {
     var tickets = data.tickets || [];
-    if (!tickets.length) return;
+    var extraLanes = [renderReviewLane(), renderPrLane()].filter(Boolean);
+    if (!tickets.length && !extraLanes.length) return;
     var byId = ticketsById();
     var plan = data.plan || {};
-    var waves = (plan.waves && plan.waves.length) ? plan.waves : derivedWaves(tickets);
+    var waves = tickets.length
+      ? ((plan.waves && plan.waves.length) ? plan.waves : derivedWaves(tickets))
+      : [];
 
-    var ph = el("div", "phead");
-    ph.appendChild(el("span", null, "실행 계획"));
-    if (plan.concurrency) ph.appendChild(el("span", "badge", "동시 " + plan.concurrency));
-    if (plan.placement) ph.appendChild(el("span", "badge", plan.placement));
-    host.appendChild(ph);
-
-    var flow = el("div", "flow");
-    waves.forEach(function (w, i) {
-      if (i) {
-        var conn = el("div", "conn");
-        conn.appendChild(el("span", null, "→"));
-        flow.appendChild(conn);
-      }
-      var col = el("div", "wcol");
-      var wh = el("div", "whead");
-      wh.appendChild(el("span", null, w.id || ("W" + (i + 1))));
-      wh.appendChild(el("span", "badge " + (w.mode === "parallel" ? "new" : "keep"),
-        w.mode === "parallel" ? "병렬 " + (w.tickets || []).length : "순차"));
-      var dur = waveDuration(w, byId);
-      if (dur) wh.appendChild(el("span", "wdur", "≈" + fmtMinutes(dur)));
-      col.appendChild(wh);
-      (w.tickets || []).forEach(function (id) {
-        col.appendChild(renderTicketNode(byId[id] || { id: id, title: "" }));
+    var head = el("div", "flow-head");
+    head.appendChild(el("span", "phead", "실행 계획"));
+    if (plan.concurrency) head.appendChild(el("span", "badge", "동시 " + plan.concurrency));
+    if (plan.placement) head.appendChild(el("span", "badge", plan.placement));
+    var liveIndex = waves.findIndex(function (w) {
+      return (w.tickets || []).some(function (id) {
+        var tk = byId[id];
+        return tk && tk.status !== "done" && tk.status !== "skipped";
       });
-      if (w.why) col.appendChild(el("p", "why", w.why));
-      flow.appendChild(col);
     });
+    if (waves.length) {
+      head.appendChild(el("span", "badge",
+        "웨이브 " + (liveIndex < 0 ? waves.length : liveIndex + 1) + "/" + waves.length));
+    }
+    // A long run is mostly finished waves; they collapse to stubs by default so
+    // the live one is what the reader lands on. One button brings them all back.
+    var expandAll = false;
+    var btnAll = el("button", "wtoggle", "완료 웨이브 펼치기");
+    btnAll.classList.add("spacer");
+    head.appendChild(btnAll);
+    host.appendChild(head);
+
     var wrap = el("div", "flow-wrap");
+    var flow = el("div", "flow");
     wrap.appendChild(flow);
+
+    function draw() {
+      flow.textContent = "";
+      var liveCol = null;
+      waves.forEach(function (w, i) {
+        if (i) {
+          var conn = el("div", "conn");
+          conn.appendChild(el("span", null, "→"));
+          flow.appendChild(conn);
+        }
+        var tks = (w.tickets || []).map(function (id) { return byId[id] || { id: id, title: "" }; });
+        var allDone = tks.length && tks.every(function (tk) { return tk.status === "done" || tk.status === "skipped"; });
+        var collapsed = allDone && !expandAll && waves.length > 3;
+        var col = el("div", "wcol" + (collapsed ? " collapsed" : ""));
+        var wh = el("div", "whead");
+        wh.appendChild(el("span", null, w.id || ("W" + (i + 1))));
+        if (!collapsed) {
+          wh.appendChild(el("span", "badge " + (w.mode === "parallel" ? "new" : "keep"),
+            w.mode === "parallel" ? "병렬 " + tks.length : "순차"));
+          var dur = waveDuration(w, byId);
+          if (dur) wh.appendChild(el("span", "wdur", "≈" + fmtMinutes(dur)));
+        }
+        col.appendChild(wh);
+        if (collapsed) {
+          var stub = el("button", "wtoggle", "✓ " + tks.length + "개\n펼치기");
+          stub.addEventListener("click", function () {
+            col.classList.remove("collapsed");
+            col.removeChild(stub);
+            tks.forEach(function (tk) { col.appendChild(renderTicketNode(tk)); });
+          });
+          col.appendChild(stub);
+        } else {
+          tks.forEach(function (tk) { col.appendChild(renderTicketNode(tk)); });
+          if (w.why) col.appendChild(el("p", "why", w.why));
+        }
+        if (i === liveIndex) liveCol = col;
+        flow.appendChild(col);
+      });
+      extraLanes.forEach(function (lane, i) {
+        if (waves.length || i) {
+          var conn2 = el("div", "conn");
+          conn2.appendChild(el("span", null, "→"));
+          flow.appendChild(conn2);
+        }
+        flow.appendChild(lane);
+      });
+      // Land on the wave that is actually running, not on the finished history.
+      if (liveCol) {
+        requestAnimationFrame(function () {
+          wrap.scrollLeft = Math.max(0, liveCol.offsetLeft - flow.offsetLeft - 12);
+        });
+      }
+    }
+
+    btnAll.addEventListener("click", function () {
+      expandAll = !expandAll;
+      btnAll.textContent = expandAll ? "완료 웨이브 접기" : "완료 웨이브 펼치기";
+      draw();
+    });
+
+    draw();
     host.appendChild(wrap);
     if (plan.note) host.appendChild(el("p", "why", plan.note));
   }

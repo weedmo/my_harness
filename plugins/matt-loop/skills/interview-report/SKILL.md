@@ -151,6 +151,22 @@ The page ships **both skins**: Orca-native dark by default, and a full light pal
   - The page lays the waves out **left to right** and prints each wave's own duration (a parallel wave's slowest ticket, a sequential wave's sum). With no `plan` at all it still draws the flow, deriving one column per blocking level from `blockedBy` — so the shape survives a run that never planned waves.
 - **Estimates and progress bars.** `progress.startedAt` (ISO) drives 경과; each ticket's `estimateMin` (and `startedAt` once it begins, `actualMin` once done) drives the rest. The page computes, and never asks you to pre-compute: the overall percent (estimate-weighted, an in-progress ticket counted by elapsed/estimate and capped at 90%), 남은 예상, and 완료 예정 시각 — a parallel wave costing its slowest ticket, a sequential one their sum. A stage may carry an explicit `percent`; otherwise done is 100, pending is 0, and an in-progress implement stage follows its tickets. **`estimateMin` is the run's own guess and the page labels it 예상** — never present it as measurement, and never back-fill it to make a bar look better.
 
+- **Ticket detail — what the modal shows.** A node is a summary; clicking it opens the ticket. Put the specifics here rather than in the node: `acceptance` (the ticket's criteria, as written), `steps` (what happened inside the ticket — 티켓 읽기 → `$implement` → 게이트 재검증 → 머지백, each `{ name, status, note }`), `gateList` (`{ id, text, status: met|unmet|manual, check, expect, actual }` — the `CHECK:` command and the expected-vs-actual are what make an unmet gate actionable), `files` and `commits`. Everything is optional; the modal renders the sections that exist.
+- **`review` and `pr` — the tail of the flow.** The run does not end at the last ticket, so the flow does not either: `review` renders a 리뷰 lane (one node per review dimension, with its finding count) and `pr` renders a PR lane (number, `branch → base`, check rows, babysit cycles, link) at the right end of the same left-to-right flow.
+
+```json
+"review": { "status": "in-progress", "skill": "code-review", "note": "…",
+  "passes": [ { "id": "r1", "name": "정확성", "status": "done", "findings": 2, "note": "…" } ] },
+"pr": { "number": 128, "url": "https://…", "base": "dev", "branch": "matt-auto/x",
+  "status": "in-progress", "cycles": 2, "note": "…",
+  "checks": [ { "name": "CI", "status": "failed", "detail": "unit: 2 failing" },
+              { "name": "리뷰어", "status": "pending", "detail": "변경 요청 1건" },
+              { "name": "머지 가능", "status": "ok", "detail": "충돌 없음" } ] }
+```
+
+  - Check `status` is `ok` / `done` / `failed` / `pending`, and `detail` carries the measured fact, never a guess. Omit `pr` entirely on a run that opens no PR — the lane simply does not appear.
+- **Long runs stay readable.** Once there are more than three waves, finished ones collapse to stubs and the flow scrolls itself to the wave that is actually running; a 완료 웨이브 펼치기 button brings the history back, and each stub expands on its own. Nothing needs doing in the data for this — but it is why a long plan is fine to publish in full.
+
 - **`outcome` — the shipped-changes panel, final regeneration only.** Omit the key entirely on the interview-gate run (nothing is built yet); fill it on the last regeneration, once implementation and review are done. The page renders it under the summary as *결과 — 이번 실행이 바꾼 것*: file counts by status, `+`/`−` totals split into 코드 / 문서 / 기타, and a per-file table. Totals are computed in the page from `files`, so never pass pre-summed numbers.
 
 ```json
