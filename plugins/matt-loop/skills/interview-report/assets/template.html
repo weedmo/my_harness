@@ -10,7 +10,11 @@
   Data contract (see SKILL.md for the full spec):
     { title, slug, generated, summary,
       stages: [ { id, name, skill, status, note,
-                  decisions: [ { id, question, decision, rationale, escalated } ] } ],
+                  decisions: [ { id, question, before, change, decision,
+                                rationale, escalated } ] } ],
+      progress?: { state, updated, current, note },
+      tickets?: [ { id, title, status, blockedBy, blocker: { reason, detail },
+                    gates: { met, total }, route, note } ],
       outcome?: { baseRef, headRef, branch, note,
                   files: [ { path, status, kind, added, removed, note } ] } }
   `outcome` is the final run's shipped-changes panel: omit it entirely on the
@@ -181,8 +185,102 @@
     color: var(--foreground);
   }
   .node-detail textarea { resize: vertical; min-height: 48px; }
+  .ba {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: 8px;
+    margin: 0 0 10px;
+  }
+  .ba .cell {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--background);
+    padding: 8px 10px;
+    min-width: 0;
+  }
+  .ba .cell .lbl { display: block; font-size: 11px; color: var(--muted-foreground); margin-bottom: 2px; }
+  .ba .cell.before .txt { color: var(--muted-foreground); }
+  .ba .cell.before.none .txt { font-style: italic; }
+  .ba .cell.after { border-color: var(--border-strong); }
+  .ba .arrow { align-self: center; color: var(--muted-foreground); font-size: 13px; }
+  .badge.new { background: var(--progress-bg); color: var(--progress); }
+  .badge.redirect { background: var(--edited-bg); color: var(--edited); }
+  .badge.keep { background: var(--muted-bg); color: var(--muted-foreground); }
+  @media (max-width: 560px) {
+    .ba { grid-template-columns: 1fr; }
+    .ba .arrow { transform: rotate(90deg); justify-self: start; }
+  }
   .flag-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 13px; }
   .flag-row input { accent-color: var(--flagged); }
+
+  /* ── live progress + tickets ───────────────────────────────── */
+  .progress {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 14px 18px;
+    margin: 12px 0 4px;
+  }
+  .progress .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .progress h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+  .progress .stamp { color: var(--muted-foreground); font-size: 11px; margin-left: auto; }
+  .progress .current { margin: 8px 0 0; font-size: 13px; }
+  .progress .current .lbl { color: var(--muted-foreground); margin-right: 6px; }
+  .progress .note { color: var(--muted-foreground); font-size: 12px; margin: 6px 0 0; }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--progress); flex: none;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  .progress.state-blocked .live-dot { background: var(--flagged); animation: none; }
+  .progress.state-done .live-dot { background: var(--done); animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+  .blocker {
+    border: 1px solid color-mix(in srgb, var(--flagged) 40%, var(--border));
+    background: var(--flagged-bg);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-top: 12px;
+  }
+  .blocker .why { font-weight: 600; color: var(--flagged); }
+  .blocker .detail { color: var(--foreground); font-size: 13px; margin: 2px 0 0; }
+
+  .tickets { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .ticket {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--background);
+    padding: 8px 12px;
+  }
+  .ticket.in-progress { border-color: color-mix(in srgb, var(--progress) 45%, var(--border)); }
+  .ticket.blocked { border-color: color-mix(in srgb, var(--flagged) 45%, var(--border)); }
+  .ticket .tid { font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); flex: none; }
+  .ticket .ttitle { flex: 1 1 220px; min-width: 0; }
+  .ticket.done .ttitle { color: var(--muted-foreground); }
+  .ticket .tnote { flex-basis: 100%; color: var(--muted-foreground); font-size: 12px; }
+  .ticket .blocked-by { color: var(--muted-foreground); font-size: 11px; font-family: var(--font-mono); }
+  .badge.blocked { background: var(--flagged-bg); color: var(--flagged); }
+  .badge.gates { background: var(--muted-bg); color: var(--muted-foreground); font-family: var(--font-mono); }
+
+  .refresh-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-top: 12px; }
+  .refresh-row button.ghost {
+    font: inherit;
+    font-size: 12px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+  }
+  .refresh-row button.ghost:hover { background: var(--accent); border-color: var(--border-strong); color: var(--foreground); }
 
   /* ── outcome (final run only) ──────────────────────────────── */
   .outcome {
@@ -249,6 +347,7 @@
   <h1 id="r-title"></h1>
   <div class="meta" id="r-meta"></div>
   <div class="summary"><span class="icon">💡</span><span id="r-summary"></span></div>
+  <section class="progress" id="r-progress" hidden></section>
   <section class="outcome" id="r-outcome" hidden></section>
   <div class="toolbar">
     <button class="primary" id="btn-export">수정 내보내기</button>
@@ -392,7 +491,123 @@
     return n;
   }
 
+  // ── live progress + ticket tracking (present while a run is under way) ──
+  var PROGRESS_STATE_LABEL = { "running": "진행 중", "blocked": "막힘", "done": "완료" };
+  var TICKET_STATUS_LABEL = {
+    "done": "완료", "in-progress": "진행 중", "blocked": "막힘",
+    "pending": "대기", "skipped": "건너뜀"
+  };
+  var BLOCKER_REASON_LABEL = {
+    "gate": "게이트 미충족", "escalation": "사용자 답변 대기", "ci": "CI 실패",
+    "conflict": "머지 충돌", "dependency": "선행 티켓 대기", "worker": "워커 이상",
+    "review": "리뷰 변경 요청", "other": "막힘"
+  };
+  var AUTO_REFRESH_MS = 30000;
+
+  function sinceText(iso) {
+    var then = Date.parse(iso);
+    if (!then) return "";
+    var mins = Math.round((Date.now() - then) / 60000);
+    if (mins < 1) return "방금 갱신";
+    if (mins < 60) return mins + "분 전 갱신";
+    return Math.round(mins / 60) + "시간 전 갱신";
+  }
+
+  function renderTicket(tk) {
+    var row = el("div", "ticket " + (tk.status || "pending"));
+    if (tk.id) row.appendChild(el("span", "tid", tk.id));
+    row.appendChild(el("span", "ttitle", tk.title || ""));
+    var st = tk.status || "pending";
+    row.appendChild(el("span", "badge " + (TICKET_STATUS_LABEL[st] ? st : "pending"),
+      TICKET_STATUS_LABEL[st] || st));
+    if (tk.gates && tk.gates.total) {
+      row.appendChild(el("span", "badge gates", "게이트 " + (tk.gates.met || 0) + "/" + tk.gates.total));
+    }
+    if (tk.route) row.appendChild(el("span", "badge", tk.route));
+    if (tk.blockedBy && tk.blockedBy.length) {
+      row.appendChild(el("span", "blocked-by", "⟵ " + tk.blockedBy.join(", ")));
+    }
+    var why = tk.blocker && (tk.blocker.detail || tk.blocker.reason);
+    if (why) {
+      row.appendChild(el("span", "tnote",
+        "막힌 이유 — " + (BLOCKER_REASON_LABEL[tk.blocker.reason] || tk.blocker.reason || "") +
+        (tk.blocker.detail ? ": " + tk.blocker.detail : "")));
+    } else if (tk.note) {
+      row.appendChild(el("span", "tnote", tk.note));
+    }
+    return row;
+  }
+
+  function renderProgress() {
+    var pr = data.progress;
+    var tickets = data.tickets || [];
+    if (!pr && !tickets.length) return;
+    var host = document.getElementById("r-progress");
+    var state = (pr && pr.state) || "running";
+    host.className = "progress state-" + state;
+
+    var top = el("div", "top");
+    top.appendChild(el("span", "live-dot"));
+    var doneCount = tickets.filter(function (tk) { return tk.status === "done"; }).length;
+    top.appendChild(el("h2", null, "진행 상황 — " + (PROGRESS_STATE_LABEL[state] || state) +
+      (tickets.length ? " (티켓 " + doneCount + "/" + tickets.length + ")" : "")));
+    if (pr && pr.updated) top.appendChild(el("span", "stamp", sinceText(pr.updated)));
+    host.appendChild(top);
+
+    if (pr && pr.current) {
+      var cur = el("p", "current");
+      cur.appendChild(el("span", "lbl", "지금:"));
+      cur.appendChild(el("span", null, pr.current));
+      host.appendChild(cur);
+    }
+    if (pr && pr.note) host.appendChild(el("p", "note", pr.note));
+
+    var stuck = tickets.filter(function (tk) { return tk.status === "blocked"; });
+    stuck.forEach(function (tk) {
+      var box = el("div", "blocker");
+      box.appendChild(el("div", "why", "막힘 — " + (tk.id ? tk.id + " " : "") + (tk.title || "")));
+      var b = tk.blocker || {};
+      box.appendChild(el("p", "detail",
+        (BLOCKER_REASON_LABEL[b.reason] || b.reason || "이유 미기재") +
+        (b.detail ? ": " + b.detail : "")));
+      host.appendChild(box);
+    });
+
+    if (tickets.length) {
+      var list = el("div", "tickets");
+      tickets.forEach(function (tk) { list.appendChild(renderTicket(tk)); });
+      host.appendChild(list);
+    }
+
+    // The page cannot be pushed to, so it pulls: until the run reports done
+    // it reloads itself to pick up the republished version — blocked runs keep
+    // polling too, since a retry can clear the blocker. Never while the reader
+    // has unsaved edits: the sandboxed frame has no localStorage to save them.
+    if (state !== "done") {
+      var auto = true;
+      var row = el("div", "refresh-row");
+      var btn = el("button", "ghost", "자동 새로고침 끄기");
+      var label = el("span", null, AUTO_REFRESH_MS / 1000 + "초마다 최신 상태를 다시 불러옵니다");
+      btn.addEventListener("click", function () {
+        auto = !auto;
+        btn.textContent = auto ? "자동 새로고침 끄기" : "자동 새로고침 켜기";
+        label.textContent = auto
+          ? AUTO_REFRESH_MS / 1000 + "초마다 최신 상태를 다시 불러옵니다"
+          : "자동 새로고침이 꺼져 있습니다";
+      });
+      row.appendChild(btn);
+      row.appendChild(label);
+      host.appendChild(row);
+      setInterval(function () {
+        if (auto && changedIds().length === 0) location.reload();
+      }, AUTO_REFRESH_MS);
+    }
+
+    host.hidden = false;
+  }
+
   // ── outcome panel (final run only; absent on the interview gate) ──
+  var CHANGE_LABEL = { "new": "신규", "redirect": "방향 전환", "keep": "유지" };
   var KIND_LABEL = { "code": "코드", "docs": "문서", "other": "기타" };
   var FILE_STATUS_LABEL = {
     "added": "생성", "modified": "수정", "deleted": "삭제", "renamed": "이름 변경"
@@ -496,6 +711,7 @@
     head.appendChild(el("span", "caret", "▸"));
     head.appendChild(el("span", "q", d.question));
     var badges = el("span", "badges");
+    if (CHANGE_LABEL[d.change]) badges.appendChild(el("span", "badge " + d.change, CHANGE_LABEL[d.change]));
     if (d.escalated) badges.appendChild(el("span", "badge escalated", "직접 답변"));
     var editedBadge = el("span", "badge edited", "수정됨");
     var flaggedBadge = el("span", "badge flagged", "문제");
@@ -505,8 +721,24 @@
     node.appendChild(head);
 
     var detail = el("div", "node-detail");
-    var dLine = el("p", "d", d.decision);
-    detail.appendChild(dLine);
+    var dLine;
+    if (d.change) {
+      var ba = el("div", "ba");
+      var before = el("div", "cell before" + (d.before ? "" : " none"));
+      before.appendChild(el("span", "lbl", "이전"));
+      before.appendChild(el("span", "txt", d.before || "없음 — 정해진 바 없었음"));
+      ba.appendChild(before);
+      ba.appendChild(el("span", "arrow", "→"));
+      var after = el("div", "cell after");
+      after.appendChild(el("span", "lbl", "이후"));
+      dLine = el("span", "txt d", d.decision);
+      after.appendChild(dLine);
+      ba.appendChild(after);
+      detail.appendChild(ba);
+    } else {
+      dLine = el("p", "d", d.decision);
+      detail.appendChild(dLine);
+    }
     detail.appendChild(el("p", "r", d.rationale));
 
     detail.appendChild(el("label", null, "결정 수정 (그대로 두면 유지됩니다)"));
@@ -578,6 +810,7 @@
     graph.appendChild(stage);
   });
 
+  renderProgress();
   renderOutcome();
 
   // ── toolbar actions ────────────────────────────────────────

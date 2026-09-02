@@ -77,6 +77,7 @@ During step 9, add a ticket board under the pipeline board and update it as the 
 - Gates is the unlazy ledger tally from the latest `--reverify` (`met/total`); `—` when unlazy is absent.
 - In ship mode, step 10's note also carries the ship ledger tally from the latest `--reverify` (e.g. `🔄 gates 3/5: G4 CI red`).
 - In autonomous mode (the default), also append one stage-transition line per board update to the decision log so the file carries the same timeline; the board itself still prints to the terminal.
+- Every board update also republishes the artifact once tickets exist — see Live board in the artifact.
 
 The board is display, not an artifact: never write it to its own file, and never let it stand in for a stage's own output.
 
@@ -125,9 +126,18 @@ matt-auto runs the whole pipeline unattended, start to finish, in one sitting �
 - **Escalation is untouched.** Autonomous removes routine questions, not the safety net. The delegate still replies `ESCALATE` for security, data meaning or migration, destructive operations, externally visible interface changes, or anything contradicting the big-frame summary it was given — and the pipeline still pauses and puts the question to the real user. Autonomous means zero *routine* interruptions, never zero interruptions.
 - **Decision log** — write every question → decision + rationale (interview, seam check, ticket-breakdown quiz, escalations and their answers, implement-loop decisions) to `docs/agents/matt-auto-log/<slug>.md`, updated as the pipeline runs rather than assembled at the end. With no live confirm to surface this, the file is the only textual record — keep it complete and legible on its own. Report its path in the final report, and whenever asked. (`--confirm` mode presents decisions live instead and keeps no log.)
 
+## Live board in the artifact
+
+Once tickets exist, the artifact link stops being a snapshot and becomes the run's status page: **every board update is also a republish**. Regenerate the report with `$interview-report`'s `progress` + `tickets` blocks and run `orca artifacts update` — same file, same URL — so the user watching the link sees where the run is without asking. The page polls itself until `progress.state` is `done`.
+
+- **When to republish:** exactly when the board changes — a stage transition, a ticket moving to in-progress / done / blocked, a gate re-verification result, an escalation raised or answered. Not on a timer, and not per commit.
+- **What "blocked" means here:** the run cannot proceed on that ticket right now — unmet gates after the retries, an escalation waiting on the user, CI red, a merge conflict, an Orca worker that stopped. Fill `blocker.reason` and put the checkable fact in `blocker.detail` (the unmet gate id and its expected-vs-actual, the failing check, the question being asked). A ticket merely waiting on its blockers is `pending` with `blockedBy`, not `blocked`.
+- **`progress.current`** is one line on what is happening right now — the same note the board's `🔄` carries.
+- The terminal board stays exactly as it is; this mirrors it, never replaces it. When Orca publishing is unavailable, print the board as usual and say once that the link is not being updated.
+
 ## Final report (before → after)
 
-The run ends by regenerating the decision graph **with `$interview-report`'s `outcome` block filled in**, republishing it (`orca artifacts update`, same link), and handing the user that URL. This happens once, at the true end of the run: after step 9's implement loop and its gate re-verification, after the small path's `$implement`, or — in ship mode — after step 10 leaves the PR merge-ready. Never earlier: a results panel written before the work is verified is a guess.
+The run ends by regenerating the decision graph **with `$interview-report`'s `outcome` block filled in and `progress.state` set to `done`** (that is what stops the page polling), republishing it (`orca artifacts update`, same link), and handing the user that URL. This happens once, at the true end of the run: after step 9's implement loop and its gate re-verification, after the small path's `$implement`, or — in ship mode — after step 10 leaves the PR merge-ready. Never earlier: a results panel written before the work is verified is a guess.
 
 - **Measure, never estimate.** `git diff --numstat <baseline>..HEAD` for the line counts and `git diff --name-status <baseline>..HEAD` for added / modified / deleted / renamed, against the baseline recorded in step 1. In ship mode measure the PR branch's tip. Every number in the panel and in your terminal summary comes from that output.
 - **Classify each file** as `code` / `docs` / `other` (see interview-report's `outcome` spec) and write one Korean line per file saying what it now does — that line is the report, the path alone is not. Leave the run's own bookkeeping (`docs/agents/matt-auto-log/**`, `.unlazy/**`) out of the tally.
@@ -225,6 +235,7 @@ Invoke as `/matt-auto --orca [--parallel N] [--on <env>]`. It changes only *wher
 
 - Answering a sub-skill's question yourself instead of routing it to the delegate → the delegate's independent judgment is the point; you grading your own recommendations is not.
 - Publishing tickets before step 8's confirm in `--confirm` mode → that confirm is the gate the user explicitly asked back for; don't take it away.
+- Letting the artifact go stale while the terminal board moves on, or marking a ticket `blocked` without the checkable reason → the link is the user's window into a run they are not watching.
 - Reporting file or line counts that were not measured from `git diff --numstat` against step 1's baseline → the results panel's whole value is that its numbers are checkable.
 - Starting the spec, tickets, or `$implement` while the interview gate is unanswered → that gate is the one thing autonomous mode does not skip, and a published link the user hasn't replied to is not approval.
 - Treating autonomous mode as license to skip escalation too → it removes the effort question and the confirms, nothing else. A material decision still stops the pipeline and goes to the real user.

@@ -83,7 +83,9 @@ Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and
         {
           "id": "interview-1",
           "question": "The question, restated plainly",
-          "decision": "The decision",
+          "before": "The policy or de-facto behavior that held before, or null when none existed",
+          "change": "new",
+          "decision": "The decision (the after-state)",
           "rationale": "One-line rationale",
           "escalated": false
         }
@@ -97,6 +99,30 @@ Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and
 - `status` is one of `done` / `in-progress` / `pending` / `skipped`.
 - Decision `id`s must be stable across regenerations (stage prefix + ordinal is fine) — `localStorage` edits and `edits.json` both key on them.
 - `escalated: true` marks decisions the real user answered directly; the page highlights them.
+- **`before` / `change` — the before → after view on every decision.** A decision is a move against what already held, and the node shows that move as two cells: `before` is the prior state — a documented policy, or the de-facto behavior the code already exhibited — or `null` when nothing existed (the page then reads *"없음 — 정해진 바 없었음"*). `change` classifies the move and shows as a badge even while the node is collapsed: `"new"` (신규 — nothing existed), `"redirect"` (방향 전환 — a prior direction existed and this changes it), `"keep"` (유지 — a prior policy was examined and confirmed). `decision` is always the after-state. Fill these whenever the log knows the before-state; a decision without `change` falls back to a plain single-line node, which is the degraded form, not a choice.
+- **`progress` + `tickets` — the live board, present from the ticket stage until the run ends.** Together they render *진행 상황* above everything else: run state, what is happening right now, every ticket with its status, and a red blocker box for anything stuck. Omit both on the interview-gate generation (no tickets exist yet) and on a small-path run that never produced tickets.
+
+```json
+"progress": {
+  "state": "running",
+  "updated": "2026-09-02T05:50:00Z",
+  "current": "T3 구현 중 — 게이트 재검증에서 2개가 남았습니다",
+  "note": "선택 — 읽는 사람이 알아야 할 한 줄"
+},
+"tickets": [
+  { "id": "T3", "title": "결과 패널 렌더링", "status": "blocked",
+    "blockedBy": [], "gates": { "met": 3, "total": 5 }, "route": "matt-deep",
+    "blocker": { "reason": "gate", "detail": "G4 스냅샷 테스트 실패 — 기대 +504/−175, 수신 +504/−134" },
+    "note": "선택 — 막히지 않았을 때의 한 줄" }
+]
+```
+
+  - `state` is `running` / `blocked` / `done`; `updated` is the ISO timestamp of this regeneration (the page shows "N분 전 갱신" from it).
+  - Ticket `status` is `done` / `in-progress` / `blocked` / `pending` / `skipped`. `blockedBy` lists the ticket ids it waits on — that is the DAG edge, not a blocker.
+  - **`blocker` is required on every `blocked` ticket** and is what the whole panel exists for: `reason` is one of `gate` / `escalation` / `ci` / `conflict` / `dependency` / `worker` / `review` / `other`, and `detail` is the specific, checkable fact — the unmet gate id and its expected-vs-actual, the failing check, the question awaiting an answer. "막혔습니다" with no detail is the failure this panel was built to prevent.
+  - `gates` is the unlazy ledger tally when unlazy is installed; omit it otherwise. `route` is the routed agent name.
+  - **The page polls while `state` is not `done`** — it reloads itself every 30s to pick up a republished version, skipping the reload whenever the reader has unsaved edits, with a toggle to stop it. That is why `state: "done"` on the final regeneration matters: it is what stops the polling.
+
 - **`outcome` — the shipped-changes panel, final regeneration only.** Omit the key entirely on the interview-gate run (nothing is built yet); fill it on the last regeneration, once implementation and review are done. The page renders it under the summary as *결과 — 이번 실행이 바꾼 것*: file counts by status, `+`/`−` totals split into 코드 / 문서 / 기타, and a per-file table. Totals are computed in the page from `files`, so never pass pre-summed numbers.
 
 ```json
@@ -135,6 +161,8 @@ The page lets the user rewrite a decision, flag a node as a problem with a comme
 - Changing decision ids on regeneration → orphans the user's saved edits and any exported edits.json.
 - Line counts in `outcome` that were estimated, read off a subagent's report, or summed by hand → they must come from `git diff --numstat`, and a wrong number in a results panel is worse than no panel.
 - Shipping `outcome` on the interview-gate generation → nothing has been built yet; the panel would be a lie.
+- A `blocked` ticket whose `blocker.detail` is vague ("실패함", "확인 필요") → the reader must be able to act on it without opening a terminal.
+- Leaving `state` at `running` on the final regeneration → the page polls forever and the run looks unfinished.
 - Running `artifacts share` on a regeneration instead of `artifacts update` → the link the user already has is no longer the one you regenerated.
 - Publishing the graph anywhere but Orca's own artifacts (another host, a pasted screenshot, a hand-rolled upload) → Orca artifacts are the delivery mechanism; when they are unavailable the fallback is the local path, not a substitute service.
 - Retrying a share denied with `artifact_sharing_disabled` → the answer cannot change until a human flips the device setting.
