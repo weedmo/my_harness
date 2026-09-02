@@ -1,21 +1,25 @@
 <!--
-  Starting point for interview-report. Copy this file, then replace the
-  REPLACE-marked content. Keep the CSS as-is — it's the whole point of
-  bundling this template instead of redesigning the look every run.
+  Starting point for interview-report's decision graph. Copy this file, then
+  replace ONLY:
+    1. the <title> tag
+    2. the JSON inside <script id="graph-data" type="application/json">
+  Keep the CSS and JS as-is — the rendering, editing, flagging, and export
+  machinery lives there, and consistent output between runs is the point of
+  bundling this template.
 
-  Structure:
-    - .summary        the plain-language callout at the top (always present)
-    - .decisions       flat list, only when there are 5 or fewer questions
-    - <details>         one per topic group, only when there are more than 5
-    - .escalated       separate callout for anything the real user answered
-                        directly (delegate replied ESCALATE) — omit the whole
-                        block if nothing was escalated
+  Data contract (see SKILL.md for the full spec):
+    { title, slug, generated, summary,
+      stages: [ { id, name, skill, status, note,
+                  decisions: [ { id, question, decision, rationale, escalated } ] } ] }
+  Decision ids must be stable across regenerations — localStorage edits and
+  the exported <slug>.edits.json both key on them.
 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>REPLACE: idea/feature name — Interview Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REPLACE: idea/feature name — Decision Graph</title>
 <style>
   :root {
     --bg: #ffffff;
@@ -27,6 +31,16 @@
     --callout-border: #cbe6f2;
     --escalated-bg: #fbf3db;
     --escalated-border: #f0e2ab;
+    --edited: #d9730d;
+    --edited-bg: #fdf4ec;
+    --flagged: #d44c47;
+    --flagged-bg: #fdf0ef;
+    --done: #2e7d32;
+    --done-bg: #e8f3e9;
+    --progress: #1565c0;
+    --progress-bg: #e7f0fa;
+    --pending-bg: #f1f1ef;
+    --rail: #c9c9c5;
   }
   * { box-sizing: border-box; }
   body {
@@ -38,132 +52,396 @@
     line-height: 1.6;
   }
   main {
-    max-width: 720px;
+    max-width: 860px;
     margin: 0 auto;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 48px;
   }
-  h1 {
-    font-size: 2rem;
-    margin: 0 0 8px;
-  }
-  .meta {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin-bottom: 32px;
-  }
-  h2 {
-    font-size: 1.1rem;
-    margin: 40px 0 12px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border);
-  }
-  h2:first-of-type { border-top: none; padding-top: 0; }
+  h1 { font-size: 2rem; margin: 0 0 8px; }
+  .meta { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
   .summary {
     background: var(--callout-bg);
     border: 1px solid var(--callout-border);
     border-radius: 8px;
     padding: 16px 20px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
   }
   .summary .icon { margin-right: 8px; }
-  .escalated {
-    background: var(--escalated-bg);
-    border: 1px solid var(--escalated-border);
-    border-radius: 8px;
-    padding: 16px 20px;
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 16px 0 32px;
   }
-  .qa {
-    margin: 16px 0;
-    padding-left: 16px;
-    border-left: 2px solid var(--border);
-  }
-  .qa .q { font-weight: 600; margin-bottom: 4px; }
-  .qa .d { margin-bottom: 4px; }
-  .qa .r { color: var(--text-muted); font-size: 0.92rem; }
-  details {
+  .toolbar button {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 6px 14px;
+    border-radius: 6px;
     border: 1px solid var(--border);
-    border-radius: 8px;
-    margin: 8px 0;
-    padding: 4px 16px;
-  }
-  summary {
+    background: var(--bg);
+    color: var(--text);
     cursor: pointer;
-    font-weight: 600;
-    padding: 12px 0;
-    list-style: none;
   }
-  summary::-webkit-details-marker { display: none; }
-  summary::before {
-    content: "▸";
-    display: inline-block;
-    margin-right: 8px;
-    transition: transform 0.15s;
+  .toolbar button.primary {
+    background: var(--edited);
+    border-color: var(--edited);
+    color: #fff;
   }
-  details[open] summary::before { transform: rotate(90deg); }
-  details[open] summary { border-bottom: 1px solid var(--border); }
-  .qa-list { padding: 8px 0 12px; }
+  .toolbar button:disabled { opacity: 0.45; cursor: default; }
+  .toolbar .count { color: var(--text-muted); font-size: 0.88rem; }
+  .toolbar .hint { flex-basis: 100%; color: var(--text-muted); font-size: 0.82rem; }
+
+  /* ── pipeline rail ─────────────────────────────────────────── */
+  .stage { display: flex; gap: 20px; }
+  .rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 0 0 28px;
+  }
+  .rail .dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 3px solid var(--rail);
+    background: var(--bg);
+    flex: 0 0 auto;
+    margin-top: 6px;
+  }
+  .stage.done .dot { border-color: var(--done); background: var(--done); }
+  .stage.in-progress .dot { border-color: var(--progress); }
+  .stage.skipped .dot { border-color: var(--rail); background: var(--pending-bg); }
+  .rail .line { width: 2px; flex: 1 1 auto; background: var(--rail); min-height: 24px; }
+  .stage:last-child .rail .line { display: none; }
+
+  .stage-body { flex: 1 1 auto; padding-bottom: 28px; min-width: 0; }
+  .stage-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .stage-head h2 { font-size: 1.1rem; margin: 0; }
+  .stage-head .skill { color: var(--text-muted); font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .badge {
+    font-size: 0.72rem;
+    padding: 1px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .badge.done { background: var(--done-bg); color: var(--done); }
+  .badge.in-progress { background: var(--progress-bg); color: var(--progress); }
+  .badge.pending, .badge.skipped { background: var(--pending-bg); color: var(--text-muted); }
+  .badge.escalated { background: var(--escalated-bg); color: #9a6700; border: 1px solid var(--escalated-border); }
+  .badge.edited { background: var(--edited-bg); color: var(--edited); }
+  .badge.flagged { background: var(--flagged-bg); color: var(--flagged); }
+  .stage-note { color: var(--text-muted); font-size: 0.85rem; margin: 2px 0 0; }
+
+  /* ── decision nodes ────────────────────────────────────────── */
+  .decisions { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .node {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--rail);
+    border-radius: 8px;
+    background: var(--bg);
+  }
+  .node.escalated { border-left-color: #d4a72c; background: var(--escalated-bg); }
+  .node.edited { border-left-color: var(--edited); }
+  .node.flagged { border-left-color: var(--flagged); }
+  .node-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+  .node-head .q { font-weight: 600; flex: 1 1 auto; min-width: 0; }
+  .node-head .caret { color: var(--text-muted); transition: transform 0.15s; }
+  .node.open .node-head .caret { transform: rotate(90deg); }
+  .node-detail { display: none; padding: 0 14px 12px; }
+  .node.open .node-detail { display: block; }
+  .node-detail .d { margin: 0 0 4px; }
+  .node-detail .d.struck { text-decoration: line-through; color: var(--text-muted); }
+  .node-detail .r { color: var(--text-muted); font-size: 0.92rem; margin: 0 0 10px; }
+  .node-detail label { display: block; font-size: 0.8rem; color: var(--text-muted); margin: 8px 0 2px; }
+  .node-detail textarea, .node-detail input[type="text"] {
+    width: 100%;
+    font: inherit;
+    font-size: 0.92rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: var(--bg-soft);
+  }
+  .node-detail textarea { resize: vertical; min-height: 48px; }
+  .flag-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.9rem; }
+  .flag-row input { accent-color: var(--flagged); }
 </style>
 </head>
 <body>
 <main>
-  <h1>REPLACE: idea/feature name</h1>
-  <div class="meta">Interview report — REPLACE: date · REPLACE: N questions</div>
-
-  <div class="summary">
-    <span class="icon">💡</span>
-    REPLACE: 2–4 plain-language sentences. What got decided and why, written
-    for someone with zero context on the codebase or the interview itself.
+  <h1 id="r-title"></h1>
+  <div class="meta" id="r-meta"></div>
+  <div class="summary"><span class="icon">💡</span><span id="r-summary"></span></div>
+  <div class="toolbar">
+    <button class="primary" id="btn-export">수정 내보내기</button>
+    <button id="btn-reset">수정 초기화</button>
+    <span class="count" id="edit-count"></span>
+    <span class="hint">노드를 클릭하면 근거를 보고, 결정을 고치거나 문제로 표시할 수 있습니다.
+      내보내기는 <code id="r-edits-name"></code> 파일을 만듭니다 — <code>docs/agents/matt-auto-log/</code>에
+      저장해 두면 다음 실행 때 matt-auto가 해당 스테이지부터 다시 작업합니다.</span>
   </div>
-
-  <!-- ============================================================
-       CASE A — 5 or fewer questions: flat list, no grouping.
-       Delete this block if using CASE B instead.
-       ============================================================ -->
-  <h2>Decisions</h2>
-  <div class="decisions">
-    <div class="qa">
-      <div class="q">REPLACE: question, restated plainly</div>
-      <div class="d">REPLACE: the decision</div>
-      <div class="r">REPLACE: one-line rationale</div>
-    </div>
-  </div>
-
-  <!-- ============================================================
-       CASE B — more than 5 questions: group into named topic
-       sections. Name sections from what the interview actually
-       covered — don't force a fixed taxonomy. One <details> per
-       topic. Delete this block if using CASE A instead.
-       ============================================================ -->
-  <h2>Decisions</h2>
-  <details>
-    <summary>REPLACE: topic name — one-line plain-language takeaway</summary>
-    <div class="qa-list">
-      <div class="qa">
-        <div class="q">REPLACE: question, restated plainly</div>
-        <div class="d">REPLACE: the decision</div>
-        <div class="r">REPLACE: one-line rationale</div>
-      </div>
-      <!-- repeat .qa per question in this topic -->
-    </div>
-  </details>
-  <!-- repeat <details> per topic -->
-
-  <!-- ============================================================
-       Escalated decisions — only include this section if at least
-       one question was escalated to the real user instead of
-       answered by the delegate. Omit entirely otherwise.
-       ============================================================ -->
-  <h2>Escalated to you directly</h2>
-  <div class="escalated">
-    <div class="qa">
-      <div class="q">REPLACE: question</div>
-      <div class="d">REPLACE: your answer</div>
-      <div class="r">REPLACE: why this one was escalated</div>
-    </div>
-  </div>
+  <div id="graph"></div>
 </main>
+
+<script id="graph-data" type="application/json">
+{
+  "title": "REPLACE: idea/feature name, in Korean",
+  "slug": "replace-slug",
+  "generated": "REPLACE: YYYY-MM-DD",
+  "summary": "REPLACE: 2-4 plain-language sentences on what got decided and why, in Korean.",
+  "stages": [
+    {
+      "id": "interview",
+      "name": "인터뷰",
+      "skill": "grill-with-docs",
+      "status": "done",
+      "note": "",
+      "decisions": [
+        {
+          "id": "interview-1",
+          "question": "REPLACE: question, restated plainly, in Korean",
+          "decision": "REPLACE: the decision, in Korean",
+          "rationale": "REPLACE: one-line rationale, in Korean",
+          "escalated": false
+        }
+      ]
+    },
+    {
+      "id": "spec",
+      "name": "스펙",
+      "skill": "to-spec",
+      "status": "pending",
+      "note": "",
+      "decisions": []
+    }
+  ]
+}
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var data = JSON.parse(document.getElementById("graph-data").textContent);
+  var storeKey = "matt-auto-edits:" + data.slug;
+
+  function loadEdits() {
+    try {
+      return JSON.parse(localStorage.getItem(storeKey)) || {};
+    } catch (e) { return {}; }
+  }
+  function saveEdits() {
+    try { localStorage.setItem(storeKey, JSON.stringify(edits)); } catch (e) {}
+  }
+  var edits = loadEdits(); // { [decisionId]: { decision?, flagged?, comment? } }
+
+  var decisionsById = {};
+  data.stages.forEach(function (s) {
+    (s.decisions || []).forEach(function (d) { decisionsById[d.id] = { d: d, stage: s }; });
+  });
+
+  function editOf(id) { return edits[id] || {}; }
+  function isEdited(id) {
+    var e = editOf(id);
+    return typeof e.decision === "string" && e.decision.trim() !== "" &&
+           e.decision.trim() !== decisionsById[id].d.decision.trim();
+  }
+  function isFlagged(id) { return !!editOf(id).flagged; }
+  function isChanged(id) { return isEdited(id) || isFlagged(id); }
+
+  function setEdit(id, patch) {
+    var e = edits[id] || {};
+    Object.keys(patch).forEach(function (k) { e[k] = patch[k]; });
+    if ((typeof e.decision !== "string" || e.decision.trim() === "" ||
+         e.decision.trim() === decisionsById[id].d.decision.trim()) &&
+        !e.flagged && !(e.comment && e.comment.trim())) {
+      delete edits[id];
+    } else {
+      edits[id] = e;
+    }
+    saveEdits();
+  }
+
+  // ── header ─────────────────────────────────────────────────
+  document.title = data.title + " — 결정 그래프";
+  document.getElementById("r-title").textContent = data.title;
+  var total = Object.keys(decisionsById).length;
+  document.getElementById("r-meta").textContent =
+    "결정 그래프 — " + data.generated + " · 결정 " + total + "개";
+  document.getElementById("r-summary").textContent = data.summary;
+  document.getElementById("r-edits-name").textContent = data.slug + ".edits.json";
+
+  // ── toolbar state (looked up before render; renderNode calls updateToolbar) ──
+  var btnExport = document.getElementById("btn-export");
+  var btnReset = document.getElementById("btn-reset");
+  var countEl = document.getElementById("edit-count");
+
+  function changedIds() { return Object.keys(decisionsById).filter(isChanged); }
+
+  function updateToolbar() {
+    var n = changedIds().length;
+    countEl.textContent = n ? "노드 " + n + "개 변경됨" : "변경 없음";
+    btnExport.disabled = n === 0;
+    btnReset.disabled = Object.keys(edits).length === 0;
+  }
+
+  // ── render ─────────────────────────────────────────────────
+  var STATUS_LABEL = {
+    "done": "완료", "in-progress": "진행 중",
+    "pending": "대기", "skipped": "건너뜀"
+  };
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function renderNode(d) {
+    var node = el("div", "node");
+    if (d.escalated) node.classList.add("escalated");
+
+    var head = el("div", "node-head");
+    head.appendChild(el("span", "caret", "▸"));
+    head.appendChild(el("span", "q", d.question));
+    var badges = el("span", "badges");
+    if (d.escalated) badges.appendChild(el("span", "badge escalated", "직접 답변"));
+    var editedBadge = el("span", "badge edited", "수정됨");
+    var flaggedBadge = el("span", "badge flagged", "문제");
+    badges.appendChild(editedBadge);
+    badges.appendChild(flaggedBadge);
+    head.appendChild(badges);
+    node.appendChild(head);
+
+    var detail = el("div", "node-detail");
+    var dLine = el("p", "d", d.decision);
+    detail.appendChild(dLine);
+    detail.appendChild(el("p", "r", d.rationale));
+
+    detail.appendChild(el("label", null, "결정 수정 (그대로 두면 유지됩니다)"));
+    var ta = document.createElement("textarea");
+    ta.value = typeof editOf(d.id).decision === "string" ? editOf(d.id).decision : d.decision;
+    detail.appendChild(ta);
+
+    var flagRow = el("div", "flag-row");
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.id = "flag-" + d.id;
+    cb.checked = isFlagged(d.id);
+    var cbLabel = document.createElement("label");
+    cbLabel.htmlFor = cb.id;
+    cbLabel.textContent = "문제로 표시";
+    cbLabel.style.margin = "0";
+    flagRow.appendChild(cb);
+    flagRow.appendChild(cbLabel);
+    detail.appendChild(flagRow);
+
+    detail.appendChild(el("label", null, "코멘트 (무엇이 문제인지 / 대신 원하는 방향)"));
+    var comment = document.createElement("input");
+    comment.type = "text";
+    comment.value = editOf(d.id).comment || "";
+    detail.appendChild(comment);
+
+    node.appendChild(detail);
+
+    function refresh() {
+      node.classList.toggle("edited", isEdited(d.id));
+      node.classList.toggle("flagged", isFlagged(d.id));
+      editedBadge.style.display = isEdited(d.id) ? "" : "none";
+      flaggedBadge.style.display = isFlagged(d.id) ? "" : "none";
+      dLine.classList.toggle("struck", isEdited(d.id));
+      updateToolbar();
+    }
+
+    head.addEventListener("click", function () { node.classList.toggle("open"); });
+    ta.addEventListener("input", function () { setEdit(d.id, { decision: ta.value }); refresh(); });
+    cb.addEventListener("change", function () { setEdit(d.id, { flagged: cb.checked }); refresh(); });
+    comment.addEventListener("input", function () { setEdit(d.id, { comment: comment.value }); refresh(); });
+
+    refresh();
+    return node;
+  }
+
+  var graph = document.getElementById("graph");
+  data.stages.forEach(function (s) {
+    var stage = el("div", "stage " + s.status);
+    var rail = el("div", "rail");
+    rail.appendChild(el("div", "dot"));
+    rail.appendChild(el("div", "line"));
+    stage.appendChild(rail);
+
+    var body = el("div", "stage-body");
+    var headRow = el("div", "stage-head");
+    headRow.appendChild(el("h2", null, s.name));
+    if (s.skill) headRow.appendChild(el("span", "skill", s.skill));
+    headRow.appendChild(el("span", "badge " + s.status, STATUS_LABEL[s.status] || s.status));
+    body.appendChild(headRow);
+    if (s.note) body.appendChild(el("p", "stage-note", s.note));
+
+    if (s.decisions && s.decisions.length) {
+      var list = el("div", "decisions");
+      s.decisions.forEach(function (d) { list.appendChild(renderNode(d)); });
+      body.appendChild(list);
+    }
+    stage.appendChild(body);
+    graph.appendChild(stage);
+  });
+
+  // ── toolbar actions ────────────────────────────────────────
+  function exportPayload() {
+    return {
+      slug: data.slug,
+      exported: new Date().toISOString(),
+      edits: changedIds().map(function (id) {
+        var entry = decisionsById[id];
+        var e = editOf(id);
+        return {
+          id: id,
+          stage: entry.stage.id,
+          question: entry.d.question,
+          original: entry.d.decision,
+          edited: isEdited(id) ? e.decision.trim() : null,
+          flagged: isFlagged(id),
+          comment: (e.comment || "").trim()
+        };
+      })
+    };
+  }
+
+  btnExport.addEventListener("click", function () {
+    var json = JSON.stringify(exportPayload(), null, 2);
+    var blob = new Blob([json], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = data.slug + ".edits.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(json).catch(function () {});
+    }
+  });
+
+  btnReset.addEventListener("click", function () {
+    edits = {};
+    try { localStorage.removeItem(storeKey); } catch (e) {}
+    location.reload();
+  });
+
+  updateToolbar();
+})();
+</script>
 </body>
 </html>

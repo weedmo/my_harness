@@ -1,48 +1,123 @@
 ---
 name: interview-report
-description: Turns a completed grilling interview log (question → decision → rationale triples) into a single self-contained, Notion-style light-theme HTML file anyone can skim and understand. Called by matt-auto right after its interview stage finishes — do not trigger this standalone on a bare grill-me/grill-with-docs session; matt-auto is what pulls it in.
+description: Renders matt-auto's decision log (question → decision → rationale, per pipeline stage) into a single self-contained interactive decision-graph HTML — the pipeline stages in order, each decision as an editable node the user can rewrite or flag and export as <slug>.edits.json for matt-auto to rework from, published as an Orca artifact link (`orca artifacts share`/`update`) so the user reads it in a browser instead of opening a local file. Called by matt-auto right after its interview stage and again before its final report — do not trigger this standalone on a bare grill-me/grill-with-docs session; matt-auto is what pulls it in.
 ---
 
-# Interview Report
+# Interview Report (decision graph)
 
-Turn the interview log matt-auto's delegate produced — every question it faced during `$grill-with-docs`/`$grill-me`, its decision, and the one-line rationale — into something a person can actually read in under a minute.
+Turn the decision log matt-auto's delegate produced — every question it faced, its decision, and the one-line rationale, stage by stage — into an interactive graph a person can read in under a minute and *push back on* by editing it.
 
 ## Why this exists
 
-The raw log is a flat transcript, complete but not *readable*: a real interview can run to dozens of questions, and nobody wants to scroll a wall of Q&A to find out what actually got decided. This turns the transcript into something skimmable — a plain-language summary up top, detail underneath organized so a reader only opens what they want to go deeper on.
+The raw log is a flat transcript, complete but not *readable*: a real run answers dozens of questions across interview, seam check, ticket breakdown, and implementation, and nobody wants to scroll a wall of Q&A to find out what got decided where. The graph shows the pipeline as it actually ran — which stage came in what order, and which decisions and policies applied inside each stage — and because the user opted out of live confirms, the graph is also their steering wheel: any node they disagree with, they edit or flag right in the page and export the change for matt-auto to act on.
 
 ## When this runs
 
-Only as part of matt-auto's pipeline, right after its interview stage (step 4) concludes — in both its default and `--yolo` modes, since both run the interview, just routed to the delegate either way. Don't run this off a standalone `$grill-me`/`$grill-with-docs` session; those aren't matt-auto's concern and this report is specifically about what the delegate decided on the user's behalf.
+Only as part of matt-auto's pipeline:
+
+1. Right after the interview stage (step 4) concludes — the graph then covers the interview decisions and marks later stages pending. This run feeds matt-auto's interview gate, so the published link is what the user is asked to approve; get it published before matt-auto presents the gate.
+2. Again before matt-auto's final report (and after the small path's `$implement`, and after ship mode's step 10) — regenerate the same file over the full decision log so the finished graph covers every stage.
+
+Don't run this off a standalone `$grill-me`/`$grill-with-docs` session; this report is specifically about what the delegate decided on the user's behalf.
 
 ## Input
 
-The interview log matt-auto accumulated: an ordered list of `{question, decision, rationale}`, plus which of those (if any) were escalated to the real user instead of answered by the delegate.
+The decision log matt-auto accumulated: an ordered list of `{question, decision, rationale}` per pipeline stage, which of those were escalated to the real user, and each stage's current status (done / in progress / pending / skipped, with why).
 
 ## Output
 
-One self-contained HTML file — no external fonts, scripts, or CDNs, so it opens correctly offline — written to `docs/agents/interview-reports/<slug>.html` (create the directory if it doesn't exist). Use the same `<slug>` matt-auto is already using for its own `--yolo` decision log, if it's running in that mode; otherwise a short kebab-case name for the idea under discussion.
+One self-contained HTML file — no external fonts, scripts, or CDNs, so it opens correctly offline — written to `docs/agents/matt-auto-log/<slug>.html`, next to the decision log, using the same `<slug>`. Regeneration overwrites the same file; the page keeps user edits safe across regenerations via `localStorage`, keyed by slug.
 
-Report the saved path back to the user in your final message — a file nobody's told about might as well not exist.
+Then publish it as an Orca artifact (below) and report both the link and the path.
 
-## Structure
+## Publish it as an Orca artifact
 
-Copy `assets/template.html` and fill in the content — it already has the light Notion-style look (background, typography, toggle blocks via native `<details>/<summary>`, callout boxes) worked out. Don't redesign the CSS from scratch each run; that's the whole point of bundling it.
+The file on disk is the source of truth; the link is how the user actually reads it — matt-auto's interview gate hands them this URL, not a path they have to open by hand. Use Orca's own artifact mechanism, nothing else: the bundled `orca-cli` skill's **Artifacts** section is the authority (`$orca-cli`, or `orca skills get orca-cli`), and this section only says how matt-auto uses it. Never substitute another host, a screenshot, or a hand-rolled upload.
 
-1. **Title** — the idea/feature name, one line.
-2. **Plain-language summary** — 2–4 sentences, no jargon, answering "what got decided and why" for someone with zero context on the codebase or the interview. This is the only part a skimming reader has to read.
-3. **The decisions**:
-   - **5 or fewer questions** — list them flat (template's Case A). Grouping a short list just adds clicks for nothing.
-   - **More than 5** — group into named topic sections (template's Case B), one `<details>` toggle per topic. Name sections from what the interview actually covered ("Scope", "Data model", "Error handling", whatever came up) — don't force a fixed taxonomy onto an interview that didn't have one.
-4. **Escalated decisions**, if any — call these out in their own section with the template's `.escalated` callout, since these are the ones the real user answered directly and are worth being able to spot at a glance. Omit the section entirely if nothing was escalated.
+Pick the executable the way `orca-cli` does, once: inside an Orca-managed terminal `orca` is always the Orca CLI; in any other shell **on Linux use `orca-ide`** — bare `orca` there is usually the GNOME screen reader and running it starts speech on the user's machine.
 
-## Writing the summary and section labels
+- **First publish for this slug:** `<orca> artifacts share docs/agents/matt-auto-log/<slug>.html --json` → the share URL comes back as `result.shareUrl` (without `--json` the URL is the whole stdout).
+- **Every regeneration afterwards:** `<orca> artifacts update <the same path> --json`. Orca looks the artifact up by the resolved local path in the active profile, so the same path from the same profile keeps the same link — the user goes on reading the URL they already have. Only if `update` reports no such record (the file was never shared from this profile) fall back to `share`.
+- The HTML must stay self-contained — Orca does not upload relative assets — which the template already guarantees. The CLI transport caps a file at 800 KB; template plus a normal decision log sits far under it, so a size failure means the data block grew wrong.
 
-Write for someone who has zero context on the interview — a teammate skimming this a week later, or the user's manager. Every "what got decided" line should stand on its own without requiring the reader to already know the question that prompted it: translate ("we decided X because Y"), don't just relabel the raw question.
+### What the hosted page can and cannot do
+
+Orca serves the file inside a sandboxed iframe (`allow-downloads allow-forms allow-modals allow-popups allow-scripts`, no `allow-same-origin`) under an Orca chrome header. Verified against a live artifact, this means:
+
+- **Scripts run**, so the graph renders, edits, flags, and **Export edits** all work — the export's blob download is covered by `allow-downloads`.
+- **`localStorage` throws `SecurityError`** (the frame has an opaque origin). The template already wraps every access in `try`/`catch`, so nothing breaks — but edits live only for that page load. Say so when handing over the link: **export before reloading**, or edit the local file instead. Never "fix" this by removing the guards.
+- The header shows the **original file name as the page title** (`<slug>.html`) and the artifact's expiry — links last 30 days, and each `update` restarts that window.
+
+Publishing can be refused, and that never cancels the report — write the file anyway and say in one line why there is no link:
+
+- Code `artifact_sharing_disabled` → publishing is off for the whole device and **only a human can turn it on**; there is no CLI or RPC way to grant it, so do not retry. Tell the user to open Settings → Artifacts in the Orca desktop app on this device, turn on "Allow publishing public artifact links", and say the word — then re-run the share and hand them the link. Give them the local path meanwhile.
+- No Orca CLI on `PATH`, runtime unreachable, or profile signed out → report `Orca artifact unavailable: <why>` plus the local path.
+
+Report the share URL and the saved path back in your final message — a file nobody's told about might as well not exist.
+
+## How to build it
+
+Copy `assets/template.html` and fill in **only** the data:
+
+- the `<title>` tag, and
+- the JSON inside `<script id="graph-data" type="application/json">`.
+
+Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and export machinery lives there, and consistent output between runs is the point of bundling it.
+
+### Data format
+
+```json
+{
+  "title": "Feature name",
+  "slug": "feature-slug",
+  "generated": "2026-09-01",
+  "summary": "2-4 plain-language sentences: what got decided and why, for someone with zero context.",
+  "stages": [
+    {
+      "id": "interview",
+      "name": "Interview",
+      "skill": "grill-with-docs",
+      "status": "done",
+      "note": "",
+      "decisions": [
+        {
+          "id": "interview-1",
+          "question": "The question, restated plainly",
+          "decision": "The decision",
+          "rationale": "One-line rationale",
+          "escalated": false
+        }
+      ]
+    }
+  ]
+}
+```
+
+- `stages` appear in the order the pipeline ran them; the page draws the rail and connectors from that order. Use matt-auto's own stages (Interview, Size branch, Spec, Tickets, Confirm, Implement, Ship) and drop stages that never applied rather than listing empty shells — except skipped stages, which stay visible with `"status": "skipped"` and a `note` saying why (`"small path"`, `"autonomous"`).
+- `status` is one of `done` / `in-progress` / `pending` / `skipped`.
+- Decision `id`s must be stable across regenerations (stage prefix + ordinal is fine) — `localStorage` edits and `edits.json` both key on them.
+- `escalated: true` marks decisions the real user answered directly; the page highlights them.
+
+### Writing the summary and decision text
+
+**Always write the graph's content in Korean** — `title`, `summary`, stage `name`s and `note`s, and every `question`/`decision`/`rationale`. The template's own UI labels are already Korean; ids and the JSON structure stay English.
+
+Write for someone who has zero context on the run — a teammate skimming this a week later. Every `question`/`decision` pair must stand on its own: translate ("X를 하기로 했다, 왜냐하면 Y"), don't paste the raw transcript line.
+
+## The edits round-trip
+
+The page lets the user rewrite a decision, flag a node as a problem with a comment, and click **Export edits**, which downloads `<slug>.edits.json` (and copies it to the clipboard). The page tells them to save it into `docs/agents/matt-auto-log/`. matt-auto checks for that file at every invocation and treats each entry as a change request — that consumption logic is matt-auto's (see its Decision-graph report section), not this skill's. This skill's only obligations are stable decision ids and not breaking the template's export format.
 
 ## Red flags
 
-- Dumping the raw Q&A log into the template unedited → the point is translation into plain language, not reformatting.
-- Grouping a 4-question interview into topic sections → adds friction for no benefit; use the flat list.
-- Redesigning the CSS instead of using the template → inconsistent output between runs is the failure mode this skill exists to prevent.
+- Dumping the raw Q&A log into the JSON unedited → the point is translation into plain language, not reformatting.
+- Writing the graph's content in English → the user reads this in Korean; only ids and JSON structure stay English.
+- Editing the template's CSS/JS instead of only the data block → inconsistent, possibly broken output between runs is the failure mode this skill exists to prevent.
+- Changing decision ids on regeneration → orphans the user's saved edits and any exported edits.json.
+- Running `artifacts share` on a regeneration instead of `artifacts update` → the link the user already has is no longer the one you regenerated.
+- Publishing the graph anywhere but Orca's own artifacts (another host, a pasted screenshot, a hand-rolled upload) → Orca artifacts are the delivery mechanism; when they are unavailable the fallback is the local path, not a substitute service.
+- Retrying a share denied with `artifact_sharing_disabled` → the answer cannot change until a human flips the device setting.
+- Calling bare `orca` from a non-Orca Linux shell → that is the GNOME screen reader; use `orca-ide`.
+- Skipping the report, or leaving the gate without a deliverable, because publishing failed → the local HTML is still the report; only the link is missing, and the reason belongs in one line.
+- Writing the file anywhere but `docs/agents/matt-auto-log/<slug>.html` → matt-auto and the edits round-trip both assume that path.
 - Running this outside matt-auto, off a bare grilling session → out of scope; the report is specifically about delegate decisions.
