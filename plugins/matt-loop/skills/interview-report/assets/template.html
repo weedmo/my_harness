@@ -592,11 +592,26 @@
   }
 
   // ── theme ──────────────────────────────────────────────────
-  // The sandboxed frame has no localStorage, and the page reloads itself while
-  // a run is live, so the choice rides in the URL hash — reloads keep it.
+  // The sandboxed frame has no localStorage, and the page reloads itself while a
+  // run is live, so the choice has to survive a reload without storage. It rides
+  // in `window.name`, which belongs to the browsing context rather than the
+  // origin and therefore persists; the hash is only honoured for direct links,
+  // since assigning to it inside Orca's frame reloads the document and the
+  // fragment is dropped. `replaceState` throws in an opaque origin — hence the
+  // try/catch around the cosmetic URL update.
   var THEMES = { dark: { next: "light", label: "☀︎ 라이트" }, light: { next: "dark", label: "☾ 다크" } };
+  var THEME_KEY = "matt-auto-theme=";
   function currentTheme() {
-    return /theme=light/.test(location.hash) ? "light" : "dark";
+    if (/theme=light/.test(location.hash)) return "light";
+    if (/theme=dark/.test(location.hash)) return "dark";
+    try {
+      if (window.name.indexOf(THEME_KEY + "light") === 0) return "light";
+    } catch (e) {}
+    return "dark";
+  }
+  function rememberTheme(name) {
+    try { window.name = THEME_KEY + name; } catch (e) {}
+    try { history.replaceState(null, "", "#theme=" + name); } catch (e) {}
   }
   function applyTheme(name) {
     document.documentElement.setAttribute("data-theme", name);
@@ -607,7 +622,7 @@
   applyTheme(currentTheme());
   document.getElementById("btn-theme").addEventListener("click", function () {
     var next = THEMES[currentTheme()].next;
-    location.hash = "theme=" + next;
+    rememberTheme(next);
     applyTheme(next);
   });
 
