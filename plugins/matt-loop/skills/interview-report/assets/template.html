@@ -42,21 +42,24 @@
 <title>REPLACE: idea/feature name — Decision Graph</title>
 <style>
   /* Design tokens follow robodata's frontend (frontend/src/App.css): layered
-     panels over a near-black ground rather than one flat black, Catppuccin-
-     family semantic colors at 10% dim backgrounds, and #ff9830 as the accent. */
+     panels rather than one flat field, Catppuccin-family semantic colors at 10%
+     dim backgrounds, and #ff9830 as the accent. Both ends are pulled off the
+     extremes on purpose — the dark ground sits at #1a1a1d rather than near-black
+     and the light one at #f4f4f2 rather than white, since a report is read for
+     minutes at a time and either extreme tires the eye. */
   :root {
     color-scheme: dark;
-    --background: #0f0f0f;
-    --bg-deep: #0a0a0a;
-    --card: #161616;
-    --secondary: #1c1c1c;
-    --foreground: #d9d9d9;
-    --muted-foreground: #999999;
-    --dim: #666666;
-    --accent: #222222;
-    --border: #222222;
-    --border-strong: #2a2a2a;
-    --ring: #333333;
+    --background: #1a1a1d;
+    --bg-deep: #141416;
+    --card: #212126;
+    --secondary: #27272d;
+    --foreground: #e3e3e6;
+    --muted-foreground: #9d9da6;
+    --dim: #6e6e77;
+    --accent: #2e2e35;
+    --border: #2c2c33;
+    --border-strong: #3b3b44;
+    --ring: #4b4b55;
     --radius: 6px;
     --radius-md: 5px;
     --radius-sm: 4px;
@@ -76,24 +79,24 @@
     --flagged: #f38ba8;
     --flagged-bg: rgb(243 139 168 / 0.10);
     --muted-bg: rgb(255 255 255 / 0.04);
-    --on-primary: #0f0f0f;
+    --on-primary: #17171a;
     --primary-hover: #ffab55;
   }
   /* Light is the same system read on paper: the pastels darken to hold contrast
      on white, the panels invert into a light stack. */
   :root[data-theme="light"] {
     color-scheme: light;
-    --background: #ffffff;
-    --bg-deep: #f7f7f8;
-    --card: #fafafa;
-    --secondary: #f2f2f3;
-    --foreground: #2c2c31;
-    --muted-foreground: #6e6e76;
-    --dim: #9a9aa2;
-    --accent: #ececef;
-    --border: #e4e4e7;
-    --border-strong: #d0d0d6;
-    --ring: #b8b8c0;
+    --background: #f4f4f2;
+    --bg-deep: #eaeae7;
+    --card: #fbfbfa;
+    --secondary: #efefec;
+    --foreground: #35353b;
+    --muted-foreground: #70707a;
+    --dim: #9b9ba3;
+    --accent: #e6e6e2;
+    --border: #e1e1dd;
+    --border-strong: #cdcdc8;
+    --ring: #b2b2ac;
 
     --brand: #c2610b;
     --brand-bg: rgb(194 97 11 / 0.09);
@@ -832,6 +835,9 @@
     btn.setAttribute("aria-label", name === "dark" ? "라이트 테마로 전환" : "다크 테마로 전환");
   }
   applyTheme(currentTheme());
+  // A #theme= link opened while the page is already up changes the hash without
+  // reloading, so listen for it rather than only reading it at startup.
+  window.addEventListener("hashchange", function () { applyTheme(currentTheme()); });
   document.getElementById("btn-theme").addEventListener("click", function () {
     var next = THEMES[currentTheme()].next;
     rememberTheme(next);
