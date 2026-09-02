@@ -48,10 +48,19 @@ Orca serves the file inside a sandboxed iframe (`allow-downloads allow-forms all
 - **`localStorage` throws `SecurityError`** (the frame has an opaque origin). The template already wraps every access in `try`/`catch`, so nothing breaks — but edits live only for that page load. Say so when handing over the link: **export before reloading**, or edit the local file instead. Never "fix" this by removing the guards.
 - The header shows the **original file name as the page title** (`<slug>.html`) and the artifact's expiry — links last 30 days, and each `update` restarts that window.
 
-Publishing can be refused, and that never cancels the report — write the file anyway and say in one line why there is no link:
+Publishing can be refused, and that never cancels the report — write the file anyway, say in one line why there is no link, and deliver the page through Orca's built-in browser instead (next section):
 
-- Code `artifact_sharing_disabled` → publishing is off for the whole device and **only a human can turn it on**; there is no CLI or RPC way to grant it, so do not retry. Tell the user to open Settings → Artifacts in the Orca desktop app on this device, turn on "Allow publishing public artifact links", and say the word — then re-run the share and hand them the link. Give them the local path meanwhile.
-- No Orca CLI on `PATH`, runtime unreachable, or profile signed out → report `Orca artifact unavailable: <why>` plus the local path.
+- Code `artifact_sharing_disabled` → publishing is off for the whole device and **only a human can turn it on**; there is no CLI or RPC way to grant it, so do not retry. Tell the user to open Settings → Artifacts in the Orca desktop app on this device, turn on "Allow publishing public artifact links", and say the word — re-run `share` only once they have said so, never on every regeneration. On a headless runtime (`orca serve` on a server, paired from a desktop elsewhere) that switch may simply not be reachable, so treat the tab route as the delivery for that run rather than waiting.
+- No Orca CLI on `PATH`, runtime unreachable, or `authentication_required` (profile signed out) → report `Orca artifact unavailable: <why>` plus the local path.
+
+### No link: open it in Orca's built-in browser
+
+A path alone is not a deliverable — on a remote runtime the user cannot double-click it. When there is no link, open the file in the worktree's Orca browser tab, which the desktop shows even when the runtime is a headless `orca serve` on another machine (verified against a remote runtime):
+
+- **Once per run:** from inside the worktree, `<orca> tab create --url file://<absolute path> --json` → note `result.browserPageId` in the decision log. Before creating one, `<orca> tab list --json` — if a tab already shows that `file://` URL, reuse its `browserPageId` instead of opening a second.
+- **After every regeneration:** `<orca> reload --page <browserPageId> --json`. This is not optional: the built-in browser ignores every script-initiated reload or navigation of a `file://` page (`location.reload()`, `location.href = …`, `history.go(0)` — none of them fire, verified), so the page's own 30 s poll does nothing there and the rewritten file shows up only when you push it. `tab list` tells you if the tab is gone (`browser_tab_not_found`, or the URL no longer listed) — then create it again.
+- The page works normally inside that tab: `localStorage` is available (edits survive a reload, unlike the hosted artifact), the theme toggle works, exports download.
+- Only when there is no Orca at all — no CLI, no runtime — is the local path the whole deliverable; say so, and expect the user to open the file in a browser of their own, where the page's own poll does work.
 
 Report the share URL and the saved path back in your final message — a file nobody's told about might as well not exist.
 
@@ -128,7 +137,7 @@ The page ships **both skins**: the dark one above by default, and a light counte
   - **`blocker` is required on every `blocked` ticket** and is what the whole panel exists for: `reason` is one of `gate` / `escalation` / `ci` / `conflict` / `dependency` / `worker` / `review` / `other`, and `detail` is the specific, checkable fact — the unmet gate id and its expected-vs-actual, the failing check, the question awaiting an answer. "막혔습니다" with no detail is the failure this panel was built to prevent.
   - `gates` is the unlazy ledger tally when unlazy is installed; omit it otherwise.
   - **Who is doing the work shows on the node**: `route` is the routed agent, and `worker` carries the model and effort that route resolved to plus, for an Orca worker, its `dispatchId` and `worktree`. Fill both — "어떤 티켓을 어떤 서브에이전트가 어떤 모델로" is the question the node answers, and a node with only a route name half-answers it.
-  - **The page polls while `state` is not `done`** — it reloads itself every 30s to pick up a republished version, skipping the reload whenever the reader has unsaved edits, with a toggle to stop it. That is why `state: "done"` on the final regeneration matters: it is what stops the polling.
+  - **The page polls while `state` is not `done`** — it reloads itself every 30s to pick up a republished version, skipping the reload whenever the reader has unsaved edits, with a toggle to stop it. The interview-gate page (no `progress` yet) polls too, so a reader who leaves it open sees the run start once they approve. That is why `state: "done"` on the final regeneration matters: it is what stops the polling. Inside Orca's built-in browser the poll is inert — see "No link" above; there you push each regeneration with `orca reload --page`.
 
 - **`plan` — how the run intends to execute the tickets.** Rendered under the ticket list as an ordered wave graph, so the reader sees which tickets run at once, which wait, and why. Fill it as soon as matt-auto has planned execution (right after the ticket DAG), and keep it through the run — the waves stay put while the tickets inside them change status.
 
@@ -209,8 +218,10 @@ The page lets the user rewrite a decision, flag a node as a problem with a comme
 - Leaving `state` at `running` on the final regeneration → the page polls forever and the run looks unfinished.
 - A wave whose `why` is missing, or estimates invented to make the bar move → both turn the plan panel into decoration.
 - Running `artifacts share` on a regeneration instead of `artifacts update` → the link the user already has is no longer the one you regenerated.
-- Publishing the graph anywhere but Orca's own artifacts (another host, a pasted screenshot, a hand-rolled upload) → Orca artifacts are the delivery mechanism; when they are unavailable the fallback is the local path, not a substitute service.
-- Retrying a share denied with `artifact_sharing_disabled` → the answer cannot change until a human flips the device setting.
+- Publishing the graph anywhere but Orca's own artifacts (another host, a pasted screenshot, a hand-rolled upload) → Orca artifacts are the delivery mechanism; when they are unavailable the fallback is Orca's built-in browser tab on the local file, not a substitute service.
+- Handing over a bare path when there is no link, while an Orca runtime is reachable → open the file in the worktree's browser tab; a path on a remote server is not something the user can click.
+- Regenerating the file into an open Orca tab without `orca reload --page` → the tab keeps showing the old version; the page cannot reload itself there.
+- Retrying a share denied with `artifact_sharing_disabled` on every regeneration → the answer cannot change until a human flips the device setting; re-run only when the user says they did.
 - Calling bare `orca` from a non-Orca Linux shell → that is the GNOME screen reader; use `orca-ide`.
 - Skipping the report, or leaving the gate without a deliverable, because publishing failed → the local HTML is still the report; only the link is missing, and the reason belongs in one line.
 - Writing the file anywhere but `docs/agents/matt-auto-log/<slug>.html` → matt-auto and the edits round-trip both assume that path.
