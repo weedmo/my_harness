@@ -17,7 +17,8 @@
                waves: [ { id, mode, why, tickets: [ticketId] } ] },
       tickets?: [ { id, title, status, blockedBy, blocker: { reason, detail },
                     gates: { met, total }, route, estimateMin, actualMin,
-                    startedAt, note } ],
+                    startedAt, note,
+                    worker: { model, effort, dispatchId, worktree } } ],
       outcome?: { baseRef, headRef, branch, note,
                   files: [ { path, status, kind, added, removed, note } ] } }
   `outcome` is the final run's shipped-changes panel: omit it entirely on the
@@ -376,6 +377,79 @@
   }
   .refresh-row button.ghost:hover { background: var(--accent); border-color: var(--border-strong); color: var(--foreground); }
 
+  /* ── execution flow: waves left to right, tickets as nodes ──── */
+  .flow-wrap { overflow-x: auto; padding-bottom: 4px; margin-top: 14px; }
+  .flow { display: flex; align-items: stretch; gap: 0; min-width: min-content; }
+  .wcol { display: flex; flex-direction: column; gap: 8px; min-width: 196px; max-width: 260px; }
+  .wcol .whead {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted-foreground);
+    padding-bottom: 2px;
+  }
+  .wcol .wdur { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .conn { flex: 0 0 34px; display: flex; align-items: center; justify-content: center; position: relative; }
+  .conn::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    border-top: 1px dashed var(--border-strong);
+  }
+  .conn span { position: relative; color: var(--muted-foreground); font-size: 12px; background: var(--card); padding: 0 3px; }
+  .tnode {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--background);
+    padding: 9px 11px;
+  }
+  .tnode.done { border-left-color: var(--done); }
+  .tnode.in-progress { border-left-color: var(--progress); box-shadow: 0 0 0 1px color-mix(in srgb, var(--progress) 35%, transparent); }
+  .tnode.blocked { border-left-color: var(--flagged); box-shadow: 0 0 0 1px color-mix(in srgb, var(--flagged) 35%, transparent); }
+  .tnode .nhead { display: flex; align-items: baseline; gap: 6px; }
+  .tnode .ndot {
+    width: 7px; height: 7px; border-radius: 50%; flex: none;
+    background: var(--border-strong); align-self: center;
+  }
+  .tnode.done .ndot { background: var(--done); }
+  .tnode.in-progress .ndot { background: var(--progress); animation: pulse 1.8s ease-in-out infinite; }
+  .tnode.blocked .ndot { background: var(--flagged); }
+  .tnode .nid { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); }
+  .tnode .ntitle { font-size: 13px; font-weight: 500; }
+  .tnode .nmeta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .tnode .nagent {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--muted-foreground);
+    background: var(--muted-bg);
+    border-radius: var(--radius-sm);
+    padding: 1px 6px;
+  }
+  .tnode .nwhy { font-size: 11px; color: var(--flagged); margin: 6px 0 0; }
+  .tnode .nnote { font-size: 11px; color: var(--muted-foreground); margin: 6px 0 0; }
+
+  /* ── decision review, behind a disclosure ───────────────────── */
+  .disclosure-wrap { margin-top: 18px; }
+  .disclosure {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--foreground);
+    cursor: pointer;
+  }
+  .disclosure:hover { border-color: var(--border-strong); }
+  .disclosure .caret { color: var(--muted-foreground); transition: transform 0.15s; }
+  .disclosure[aria-expanded="false"] .caret { transform: rotate(-90deg); }
+  .disclosure .dcount { margin-left: auto; font-weight: 400; font-size: 12px; color: var(--muted-foreground); }
+  #decisions-body { padding-top: 4px; }
+  #decisions-body[hidden] { display: none; }
+
   /* ── outcome (final run only) ──────────────────────────────── */
   .outcome {
     border: 1px solid var(--border);
@@ -448,15 +522,22 @@
   <div class="summary"><span class="icon">💡</span><span id="r-summary"></span></div>
   <section class="progress" id="r-progress" hidden></section>
   <section class="outcome" id="r-outcome" hidden></section>
-  <div class="toolbar">
-    <button class="primary" id="btn-export">수정 내보내기</button>
-    <button id="btn-reset">수정 초기화</button>
-    <span class="count" id="edit-count"></span>
-    <span class="hint">노드를 클릭하면 근거를 보고, 결정을 고치거나 문제로 표시할 수 있습니다.
-      내보내기는 <code id="r-edits-name"></code> 파일을 만듭니다 — <code>docs/agents/matt-auto-log/</code>에
-      저장해 두면 다음 실행 때 matt-auto가 해당 스테이지부터 다시 작업합니다.</span>
-  </div>
-  <div id="graph"></div>
+  <section class="disclosure-wrap">
+    <button class="disclosure" id="btn-decisions" type="button" aria-expanded="true">
+      <span class="caret">▾</span><span class="dtitle">결정 검토</span><span class="dcount" id="r-dcount"></span>
+    </button>
+    <div id="decisions-body">
+      <div class="toolbar">
+        <button class="primary" id="btn-export">수정 내보내기</button>
+        <button id="btn-reset">수정 초기화</button>
+        <span class="count" id="edit-count"></span>
+        <span class="hint">노드를 클릭하면 근거를 보고, 결정을 고치거나 문제로 표시할 수 있습니다.
+          내보내기는 <code id="r-edits-name"></code> 파일을 만듭니다 — <code>docs/agents/matt-auto-log/</code>에
+          저장해 두면 다음 실행 때 matt-auto가 해당 스테이지부터 다시 작업합니다.</span>
+      </div>
+      <div id="graph"></div>
+    </div>
+  </section>
 </main>
 
 <script id="graph-data" type="application/json">
@@ -499,7 +580,12 @@
       },
       "route": "matt-default",
       "estimateMin": 0,
-      "note": "REPLACE: 선택 — 한 줄"
+      "note": "REPLACE: 선택 — 한 줄",
+      "worker": {
+        "model": "REPLACE: 모델 이름",
+        "effort": "high",
+        "dispatchId": ""
+      }
     }
   ],
   "stages": [
@@ -600,17 +686,33 @@
   // fragment is dropped. `replaceState` throws in an opaque origin — hence the
   // try/catch around the cosmetic URL update.
   var THEMES = { dark: { next: "light", label: "☀︎ 라이트" }, light: { next: "dark", label: "☾ 다크" } };
-  var THEME_KEY = "matt-auto-theme=";
+  var PREFIX = "matt-auto-ui:";
+  function prefs() {
+    var out = {};
+    try {
+      if (window.name.indexOf(PREFIX) === 0) {
+        window.name.slice(PREFIX.length).split(";").forEach(function (kv) {
+          var i = kv.indexOf("=");
+          if (i > 0) out[kv.slice(0, i)] = kv.slice(i + 1);
+        });
+      }
+    } catch (e) {}
+    return out;
+  }
+  function setPref(key, value) {
+    var p = prefs();
+    p[key] = value;
+    try {
+      window.name = PREFIX + Object.keys(p).map(function (k) { return k + "=" + p[k]; }).join(";");
+    } catch (e) {}
+  }
   function currentTheme() {
     if (/theme=light/.test(location.hash)) return "light";
     if (/theme=dark/.test(location.hash)) return "dark";
-    try {
-      if (window.name.indexOf(THEME_KEY + "light") === 0) return "light";
-    } catch (e) {}
-    return "dark";
+    return prefs().theme === "light" ? "light" : "dark";
   }
   function rememberTheme(name) {
-    try { window.name = THEME_KEY + name; } catch (e) {}
+    setPref("theme", name);
     try { history.replaceState(null, "", "#theme=" + name); } catch (e) {}
   }
   function applyTheme(name) {
@@ -626,6 +728,24 @@
     applyTheme(next);
   });
 
+  // ── decision review disclosure ─────────────────────────────
+  // At the interview gate the decisions are the report, so it opens; once a run
+  // is under way progress is what the reader came for, so it starts collapsed.
+  // Either way the reader's own choice wins and survives the live reload.
+  var decBtn = document.getElementById("btn-decisions");
+  var decBody = document.getElementById("decisions-body");
+  function setDecisions(open) {
+    decBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    decBody.hidden = !open;
+  }
+  var decPref = prefs().dec;
+  setDecisions(decPref ? decPref === "open" : !data.progress);
+  decBtn.addEventListener("click", function () {
+    var open = decBtn.getAttribute("aria-expanded") !== "true";
+    setPref("dec", open ? "open" : "closed");
+    setDecisions(open);
+  });
+
   // ── header ─────────────────────────────────────────────────
   document.title = data.title + " — 결정 그래프";
   document.getElementById("r-title").textContent = data.title;
@@ -634,6 +754,8 @@
     "결정 그래프 — " + data.generated + " · 결정 " + total + "개";
   document.getElementById("r-summary").textContent = data.summary;
   document.getElementById("r-edits-name").textContent = data.slug + ".edits.json";
+  document.getElementById("r-dcount").textContent = "결정 " + total + "개" +
+    (data.progress ? " · 검토하고 수정할 수 있습니다" : "");
 
   // ── toolbar state (looked up before render; renderNode calls updateToolbar) ──
   var btnExport = document.getElementById("btn-export");
@@ -682,31 +804,6 @@
     if (mins < 1) return "방금 갱신";
     if (mins < 60) return mins + "분 전 갱신";
     return Math.round(mins / 60) + "시간 전 갱신";
-  }
-
-  function renderTicket(tk) {
-    var row = el("div", "ticket " + (tk.status || "pending"));
-    if (tk.id) row.appendChild(el("span", "tid", tk.id));
-    row.appendChild(el("span", "ttitle", tk.title || ""));
-    var st = tk.status || "pending";
-    row.appendChild(el("span", "badge " + (TICKET_STATUS_LABEL[st] ? st : "pending"),
-      TICKET_STATUS_LABEL[st] || st));
-    if (tk.gates && tk.gates.total) {
-      row.appendChild(el("span", "badge gates", "게이트 " + (tk.gates.met || 0) + "/" + tk.gates.total));
-    }
-    if (tk.route) row.appendChild(el("span", "badge", tk.route));
-    if (tk.blockedBy && tk.blockedBy.length) {
-      row.appendChild(el("span", "blocked-by", "⟵ " + tk.blockedBy.join(", ")));
-    }
-    var why = tk.blocker && (tk.blocker.detail || tk.blocker.reason);
-    if (why) {
-      row.appendChild(el("span", "tnote",
-        "막힌 이유 — " + (BLOCKER_REASON_LABEL[tk.blocker.reason] || tk.blocker.reason || "") +
-        (tk.blocker.detail ? ": " + tk.blocker.detail : "")));
-    } else if (tk.note) {
-      row.appendChild(el("span", "tnote", tk.note));
-    }
-    return row;
   }
 
   // Estimates are the run's own guesses, so the page never presents them as
@@ -771,6 +868,24 @@
     return b;
   }
 
+  // A stage's bar: its own `percent` when the run set one, otherwise derived —
+  // done is 100, pending is 0, and an implement stage in flight follows its
+  // tickets. Skipped stages get no bar at all.
+  function stagePercent(s) {
+    if (typeof s.percent === "number") return Math.max(0, Math.min(100, Math.round(s.percent)));
+    if (s.status === "skipped") return null;
+    if (s.status === "done") return 100;
+    if (s.status === "pending") return 0;
+    if (s.status === "in-progress") {
+      var o = overallPercent();
+      if (o !== null && (data.tickets || []).length && /implement|구현/i.test(s.id + " " + (s.name || ""))) return o;
+      return null;
+    }
+    return null;
+  }
+
+  // The run-wide bar: percent, elapsed, and what is left — the header answers
+  // "얼마나 진행됐고 얼마나 남았나" before anything else on the page.
   function renderOverall(host, state) {
     var pct = overallPercent();
     if (pct === null) return;
@@ -788,62 +903,118 @@
       }
     }
     box.appendChild(line);
-    box.appendChild(bar(pct));
+    box.appendChild(bar(pct, state === "done" ? "done" : ""));
     host.appendChild(box);
   }
 
-  // The plan is the run's own call on what may run at once; waves render in
-  // order, so the reader sees both the shape and where it currently is.
-  function renderPlan(host) {
-    var plan = data.plan;
-    if (!plan || !plan.waves || !plan.waves.length) return;
+  // Tickets are nodes, waves are columns, and the run reads left to right —
+  // the same shape the coordinator actually executes.
+  function waveDuration(w, byId) {
+    var rs = (w.tickets || []).map(function (id) { return byId[id] ? (byId[id].estimateMin || 0) : 0; });
+    if (!rs.length) return 0;
+    return w.mode === "parallel" ? Math.max.apply(null, rs) : rs.reduce(function (a, b) { return a + b; }, 0);
+  }
+
+  function agentLabel(tk) {
+    // "어떤 sub agent가 어떤 model로" — route first, then the model/effort it maps to.
+    var parts = [];
+    if (tk.route) parts.push(tk.route);
+    var w = tk.worker || {};
+    var ml = [w.model, w.effort].filter(Boolean).join("/");
+    if (ml) parts.push(ml);
+    return parts.join(" · ");
+  }
+
+  function renderTicketNode(tk) {
+    var node = el("div", "tnode " + (tk.status || "pending"));
+    var head = el("div", "nhead");
+    head.appendChild(el("span", "ndot"));
+    head.appendChild(el("span", "nid", tk.id || ""));
+    head.appendChild(el("span", "ntitle", tk.title || ""));
+    node.appendChild(head);
+
+    var meta = el("div", "nmeta");
+    var st = tk.status || "pending";
+    meta.appendChild(el("span", "badge " + (TICKET_STATUS_LABEL[st] ? st : "pending"),
+      TICKET_STATUS_LABEL[st] || st));
+    if (tk.gates && tk.gates.total) {
+      meta.appendChild(el("span", "badge gates", "게이트 " + (tk.gates.met || 0) + "/" + tk.gates.total));
+    }
+    if (tk.estimateMin) meta.appendChild(el("span", "badge", "~" + fmtMinutes(tk.estimateMin)));
+    node.appendChild(meta);
+
+    var agent = agentLabel(tk);
+    if (agent) node.appendChild(el("div", "nagent", agent));
+    if (tk.worker && tk.worker.dispatchId) {
+      node.appendChild(el("div", "nagent", tk.worker.dispatchId));
+    }
+
+    if (tk.status === "blocked") {
+      var b = tk.blocker || {};
+      node.appendChild(el("p", "nwhy",
+        (BLOCKER_REASON_LABEL[b.reason] || b.reason || "막힘") + (b.detail ? ": " + b.detail : "")));
+    } else if (tk.note) {
+      node.appendChild(el("p", "nnote", tk.note));
+    }
+    return node;
+  }
+
+  // Without a plan the tickets still lay out left to right: each blocking level
+  // becomes its own column, so the shape survives a run that never planned waves.
+  function derivedWaves(tickets) {
+    var placed = {}, waves = [], guard = 0;
+    var left = tickets.slice();
+    while (left.length && guard++ < 50) {
+      var ready = left.filter(function (tk) {
+        return (tk.blockedBy || []).every(function (id) { return placed[id]; });
+      });
+      if (!ready.length) ready = left.slice();
+      waves.push({ id: "W" + waves.length, mode: ready.length > 1 ? "parallel" : "sequential",
+                   tickets: ready.map(function (tk) { return tk.id; }) });
+      ready.forEach(function (tk) { placed[tk.id] = true; });
+      left = left.filter(function (tk) { return !placed[tk.id]; });
+    }
+    return waves;
+  }
+
+  function renderFlow(host) {
+    var tickets = data.tickets || [];
+    if (!tickets.length) return;
     var byId = ticketsById();
-    var wrap = el("div", "plan");
+    var plan = data.plan || {};
+    var waves = (plan.waves && plan.waves.length) ? plan.waves : derivedWaves(tickets);
+
     var ph = el("div", "phead");
     ph.appendChild(el("span", null, "실행 계획"));
     if (plan.concurrency) ph.appendChild(el("span", "badge", "동시 " + plan.concurrency));
     if (plan.placement) ph.appendChild(el("span", "badge", plan.placement));
-    wrap.appendChild(ph);
+    host.appendChild(ph);
 
-    plan.waves.forEach(function (w, i) {
-      if (i) wrap.appendChild(el("div", "wave-link", "↓"));
-      var wave = el("div", "wave");
+    var flow = el("div", "flow");
+    waves.forEach(function (w, i) {
+      if (i) {
+        var conn = el("div", "conn");
+        conn.appendChild(el("span", null, "→"));
+        flow.appendChild(conn);
+      }
+      var col = el("div", "wcol");
       var wh = el("div", "whead");
       wh.appendChild(el("span", null, w.id || ("W" + (i + 1))));
       wh.appendChild(el("span", "badge " + (w.mode === "parallel" ? "new" : "keep"),
         w.mode === "parallel" ? "병렬 " + (w.tickets || []).length : "순차"));
-      wave.appendChild(wh);
-      var chips = el("div", "chips");
+      var dur = waveDuration(w, byId);
+      if (dur) wh.appendChild(el("span", "wdur", "≈" + fmtMinutes(dur)));
+      col.appendChild(wh);
       (w.tickets || []).forEach(function (id) {
-        var tk = byId[id] || { id: id, title: "" };
-        var chip = el("span", "chip " + (tk.status || "pending"));
-        chip.appendChild(el("span", "cid", tk.id));
-        chip.appendChild(el("span", "ctitle", tk.title || ""));
-        if (tk.estimateMin) chip.appendChild(el("span", "est", "~" + fmtMinutes(tk.estimateMin)));
-        chips.appendChild(chip);
+        col.appendChild(renderTicketNode(byId[id] || { id: id, title: "" }));
       });
-      wave.appendChild(chips);
-      if (w.why) wave.appendChild(el("p", "why", w.why));
-      wrap.appendChild(wave);
+      if (w.why) col.appendChild(el("p", "why", w.why));
+      flow.appendChild(col);
     });
-    if (plan.note) wrap.appendChild(el("p", "why", plan.note));
+    var wrap = el("div", "flow-wrap");
+    wrap.appendChild(flow);
     host.appendChild(wrap);
-  }
-
-  // A stage's bar: its own `percent` when the run set one, otherwise derived —
-  // done is 100, pending is 0, and an implement stage in flight follows its
-  // tickets. Skipped stages get no bar at all.
-  function stagePercent(s) {
-    if (typeof s.percent === "number") return Math.max(0, Math.min(100, Math.round(s.percent)));
-    if (s.status === "skipped") return null;
-    if (s.status === "done") return 100;
-    if (s.status === "pending") return 0;
-    if (s.status === "in-progress") {
-      var o = overallPercent();
-      if (o !== null && (data.tickets || []).length && /implement|구현/i.test(s.id + " " + (s.name || ""))) return o;
-      return null;
-    }
-    return null;
+    if (plan.note) host.appendChild(el("p", "why", plan.note));
   }
 
   function renderProgress() {
@@ -862,6 +1033,8 @@
     if (pr && pr.updated) top.appendChild(el("span", "stamp", sinceText(pr.updated)));
     host.appendChild(top);
 
+    renderOverall(host, state);
+
     if (pr && pr.current) {
       var cur = el("p", "current");
       cur.appendChild(el("span", "lbl", "지금:"));
@@ -869,8 +1042,6 @@
       host.appendChild(cur);
     }
     if (pr && pr.note) host.appendChild(el("p", "note", pr.note));
-
-    renderOverall(host, state);
 
     var stuck = tickets.filter(function (tk) { return tk.status === "blocked"; });
     stuck.forEach(function (tk) {
@@ -883,13 +1054,7 @@
       host.appendChild(box);
     });
 
-    if (tickets.length) {
-      var list = el("div", "tickets");
-      tickets.forEach(function (tk) { list.appendChild(renderTicket(tk)); });
-      host.appendChild(list);
-    }
-
-    renderPlan(host);
+    renderFlow(host);
 
     // The page cannot be pushed to, so it pulls: until the run reports done
     // it reloads itself to pick up the republished version — blocked runs keep

@@ -102,7 +102,7 @@ The page ships **both skins**: Orca-native dark by default, and a full light pal
 - Decision `id`s must be stable across regenerations (stage prefix + ordinal is fine) — `localStorage` edits and `edits.json` both key on them.
 - `escalated: true` marks decisions the real user answered directly; the page highlights them.
 - **`before` / `change` — the before → after view on every decision.** A decision is a move against what already held, and the node shows that move as two cells: `before` is the prior state — a documented policy, or the de-facto behavior the code already exhibited — or `null` when nothing existed (the page then reads *"없음 — 정해진 바 없었음"*). `change` classifies the move and shows as a badge even while the node is collapsed: `"new"` (신규 — nothing existed), `"redirect"` (방향 전환 — a prior direction existed and this changes it), `"keep"` (유지 — a prior policy was examined and confirmed). `decision` is always the after-state. Fill these whenever the log knows the before-state; a decision without `change` falls back to a plain single-line node, which is the degraded form, not a choice.
-- **`progress` + `tickets` — the live board, present from the ticket stage until the run ends.** Together they render *진행 상황* above everything else: run state, what is happening right now, every ticket with its status, and a red blocker box for anything stuck. Omit both on the interview-gate generation (no tickets exist yet) and on a small-path run that never produced tickets.
+- **`progress` + `tickets` — the live board, present from the ticket stage until the run ends.** Together they render *진행 상황* above everything else: the run-wide percentage, elapsed and remaining time first, then the execution flow — **waves as columns left to right, each ticket a node inside its wave** — and a red blocker box for anything stuck. The decision graph moves below it behind a 결정 검토 disclosure (open by default at the interview gate, collapsed once a run is under way, and the reader's own choice sticks across the live reload). Omit both on the interview-gate generation (no tickets exist yet) and on a small-path run that never produced tickets.
 
 ```json
 "progress": {
@@ -113,7 +113,11 @@ The page ships **both skins**: Orca-native dark by default, and a full light pal
 },
 "tickets": [
   { "id": "T3", "title": "결과 패널 렌더링", "status": "blocked",
-    "blockedBy": [], "gates": { "met": 3, "total": 5 }, "route": "matt-deep",
+    "blockedBy": [], "gates": { "met": 3, "total": 5 },
+    "route": "matt-deep",
+    "worker": { "model": "opus", "effort": "high",
+                "dispatchId": "dispatch-7f2", "worktree": "matt-auto/T3" },
+    "estimateMin": 25,
     "blocker": { "reason": "gate", "detail": "G4 스냅샷 테스트 실패 — 기대 +504/−175, 수신 +504/−134" },
     "note": "선택 — 막히지 않았을 때의 한 줄" }
 ]
@@ -122,7 +126,8 @@ The page ships **both skins**: Orca-native dark by default, and a full light pal
   - `state` is `running` / `blocked` / `done`; `updated` is the ISO timestamp of this regeneration (the page shows "N분 전 갱신" from it).
   - Ticket `status` is `done` / `in-progress` / `blocked` / `pending` / `skipped`. `blockedBy` lists the ticket ids it waits on — that is the DAG edge, not a blocker.
   - **`blocker` is required on every `blocked` ticket** and is what the whole panel exists for: `reason` is one of `gate` / `escalation` / `ci` / `conflict` / `dependency` / `worker` / `review` / `other`, and `detail` is the specific, checkable fact — the unmet gate id and its expected-vs-actual, the failing check, the question awaiting an answer. "막혔습니다" with no detail is the failure this panel was built to prevent.
-  - `gates` is the unlazy ledger tally when unlazy is installed; omit it otherwise. `route` is the routed agent name.
+  - `gates` is the unlazy ledger tally when unlazy is installed; omit it otherwise.
+  - **Who is doing the work shows on the node**: `route` is the routed agent, and `worker` carries the model and effort that route resolved to plus, for an Orca worker, its `dispatchId` and `worktree`. Fill both — "어떤 티켓을 어떤 서브에이전트가 어떤 모델로" is the question the node answers, and a node with only a route name half-answers it.
   - **The page polls while `state` is not `done`** — it reloads itself every 30s to pick up a republished version, skipping the reload whenever the reader has unsaved edits, with a toggle to stop it. That is why `state: "done"` on the final regeneration matters: it is what stops the polling.
 
 - **`plan` — how the run intends to execute the tickets.** Rendered under the ticket list as an ordered wave graph, so the reader sees which tickets run at once, which wait, and why. Fill it as soon as matt-auto has planned execution (right after the ticket DAG), and keep it through the run — the waves stay put while the tickets inside them change status.
@@ -143,6 +148,7 @@ The page ships **both skins**: Orca-native dark by default, and a full light pal
 
   - `mode` is `parallel` or `sequential`; `why` is one Korean line saying what made it so — the file overlap, the risk, the dependency. A wave without `why` is a shape with no reasoning, which is what this panel exists to show.
   - `concurrency` is how many workers may run at once; `placement` names where they run (`local`, or the environment name).
+  - The page lays the waves out **left to right** and prints each wave's own duration (a parallel wave's slowest ticket, a sequential wave's sum). With no `plan` at all it still draws the flow, deriving one column per blocking level from `blockedBy` — so the shape survives a run that never planned waves.
 - **Estimates and progress bars.** `progress.startedAt` (ISO) drives 경과; each ticket's `estimateMin` (and `startedAt` once it begins, `actualMin` once done) drives the rest. The page computes, and never asks you to pre-compute: the overall percent (estimate-weighted, an in-progress ticket counted by elapsed/estimate and capped at 90%), 남은 예상, and 완료 예정 시각 — a parallel wave costing its slowest ticket, a sequential one their sum. A stage may carry an explicit `percent`; otherwise done is 100, pending is 0, and an in-progress implement stage follows its tickets. **`estimateMin` is the run's own guess and the page labels it 예상** — never present it as measurement, and never back-fill it to make a bar look better.
 
 - **`outcome` — the shipped-changes panel, final regeneration only.** Omit the key entirely on the interview-gate run (nothing is built yet); fill it on the last regeneration, once implementation and review are done. The page renders it under the summary as *결과 — 이번 실행이 바꾼 것*: file counts by status, `+`/`−` totals split into 코드 / 문서 / 기타, and a per-file table. Totals are computed in the page from `files`, so never pass pre-summed numbers.
