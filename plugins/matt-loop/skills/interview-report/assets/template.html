@@ -41,65 +41,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>REPLACE: idea/feature name — Decision Graph</title>
 <style>
-  /* Orca's own artifact design language: the share page ships these tokens,
-     so the report reads as part of Orca rather than a page pasted into it. */
+  /* Design tokens follow robodata's frontend (frontend/src/App.css): layered
+     panels over a near-black ground rather than one flat black, Catppuccin-
+     family semantic colors at 10% dim backgrounds, and #ff9830 as the accent. */
   :root {
     color-scheme: dark;
-    --background: #0a0a0a;
-    --foreground: #fafafa;
-    --card: #171717;
-    --secondary: #262626;
-    --muted-foreground: #a1a1a1;
-    --accent: #404040;
-    --border: rgb(255 255 255 / 0.07);
-    --border-strong: rgb(255 255 255 / 0.15);
-    --ring: #737373;
-    --radius: 0.625rem;
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    --background: #0f0f0f;
+    --bg-deep: #0a0a0a;
+    --card: #161616;
+    --secondary: #1c1c1c;
+    --foreground: #d9d9d9;
+    --muted-foreground: #999999;
+    --dim: #666666;
+    --accent: #222222;
+    --border: #222222;
+    --border-strong: #2a2a2a;
+    --ring: #333333;
+    --radius: 6px;
+    --radius-md: 5px;
+    --radius-sm: 4px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", "Fira Code", SFMono-Regular, ui-monospace, Menlo, monospace;
 
-    --done: #4ade80;
-    --done-bg: rgb(74 222 128 / 0.12);
-    --progress: #60a5fa;
-    --progress-bg: rgb(96 165 250 / 0.12);
-    --escalated: #fbbf24;
-    --escalated-bg: rgb(251 191 36 / 0.12);
-    --edited: #fb923c;
-    --edited-bg: rgb(251 146 60 / 0.14);
-    --flagged: #f87171;
-    --flagged-bg: rgb(248 113 113 / 0.12);
-    --muted-bg: rgb(255 255 255 / 0.05);
-    --on-primary: #171717;
-    --primary-hover: #e5e5e5;
+    --brand: #ff9830;
+    --brand-bg: rgb(255 152 48 / 0.08);
+    --done: #a6e3a1;
+    --done-bg: rgb(166 227 161 / 0.10);
+    --progress: #89b4fa;
+    --progress-bg: rgb(137 180 250 / 0.10);
+    --escalated: #f9e2af;
+    --escalated-bg: rgb(249 226 175 / 0.10);
+    --edited: #ff9830;
+    --edited-bg: rgb(255 152 48 / 0.10);
+    --flagged: #f38ba8;
+    --flagged-bg: rgb(243 139 168 / 0.10);
+    --muted-bg: rgb(255 255 255 / 0.04);
+    --on-primary: #0f0f0f;
+    --primary-hover: #ffab55;
   }
-  /* Light is a real second skin, not a filter: every token is restated so the
-     same components keep their meaning at readable contrast on white. */
+  /* Light is the same system read on paper: the pastels darken to hold contrast
+     on white, the panels invert into a light stack. */
   :root[data-theme="light"] {
     color-scheme: light;
     --background: #ffffff;
-    --foreground: #18181b;
+    --bg-deep: #f7f7f8;
     --card: #fafafa;
-    --secondary: #f4f4f5;
-    --muted-foreground: #6b7280;
-    --accent: #ececed;
-    --border: rgb(0 0 0 / 0.09);
-    --border-strong: rgb(0 0 0 / 0.18);
-    --ring: #9ca3af;
-    --done: #15803d;
-    --done-bg: rgb(21 128 61 / 0.10);
-    --progress: #1d4ed8;
-    --progress-bg: rgb(29 78 216 / 0.10);
-    --escalated: #a16207;
-    --escalated-bg: rgb(161 98 7 / 0.12);
-    --edited: #c2410c;
-    --edited-bg: rgb(194 65 12 / 0.10);
-    --flagged: #b91c1c;
-    --flagged-bg: rgb(185 28 28 / 0.10);
-    --muted-bg: rgb(0 0 0 / 0.045);
+    --secondary: #f2f2f3;
+    --foreground: #2c2c31;
+    --muted-foreground: #6e6e76;
+    --dim: #9a9aa2;
+    --accent: #ececef;
+    --border: #e4e4e7;
+    --border-strong: #d0d0d6;
+    --ring: #b8b8c0;
+
+    --brand: #c2610b;
+    --brand-bg: rgb(194 97 11 / 0.09);
+    --done: #40a02b;
+    --done-bg: rgb(64 160 43 / 0.10);
+    --progress: #1e66f5;
+    --progress-bg: rgb(30 102 245 / 0.09);
+    --escalated: #b07d10;
+    --escalated-bg: rgb(176 125 16 / 0.11);
+    --edited: #c2610b;
+    --edited-bg: rgb(194 97 11 / 0.10);
+    --flagged: #c81e3a;
+    --flagged-bg: rgb(200 30 58 / 0.09);
+    --muted-bg: rgb(0 0 0 / 0.04);
     --on-primary: #ffffff;
-    --primary-hover: #3f3f46;
+    --primary-hover: #a75209;
   }
   * { box-sizing: border-box; }
   body {
@@ -109,10 +119,13 @@
     color: var(--foreground);
     font-family: var(--font-sans);
     font-size: 14px;
-    line-height: 1.65;
-    letter-spacing: 0.01em;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
   }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--background); }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ring); }
   /* The page fills the screen the reader gave it; only running text is held to
      a readable measure, so the flow can use every pixel it wants. */
   main { max-width: min(1680px, 100%); margin: 0 auto; }
@@ -168,9 +181,10 @@
     color: var(--foreground);
   }
   .toolbar button.primary {
-    background: var(--foreground);
-    border-color: var(--foreground);
+    background: var(--brand);
+    border-color: var(--brand);
     color: var(--on-primary);
+    font-weight: 600;
   }
   .toolbar button.primary:hover:not(:disabled) {
     background: var(--primary-hover);
@@ -205,7 +219,7 @@
     font-size: 11px;
     font-weight: 500;
     padding: 1px 8px;
-    border-radius: 999px;
+    border-radius: 3px;
     white-space: nowrap;
     background: var(--muted-bg);
     color: var(--muted-foreground);
@@ -341,7 +355,7 @@
   .bar.done > span { background: var(--done); }
   .overall { margin-top: 12px; }
   .overall .line { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-bottom: 5px; }
-  .overall .pct { font-size: 1.05rem; font-weight: 600; color: var(--foreground); }
+  .overall .pct { font-size: 22px; font-weight: 700; line-height: 1; color: var(--foreground); font-variant-numeric: tabular-nums; }
   .overall .eta { margin-left: auto; font-variant-numeric: tabular-nums; }
   .stage-bar { display: flex; align-items: center; gap: 8px; max-width: 240px; margin-top: 7px; }
   .stage-bar .bar { height: 4px; flex: 1 1 auto; }
@@ -569,8 +583,8 @@
     padding: 8px 14px;
     min-width: 130px;
   }
-  .outcome .stat .k { color: var(--muted-foreground); font-size: 11px; display: block; }
-  .outcome .stat .v { font-size: 1rem; font-weight: 600; }
+  .outcome .stat .k { color: var(--muted-foreground); font-size: 11px; display: block; margin-bottom: 3px; }
+  .outcome .stat .v { font-size: 22px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
   .outcome .stat .sub { color: var(--muted-foreground); font-size: 11px; display: block; }
   .outcome .note { max-width: 78ch; color: var(--muted-foreground); font-size: 13px; margin: 12px 0 0; }
   .add { color: var(--done); font-variant-numeric: tabular-nums; }
