@@ -44,22 +44,23 @@
   /* Design tokens follow robodata's frontend (frontend/src/App.css): layered
      panels rather than one flat field, Catppuccin-family semantic colors at 10%
      dim backgrounds, and #ff9830 as the accent. Both ends are pulled off the
-     extremes on purpose — the dark ground sits at #1a1a1d rather than near-black
-     and the light one at #f4f4f2 rather than white, since a report is read for
-     minutes at a time and either extreme tires the eye. */
+     extremes on purpose — a report is read for minutes at a time and either
+     extreme tires the eye — and the dark surfaces sit on Claude's warm base
+     (#262624 ground, #30302e panels), which stays neutral-warm rather than
+     drifting blue the way a cool near-black does. */
   :root {
     color-scheme: dark;
-    --background: #1a1a1d;
-    --bg-deep: #141416;
-    --card: #212126;
-    --secondary: #27272d;
-    --foreground: #e3e3e6;
-    --muted-foreground: #9d9da6;
-    --dim: #6e6e77;
-    --accent: #2e2e35;
-    --border: #2c2c33;
-    --border-strong: #3b3b44;
-    --ring: #4b4b55;
+    --background: #262624;
+    --bg-deep: #1f1e1d;
+    --card: #30302e;
+    --secondary: #3a3a38;
+    --foreground: #e3e3e0;
+    --muted-foreground: #a0a09a;
+    --dim: #72726c;
+    --accent: #414140;
+    --border: #3a3a37;
+    --border-strong: #4a4a46;
+    --ring: #5c5c56;
     --radius: 6px;
     --radius-md: 5px;
     --radius-sm: 4px;
@@ -79,7 +80,7 @@
     --flagged: #f38ba8;
     --flagged-bg: rgb(243 139 168 / 0.10);
     --muted-bg: rgb(255 255 255 / 0.04);
-    --on-primary: #17171a;
+    --on-primary: #1f1e1d;
     --primary-hover: #ffab55;
   }
   /* Light is the same system read on paper: the pastels darken to hold contrast
