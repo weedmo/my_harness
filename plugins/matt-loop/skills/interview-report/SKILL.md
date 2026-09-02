@@ -64,6 +64,8 @@ Copy `assets/template.html` and fill in **only** the data:
 
 Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and export machinery lives there, and consistent output between runs is the point of bundling it. The palette is Orca's own artifact design language (its share page's tokens: `--background #0a0a0a`, `--card #171717`, `--muted-foreground #a1a1a1`, `--radius 0.625rem`, Geist/SF Mono stacks), so the report reads as part of Orca inside the artifact chrome rather than a page pasted into it. Never restyle per run.
 
+The page ships **both skins**: Orca-native dark by default, and a full light palette behind the 라이트/다크 toggle in the header — every token is restated for light, not filtered, so badges and bars keep their meaning at readable contrast. The choice rides in the URL hash (`#theme=light`), because the sandboxed frame has no `localStorage` and the page reloads itself while a run is live; a reload therefore keeps the reader's theme. Don't add a third palette or hard-code a color outside the token blocks.
+
 ### Data format
 
 ```json

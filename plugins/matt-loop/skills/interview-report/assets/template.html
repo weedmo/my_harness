@@ -62,6 +62,35 @@
     --flagged: #f87171;
     --flagged-bg: rgb(248 113 113 / 0.12);
     --muted-bg: rgb(255 255 255 / 0.05);
+    --on-primary: #171717;
+    --primary-hover: #e5e5e5;
+  }
+  /* Light is a real second skin, not a filter: every token is restated so the
+     same components keep their meaning at readable contrast on white. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --background: #ffffff;
+    --foreground: #18181b;
+    --card: #fafafa;
+    --secondary: #f4f4f5;
+    --muted-foreground: #6b7280;
+    --accent: #ececed;
+    --border: rgb(0 0 0 / 0.09);
+    --border-strong: rgb(0 0 0 / 0.18);
+    --ring: #9ca3af;
+    --done: #15803d;
+    --done-bg: rgb(21 128 61 / 0.10);
+    --progress: #1d4ed8;
+    --progress-bg: rgb(29 78 216 / 0.10);
+    --escalated: #a16207;
+    --escalated-bg: rgb(161 98 7 / 0.12);
+    --edited: #c2410c;
+    --edited-bg: rgb(194 65 12 / 0.10);
+    --flagged: #b91c1c;
+    --flagged-bg: rgb(185 28 28 / 0.10);
+    --muted-bg: rgb(0 0 0 / 0.045);
+    --on-primary: #ffffff;
+    --primary-hover: #3f3f46;
   }
   * { box-sizing: border-box; }
   body {
@@ -76,11 +105,27 @@
     -webkit-font-smoothing: antialiased;
   }
   main { max-width: 880px; margin: 0 auto; }
+  .head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
+  .head .titles { min-width: 0; flex: 1 1 auto; }
   h1 { font-size: 1.6rem; font-weight: 600; line-height: 1.25; margin: 0 0 6px; }
+  #btn-theme {
+    flex: none;
+    font: inherit;
+    font-size: 12px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  #btn-theme:hover { background: var(--accent); border-color: var(--border-strong); color: var(--foreground); }
   code { font-family: var(--font-mono); font-size: 0.92em; }
   :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
 
-  .meta { color: var(--muted-foreground); font-size: 12px; margin-bottom: 20px; }
+  .meta { color: var(--muted-foreground); font-size: 12px; margin: 0; }
   .summary {
     background: var(--card);
     border: 1px solid var(--border);
@@ -112,9 +157,13 @@
   .toolbar button.primary {
     background: var(--foreground);
     border-color: var(--foreground);
-    color: #171717;
+    color: var(--on-primary);
   }
-  .toolbar button.primary:hover:not(:disabled) { background: #e5e5e5; border-color: #e5e5e5; color: #171717; }
+  .toolbar button.primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: var(--on-primary);
+  }
   .toolbar button:disabled { opacity: 0.45; cursor: default; }
   .toolbar .count { color: var(--muted-foreground); font-size: 12px; }
   .toolbar .hint { flex-basis: 100%; color: var(--muted-foreground); font-size: 12px; line-height: 1.6; }
@@ -223,7 +272,7 @@
     border-radius: var(--radius);
     background: var(--card);
     padding: 14px 18px;
-    margin: 12px 0 4px;
+    margin: 14px 0 0;
   }
   .progress .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .progress h2 { font-size: 1rem; font-weight: 600; margin: 0; }
@@ -276,13 +325,14 @@
   .bar > span { display: block; height: 100%; background: var(--progress); border-radius: 999px; }
   .progress.state-blocked .bar > span { background: var(--flagged); }
   .progress.state-done .bar > span { background: var(--done); }
+  .bar.done > span { background: var(--done); }
   .overall { margin-top: 12px; }
   .overall .line { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-bottom: 5px; }
   .overall .pct { font-size: 1.05rem; font-weight: 600; color: var(--foreground); }
   .overall .eta { margin-left: auto; font-variant-numeric: tabular-nums; }
-  .stage-bar { max-width: 220px; margin-top: 6px; }
-  .stage-bar .bar { height: 4px; }
-  .stage-bar .pct { font-size: 11px; color: var(--muted-foreground); margin-left: 6px; }
+  .stage-bar { display: flex; align-items: center; gap: 8px; max-width: 240px; margin-top: 7px; }
+  .stage-bar .bar { height: 4px; flex: 1 1 auto; }
+  .stage-bar .pct { font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; flex: none; }
 
   /* execution plan graph */
   .plan { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
@@ -297,10 +347,12 @@
     border: 1px solid var(--border);
     border-left: 2px solid var(--border-strong);
     border-radius: var(--radius-sm);
-    background: var(--background);
+    background: transparent;
     padding: 5px 10px;
     font-size: 12px;
+    color: var(--muted-foreground);
   }
+  .chip .ctitle { color: var(--foreground); }
   .chip .cid { font-family: var(--font-mono); color: var(--muted-foreground); }
   .chip .est { font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
   .chip.done { border-left-color: var(--done); }
@@ -330,7 +382,7 @@
     border-radius: var(--radius);
     background: var(--card);
     padding: 16px 18px;
-    margin: 12px 0 4px;
+    margin: 14px 0 0;
   }
   .outcome h2 { font-size: 1rem; font-weight: 600; margin: 0 0 2px; }
   .outcome .refs {
@@ -386,8 +438,13 @@
 </head>
 <body>
 <main>
-  <h1 id="r-title"></h1>
-  <div class="meta" id="r-meta"></div>
+  <div class="head">
+    <div class="titles">
+      <h1 id="r-title"></h1>
+      <div class="meta" id="r-meta"></div>
+    </div>
+    <button id="btn-theme" type="button"></button>
+  </div>
   <div class="summary"><span class="icon">💡</span><span id="r-summary"></span></div>
   <section class="progress" id="r-progress" hidden></section>
   <section class="outcome" id="r-outcome" hidden></section>
@@ -534,6 +591,26 @@
     saveEdits();
   }
 
+  // ── theme ──────────────────────────────────────────────────
+  // The sandboxed frame has no localStorage, and the page reloads itself while
+  // a run is live, so the choice rides in the URL hash — reloads keep it.
+  var THEMES = { dark: { next: "light", label: "☀︎ 라이트" }, light: { next: "dark", label: "☾ 다크" } };
+  function currentTheme() {
+    return /theme=light/.test(location.hash) ? "light" : "dark";
+  }
+  function applyTheme(name) {
+    document.documentElement.setAttribute("data-theme", name);
+    var btn = document.getElementById("btn-theme");
+    btn.textContent = THEMES[name].label;
+    btn.setAttribute("aria-label", name === "dark" ? "라이트 테마로 전환" : "다크 테마로 전환");
+  }
+  applyTheme(currentTheme());
+  document.getElementById("btn-theme").addEventListener("click", function () {
+    var next = THEMES[currentTheme()].next;
+    location.hash = "theme=" + next;
+    applyTheme(next);
+  });
+
   // ── header ─────────────────────────────────────────────────
   document.title = data.title + " — 결정 그래프";
   document.getElementById("r-title").textContent = data.title;
@@ -671,8 +748,8 @@
     var d = new Date(Date.now() + msFromNow);
     return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
   }
-  function bar(pct) {
-    var b = el("div", "bar");
+  function bar(pct, cls) {
+    var b = el("div", "bar" + (cls ? " " + cls : ""));
     var fill = el("span");
     fill.style.width = Math.max(0, Math.min(100, pct)) + "%";
     b.appendChild(fill);
@@ -1022,7 +1099,7 @@
     var pct = stagePercent(s);
     if (pct !== null) {
       var pbox = el("div", "stage-bar");
-      pbox.appendChild(bar(pct));
+      pbox.appendChild(bar(pct, pct >= 100 ? "done" : ""));
       var plabel = el("div", null);
       plabel.appendChild(el("span", "pct", pct + "%"));
       pbox.appendChild(plabel);
