@@ -261,7 +261,7 @@ No flag turns this on. Step 2 probes Orca; if orchestration answers, step 7 plan
 - Scoring ambiguity percentages or inventing readiness gates → no Matt skill does this. Drop it. (Step 9's per-ticket unlazy ledger is the one sanctioned exception, and it verifies implementation, never design readiness.)
 - Marking a ticket complete while its unlazy ledger has unmet gates, or trusting the subagent's "done" instead of running `--reverify` → the ledger exists precisely because a confident done report is not evidence.
 - Writing specs or notes outside the tracker, `CONTEXT.md`/ADRs, the decision log, or `$interview-report`'s output → wrong artifact system.
-- Running several implementation workers in parallel outside a wave the plan declared parallel, or beyond the blocking edges to-tickets declared → Matt's loop is one ticket per fresh context; Orca mode only executes the DAG that already exists.
+- Running several implementation workers in parallel outside a wave the plan declared parallel, or beyond the blocking edges to-tickets declared → Matt's loop is one ticket per fresh context; a parallel wave only executes the DAG that already exists.
 - Creating a parallel wave's workers with a non-Orca subagent tool and calling it orchestrated → no Orca provenance; only workers visible in `task-list` / `dispatch-show` count.
 - Stopping or abandoning an Orca worker because of a timeout, idle TUI, or heartbeat → those mean alive, not failed.
 - Merging a worker's branch on its `worker_done` alone, or marking a ticket done before the ledger passes again on the merged code → the worker's report is a signal; the coordinator's local `--reverify` after merge is the evidence.

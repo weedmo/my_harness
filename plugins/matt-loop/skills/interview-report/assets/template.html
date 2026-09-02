@@ -1094,8 +1094,8 @@
         return (tk.blockedBy || []).every(function (id) { return placed[id]; });
       });
       if (!ready.length) ready = left.slice();
-      waves.push({ id: "W" + waves.length, mode: ready.length > 1 ? "parallel" : "sequential",
-                   tickets: ready.map(function (tk) { return tk.id; }) });
+      waves.push({ id: "W" + (waves.length + 1), mode: ready.length > 1 ? "parallel" : "sequential",
+                   derived: true, tickets: ready.map(function (tk) { return tk.id; }) });
       ready.forEach(function (tk) { placed[tk.id] = true; });
       left = left.filter(function (tk) { return !placed[tk.id]; });
     }
@@ -1361,8 +1361,11 @@
         var wh = el("div", "whead");
         wh.appendChild(el("span", null, w.id || ("W" + (i + 1))));
         if (!collapsed) {
+          // A derived column is a dependency level, not a promise that its tickets
+          // run at once — only a planned wave claims parallelism.
           wh.appendChild(el("span", "badge " + (w.mode === "parallel" ? "new" : "keep"),
-            w.mode === "parallel" ? "병렬 " + tks.length : "순차"));
+            w.mode !== "parallel" ? "순차"
+              : (w.derived ? "독립 " + tks.length : "병렬 " + tks.length)));
           var dur = waveDuration(w, byId);
           if (dur) wh.appendChild(el("span", "wdur", "≈" + fmtMinutes(dur)));
         }
@@ -1703,6 +1706,8 @@
           id: id,
           stage: entry.stage.id,
           question: entry.d.question,
+          before: entry.d.before || null,
+          change: entry.d.change || null,
           original: entry.d.decision,
           edited: isEdited(id) ? e.decision.trim() : null,
           flagged: isFlagged(id),
