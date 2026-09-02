@@ -408,6 +408,43 @@
   "slug": "replace-slug",
   "generated": "REPLACE: YYYY-MM-DD",
   "summary": "REPLACE: 2-4 plain-language sentences on what got decided and why, in Korean.",
+  "progress": {
+    "state": "running",
+    "updated": "REPLACE: ISO timestamp of this regeneration",
+    "startedAt": "REPLACE: ISO timestamp the run began",
+    "current": "REPLACE: 지금 무엇을 하고 있는지 한 줄, in Korean",
+    "note": "REPLACE: 선택 — 없으면 이 키를 지우세요"
+  },
+  "plan": {
+    "concurrency": 2,
+    "placement": "local",
+    "note": "REPLACE: 선택 — 계획 전체에 대한 한 줄",
+    "waves": [
+      {
+        "id": "W1",
+        "mode": "parallel",
+        "why": "REPLACE: 왜 이 티켓들이 동시에 돌아도 되는지, in Korean",
+        "tickets": [
+          "REPLACE: ticket id"
+        ]
+      }
+    ]
+  },
+  "tickets": [
+    {
+      "id": "REPLACE: T1",
+      "title": "REPLACE: 티켓 제목, in Korean",
+      "status": "pending",
+      "blockedBy": [],
+      "gates": {
+        "met": 0,
+        "total": 0
+      },
+      "route": "matt-default",
+      "estimateMin": 0,
+      "note": "REPLACE: 선택 — 한 줄"
+    }
+  ],
   "stages": [
     {
       "id": "interview",
