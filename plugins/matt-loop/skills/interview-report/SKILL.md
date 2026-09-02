@@ -16,7 +16,7 @@ The raw log is a flat transcript, complete but not *readable*: a real run answer
 Only as part of matt-auto's pipeline:
 
 1. Right after the interview stage (step 4) concludes — the graph then covers the interview decisions and marks later stages pending. This run feeds matt-auto's interview gate, so the published link is what the user is asked to approve; get it published before matt-auto presents the gate.
-2. Again before matt-auto's final report (and after the small path's `$implement`, and after ship mode's step 10) — regenerate the same file over the full decision log so the finished graph covers every stage.
+2. Again before matt-auto's final report (and after the small path's `$implement`, and after ship mode's step 10) — regenerate the same file over the full decision log so the finished graph covers every stage, this time **with the `outcome` block** so the page opens on what the run actually shipped.
 
 Don't run this off a standalone `$grill-me`/`$grill-with-docs` session; this report is specifically about what the delegate decided on the user's behalf.
 
@@ -62,7 +62,7 @@ Copy `assets/template.html` and fill in **only** the data:
 - the `<title>` tag, and
 - the JSON inside `<script id="graph-data" type="application/json">`.
 
-Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and export machinery lives there, and consistent output between runs is the point of bundling it.
+Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and export machinery lives there, and consistent output between runs is the point of bundling it. The palette is Orca's own artifact design language (its share page's tokens: `--background #0a0a0a`, `--card #171717`, `--muted-foreground #a1a1a1`, `--radius 0.625rem`, Geist/SF Mono stacks), so the report reads as part of Orca inside the artifact chrome rather than a page pasted into it. Never restyle per run.
 
 ### Data format
 
@@ -97,6 +97,25 @@ Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and
 - `status` is one of `done` / `in-progress` / `pending` / `skipped`.
 - Decision `id`s must be stable across regenerations (stage prefix + ordinal is fine) — `localStorage` edits and `edits.json` both key on them.
 - `escalated: true` marks decisions the real user answered directly; the page highlights them.
+- **`outcome` — the shipped-changes panel, final regeneration only.** Omit the key entirely on the interview-gate run (nothing is built yet); fill it on the last regeneration, once implementation and review are done. The page renders it under the summary as *결과 — 이번 실행이 바꾼 것*: file counts by status, `+`/`−` totals split into 코드 / 문서 / 기타, and a per-file table. Totals are computed in the page from `files`, so never pass pre-summed numbers.
+
+```json
+"outcome": {
+  "baseRef": "2dacebe",
+  "headRef": "3b0523e",
+  "branch": "matt-auto/feature-slug",
+  "note": "이 diff가 무엇인지 한 줄 — 생략 가능",
+  "files": [
+    { "path": "src/foo.ts", "status": "added", "kind": "code",
+      "added": 120, "removed": 0, "note": "이 파일이 하는 일, 한 줄" }
+  ]
+}
+```
+
+  - `status` is `added` / `modified` / `deleted` / `renamed`; `kind` is `code` / `docs` / `other` — docs covers `.md`/`.mdx`/`.txt`/`.rst` and anything under a docs directory, other covers lockfiles, generated output, and binary assets, code is the rest.
+  - `added` / `removed` are line counts **measured from git** (`git diff --numstat <baseRef>..<headRef>`) — never estimated, never eyeballed. A binary file gets `0`/`0` and a `note` saying so.
+  - Leave out the run's own bookkeeping — `docs/agents/matt-auto-log/**` and `.unlazy/**` — so the panel counts the work, not the reporting about it.
+  - `path` is repo-relative; `note` is one Korean line per file and is what makes the table worth reading — a bare path list is the degraded form.
 
 ### Writing the summary and decision text
 
@@ -114,6 +133,8 @@ The page lets the user rewrite a decision, flag a node as a problem with a comme
 - Writing the graph's content in English → the user reads this in Korean; only ids and JSON structure stay English.
 - Editing the template's CSS/JS instead of only the data block → inconsistent, possibly broken output between runs is the failure mode this skill exists to prevent.
 - Changing decision ids on regeneration → orphans the user's saved edits and any exported edits.json.
+- Line counts in `outcome` that were estimated, read off a subagent's report, or summed by hand → they must come from `git diff --numstat`, and a wrong number in a results panel is worse than no panel.
+- Shipping `outcome` on the interview-gate generation → nothing has been built yet; the panel would be a lie.
 - Running `artifacts share` on a regeneration instead of `artifacts update` → the link the user already has is no longer the one you regenerated.
 - Publishing the graph anywhere but Orca's own artifacts (another host, a pasted screenshot, a hand-rolled upload) → Orca artifacts are the delivery mechanism; when they are unavailable the fallback is the local path, not a substitute service.
 - Retrying a share denied with `artifact_sharing_disabled` → the answer cannot change until a human flips the device setting.

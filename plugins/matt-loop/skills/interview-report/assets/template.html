@@ -10,7 +10,11 @@
   Data contract (see SKILL.md for the full spec):
     { title, slug, generated, summary,
       stages: [ { id, name, skill, status, note,
-                  decisions: [ { id, question, decision, rationale, escalated } ] } ] }
+                  decisions: [ { id, question, decision, rationale, escalated } ] } ],
+      outcome?: { baseRef, headRef, branch, note,
+                  files: [ { path, status, kind, added, removed, note } ] } }
+  `outcome` is the final run's shipped-changes panel: omit it entirely on the
+  interview-gate generation, fill it on the last regeneration.
   Decision ids must be stable across regenerations — localStorage edits and
   the exported <slug>.edits.json both key on them.
 -->
@@ -21,160 +25,223 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>REPLACE: idea/feature name — Decision Graph</title>
 <style>
+  /* Orca's own artifact design language: the share page ships these tokens,
+     so the report reads as part of Orca rather than a page pasted into it. */
   :root {
-    --bg: #ffffff;
-    --bg-soft: #fbfbfa;
-    --text: #37352f;
-    --text-muted: #6b6b66;
-    --border: #e9e9e7;
-    --callout-bg: #e7f3f8;
-    --callout-border: #cbe6f2;
-    --escalated-bg: #fbf3db;
-    --escalated-border: #f0e2ab;
-    --edited: #d9730d;
-    --edited-bg: #fdf4ec;
-    --flagged: #d44c47;
-    --flagged-bg: #fdf0ef;
-    --done: #2e7d32;
-    --done-bg: #e8f3e9;
-    --progress: #1565c0;
-    --progress-bg: #e7f0fa;
-    --pending-bg: #f1f1ef;
-    --rail: #c9c9c5;
+    color-scheme: dark;
+    --background: #0a0a0a;
+    --foreground: #fafafa;
+    --card: #171717;
+    --secondary: #262626;
+    --muted-foreground: #a1a1a1;
+    --accent: #404040;
+    --border: rgb(255 255 255 / 0.07);
+    --border-strong: rgb(255 255 255 / 0.15);
+    --ring: #737373;
+    --radius: 0.625rem;
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+
+    --done: #4ade80;
+    --done-bg: rgb(74 222 128 / 0.12);
+    --progress: #60a5fa;
+    --progress-bg: rgb(96 165 250 / 0.12);
+    --escalated: #fbbf24;
+    --escalated-bg: rgb(251 191 36 / 0.12);
+    --edited: #fb923c;
+    --edited-bg: rgb(251 146 60 / 0.14);
+    --flagged: #f87171;
+    --flagged-bg: rgb(248 113 113 / 0.12);
+    --muted-bg: rgb(255 255 255 / 0.05);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    padding: 48px 24px;
-    background: var(--bg-soft);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    line-height: 1.6;
+    padding: 40px 20px 72px;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.65;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
   }
-  main {
-    max-width: 860px;
-    margin: 0 auto;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 48px;
-  }
-  h1 { font-size: 2rem; margin: 0 0 8px; }
-  .meta { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
+  main { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; font-weight: 600; line-height: 1.25; margin: 0 0 6px; }
+  code { font-family: var(--font-mono); font-size: 0.92em; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
+
+  .meta { color: var(--muted-foreground); font-size: 12px; margin-bottom: 20px; }
   .summary {
-    background: var(--callout-bg);
-    border: 1px solid var(--callout-border);
-    border-radius: 8px;
-    padding: 16px 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
     margin-bottom: 12px;
   }
   .summary .icon { margin-right: 8px; }
 
-  .toolbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin: 16px 0 32px;
-  }
+  .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 16px 0 32px; }
   .toolbar button {
     font: inherit;
-    font-size: 0.9rem;
-    padding: 6px 14px;
-    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--text);
+    background: transparent;
+    color: var(--muted-foreground);
     cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  .toolbar button:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--border-strong);
+    color: var(--foreground);
   }
   .toolbar button.primary {
-    background: var(--edited);
-    border-color: var(--edited);
-    color: #fff;
+    background: var(--foreground);
+    border-color: var(--foreground);
+    color: #171717;
   }
+  .toolbar button.primary:hover:not(:disabled) { background: #e5e5e5; border-color: #e5e5e5; color: #171717; }
   .toolbar button:disabled { opacity: 0.45; cursor: default; }
-  .toolbar .count { color: var(--text-muted); font-size: 0.88rem; }
-  .toolbar .hint { flex-basis: 100%; color: var(--text-muted); font-size: 0.82rem; }
+  .toolbar .count { color: var(--muted-foreground); font-size: 12px; }
+  .toolbar .hint { flex-basis: 100%; color: var(--muted-foreground); font-size: 12px; line-height: 1.6; }
 
   /* ── pipeline rail ─────────────────────────────────────────── */
-  .stage { display: flex; gap: 20px; }
-  .rail {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 0 0 28px;
-  }
+  .stage { display: flex; gap: 18px; }
+  .rail { display: flex; flex-direction: column; align-items: center; flex: 0 0 24px; }
   .rail .dot {
-    width: 14px; height: 14px;
+    width: 11px; height: 11px;
     border-radius: 50%;
-    border: 3px solid var(--rail);
-    background: var(--bg);
+    border: 2px solid var(--border-strong);
+    background: var(--background);
     flex: 0 0 auto;
-    margin-top: 6px;
+    margin-top: 8px;
   }
   .stage.done .dot { border-color: var(--done); background: var(--done); }
   .stage.in-progress .dot { border-color: var(--progress); }
-  .stage.skipped .dot { border-color: var(--rail); background: var(--pending-bg); }
-  .rail .line { width: 2px; flex: 1 1 auto; background: var(--rail); min-height: 24px; }
+  .stage.skipped .dot { border-color: var(--border-strong); background: var(--secondary); }
+  .rail .line { width: 1px; flex: 1 1 auto; background: var(--border-strong); min-height: 24px; }
   .stage:last-child .rail .line { display: none; }
-
-  .stage-body { flex: 1 1 auto; padding-bottom: 28px; min-width: 0; }
+  .stage-body { flex: 1 1 auto; padding-bottom: 26px; min-width: 0; }
   .stage-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .stage-head h2 { font-size: 1.1rem; margin: 0; }
-  .stage-head .skill { color: var(--text-muted); font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .stage-head h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+  .stage-head .skill { color: var(--muted-foreground); font-size: 12px; font-family: var(--font-mono); }
   .badge {
-    font-size: 0.72rem;
+    font-size: 11px;
+    font-weight: 500;
     padding: 1px 8px;
-    border-radius: 10px;
+    border-radius: 999px;
     white-space: nowrap;
+    background: var(--muted-bg);
+    color: var(--muted-foreground);
   }
   .badge.done { background: var(--done-bg); color: var(--done); }
   .badge.in-progress { background: var(--progress-bg); color: var(--progress); }
-  .badge.pending, .badge.skipped { background: var(--pending-bg); color: var(--text-muted); }
-  .badge.escalated { background: var(--escalated-bg); color: #9a6700; border: 1px solid var(--escalated-border); }
+  .badge.pending, .badge.skipped { background: var(--muted-bg); color: var(--muted-foreground); }
+  .badge.escalated { background: var(--escalated-bg); color: var(--escalated); }
   .badge.edited { background: var(--edited-bg); color: var(--edited); }
   .badge.flagged { background: var(--flagged-bg); color: var(--flagged); }
-  .stage-note { color: var(--text-muted); font-size: 0.85rem; margin: 2px 0 0; }
+  .stage-note { color: var(--muted-foreground); font-size: 12px; margin: 2px 0 0; }
 
   /* ── decision nodes ────────────────────────────────────────── */
   .decisions { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
   .node {
     border: 1px solid var(--border);
-    border-left: 3px solid var(--rail);
-    border-radius: 8px;
-    background: var(--bg);
+    border-left: 2px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--card);
   }
-  .node.escalated { border-left-color: #d4a72c; background: var(--escalated-bg); }
+  .node.escalated { border-left-color: var(--escalated); }
   .node.edited { border-left-color: var(--edited); }
   .node.flagged { border-left-color: var(--flagged); }
-  .node-head {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding: 10px 14px;
-    cursor: pointer;
-  }
-  .node-head .q { font-weight: 600; flex: 1 1 auto; min-width: 0; }
-  .node-head .caret { color: var(--text-muted); transition: transform 0.15s; }
+  .node-head { display: flex; align-items: baseline; gap: 8px; padding: 10px 14px; cursor: pointer; }
+  .node-head .q { font-weight: 500; flex: 1 1 auto; min-width: 0; }
+  .node-head .caret { color: var(--muted-foreground); transition: transform 0.15s; }
   .node.open .node-head .caret { transform: rotate(90deg); }
   .node-detail { display: none; padding: 0 14px 12px; }
   .node.open .node-detail { display: block; }
   .node-detail .d { margin: 0 0 4px; }
-  .node-detail .d.struck { text-decoration: line-through; color: var(--text-muted); }
-  .node-detail .r { color: var(--text-muted); font-size: 0.92rem; margin: 0 0 10px; }
-  .node-detail label { display: block; font-size: 0.8rem; color: var(--text-muted); margin: 8px 0 2px; }
+  .node-detail .d.struck { text-decoration: line-through; color: var(--muted-foreground); }
+  .node-detail .r { color: var(--muted-foreground); font-size: 13px; margin: 0 0 10px; }
+  .node-detail label { display: block; font-size: 11px; color: var(--muted-foreground); margin: 8px 0 2px; }
   .node-detail textarea, .node-detail input[type="text"] {
     width: 100%;
     font: inherit;
-    font-size: 0.92rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    font-size: 13px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
     padding: 6px 8px;
-    background: var(--bg-soft);
+    background: var(--background);
+    color: var(--foreground);
   }
   .node-detail textarea { resize: vertical; min-height: 48px; }
-  .flag-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.9rem; }
+  .flag-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 13px; }
   .flag-row input { accent-color: var(--flagged); }
+
+  /* ── outcome (final run only) ──────────────────────────────── */
+  .outcome {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 16px 18px;
+    margin: 12px 0 4px;
+  }
+  .outcome h2 { font-size: 1rem; font-weight: 600; margin: 0 0 2px; }
+  .outcome .refs {
+    color: var(--muted-foreground);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    margin-bottom: 14px;
+  }
+  .outcome .stats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .outcome .stat {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--background);
+    padding: 8px 14px;
+    min-width: 130px;
+  }
+  .outcome .stat .k { color: var(--muted-foreground); font-size: 11px; display: block; }
+  .outcome .stat .v { font-size: 1rem; font-weight: 600; }
+  .outcome .stat .sub { color: var(--muted-foreground); font-size: 11px; display: block; }
+  .outcome .note { color: var(--muted-foreground); font-size: 13px; margin: 12px 0 0; }
+  .add { color: var(--done); font-variant-numeric: tabular-nums; }
+  .del { color: var(--flagged); font-variant-numeric: tabular-nums; }
+  .files-wrap { overflow-x: auto; margin-top: 14px; }
+  table.files { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.files th, table.files td {
+    text-align: left;
+    padding: 7px 10px 7px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  table.files tr:last-child td { border-bottom: 0; }
+  table.files th { color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+  table.files td.num { text-align: right; padding-right: 14px; }
+  table.files .path { font-family: var(--font-mono); font-size: 12px; white-space: normal; word-break: break-all; }
+  table.files .fnote { color: var(--muted-foreground); font-size: 12px; font-family: var(--font-sans); white-space: normal; }
+  .badge.code { background: var(--progress-bg); color: var(--progress); }
+  .badge.docs { background: var(--done-bg); color: var(--done); }
+  .badge.other { background: var(--muted-bg); color: var(--muted-foreground); }
+  .badge.added { background: var(--done-bg); color: var(--done); }
+  .badge.modified { background: var(--edited-bg); color: var(--edited); }
+  .badge.deleted { background: var(--flagged-bg); color: var(--flagged); }
+  .badge.renamed { background: var(--muted-bg); color: var(--muted-foreground); }
+
+  @media (max-width: 640px) {
+    body { padding: 24px 14px 56px; }
+    h1 { font-size: 1.35rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -182,6 +249,7 @@
   <h1 id="r-title"></h1>
   <div class="meta" id="r-meta"></div>
   <div class="summary"><span class="icon">💡</span><span id="r-summary"></span></div>
+  <section class="outcome" id="r-outcome" hidden></section>
   <div class="toolbar">
     <button class="primary" id="btn-export">수정 내보내기</button>
     <button id="btn-reset">수정 초기화</button>
@@ -224,7 +292,23 @@
       "note": "",
       "decisions": []
     }
-  ]
+  ],
+  "outcome": {
+    "baseRef": "REPLACE: baseline commit, short sha",
+    "headRef": "REPLACE: final commit, short sha",
+    "branch": "REPLACE: branch the work landed on",
+    "note": "REPLACE: one line on what the diff amounts to, in Korean — or drop this key",
+    "files": [
+      {
+        "path": "REPLACE: path/from/repo/root.ts",
+        "status": "added",
+        "kind": "code",
+        "added": 0,
+        "removed": 0,
+        "note": "REPLACE: what this file does now, in Korean"
+      }
+    ]
+  }
 }
 </script>
 
@@ -306,6 +390,102 @@
     if (cls) n.className = cls;
     if (text !== undefined) n.textContent = text;
     return n;
+  }
+
+  // ── outcome panel (final run only; absent on the interview gate) ──
+  var KIND_LABEL = { "code": "코드", "docs": "문서", "other": "기타" };
+  var FILE_STATUS_LABEL = {
+    "added": "생성", "modified": "수정", "deleted": "삭제", "renamed": "이름 변경"
+  };
+  var KIND_ORDER = { "code": 0, "docs": 1, "other": 2 };
+
+  function stat(label, value, sub) {
+    var box = el("div", "stat");
+    box.appendChild(el("span", "k", label));
+    box.appendChild(el("span", "v", value));
+    if (sub) box.appendChild(el("span", "sub", sub));
+    return box;
+  }
+
+  function lineCell(row, n, cls) {
+    var td = el("td", "num");
+    td.appendChild(el("span", cls, n ? (cls === "add" ? "+" : "−") + n : "—"));
+    row.appendChild(td);
+  }
+
+  function renderOutcome() {
+    var o = data.outcome;
+    if (!o || !o.files || !o.files.length) return;
+    var host = document.getElementById("r-outcome");
+    var files = o.files.slice().sort(function (a, b) {
+      var ka = KIND_ORDER[a.kind] === undefined ? 3 : KIND_ORDER[a.kind];
+      var kb = KIND_ORDER[b.kind] === undefined ? 3 : KIND_ORDER[b.kind];
+      if (ka !== kb) return ka - kb;
+      return ((b.added || 0) + (b.removed || 0)) - ((a.added || 0) + (a.removed || 0));
+    });
+
+    function tally(pred) {
+      return files.filter(pred).reduce(function (acc, f) {
+        acc.files += 1;
+        acc.added += f.added || 0;
+        acc.removed += f.removed || 0;
+        return acc;
+      }, { files: 0, added: 0, removed: 0 });
+    }
+    function byKind(kind) { return tally(function (f) { return f.kind === kind; }); }
+    function byStatus(status) { return files.filter(function (f) { return f.status === status; }).length; }
+    function lines(t) { return "+" + t.added + " / −" + t.removed; }
+
+    host.appendChild(el("h2", null, "결과 — 이번 실행이 바꾼 것"));
+    var refs = [];
+    if (o.branch) refs.push(o.branch);
+    if (o.baseRef && o.headRef) refs.push(o.baseRef + " → " + o.headRef);
+    if (refs.length) host.appendChild(el("div", "refs", refs.join("  ·  ")));
+
+    var stats = el("div", "stats");
+    stats.appendChild(stat("파일",
+      byStatus("added") + "개 생성 · " + byStatus("modified") + "개 수정",
+      byStatus("deleted") ? byStatus("deleted") + "개 삭제" : ""));
+    ["code", "docs"].forEach(function (kind) {
+      var t = byKind(kind);
+      if (!t.files) return;
+      stats.appendChild(stat(KIND_LABEL[kind], lines(t), t.files + "개 파일"));
+    });
+    var other = byKind("other");
+    if (other.files) stats.appendChild(stat(KIND_LABEL.other, lines(other), other.files + "개 파일"));
+    host.appendChild(stats);
+    if (o.note) host.appendChild(el("p", "note", o.note));
+
+    var table = el("table", "files");
+    var headRow = el("tr");
+    ["파일", "구분", "상태", "추가", "삭제"].forEach(function (h) {
+      headRow.appendChild(el("th", null, h));
+    });
+    table.appendChild(headRow);
+    files.forEach(function (f) {
+      var row = el("tr");
+      var pathCell = el("td", "path", f.path);
+      if (f.note) {
+        pathCell.appendChild(document.createElement("br"));
+        pathCell.appendChild(el("span", "fnote", f.note));
+      }
+      row.appendChild(pathCell);
+      var kindCell = el("td");
+      kindCell.appendChild(el("span", "badge " + (KIND_LABEL[f.kind] ? f.kind : "other"),
+        KIND_LABEL[f.kind] || f.kind || "기타"));
+      row.appendChild(kindCell);
+      var statusCell = el("td");
+      statusCell.appendChild(el("span", "badge " + (FILE_STATUS_LABEL[f.status] ? f.status : "renamed"),
+        FILE_STATUS_LABEL[f.status] || f.status || "수정"));
+      row.appendChild(statusCell);
+      lineCell(row, f.added || 0, "add");
+      lineCell(row, f.removed || 0, "del");
+      table.appendChild(row);
+    });
+    var wrap = el("div", "files-wrap");
+    wrap.appendChild(table);
+    host.appendChild(wrap);
+    host.hidden = false;
   }
 
   function renderNode(d) {
@@ -397,6 +577,8 @@
     stage.appendChild(body);
     graph.appendChild(stage);
   });
+
+  renderOutcome();
 
   // ── toolbar actions ────────────────────────────────────────
   function exportPayload() {
