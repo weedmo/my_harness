@@ -12,9 +12,12 @@
       stages: [ { id, name, skill, status, note,
                   decisions: [ { id, question, before, change, decision,
                                 rationale, escalated } ] } ],
-      progress?: { state, updated, current, note },
+      progress?: { state, updated, startedAt, current, note },
+      plan?: { concurrency, placement, note,
+               waves: [ { id, mode, why, tickets: [ticketId] } ] },
       tickets?: [ { id, title, status, blockedBy, blocker: { reason, detail },
-                    gates: { met, total }, route, note } ],
+                    gates: { met, total }, route, estimateMin, actualMin,
+                    startedAt, note } ],
       outcome?: { baseRef, headRef, branch, note,
                   files: [ { path, status, kind, added, removed, note } ] } }
   `outcome` is the final run's shipped-changes panel: omit it entirely on the
@@ -267,6 +270,45 @@
   .ticket .blocked-by { color: var(--muted-foreground); font-size: 11px; font-family: var(--font-mono); }
   .badge.blocked { background: var(--flagged-bg); color: var(--flagged); }
   .badge.gates { background: var(--muted-bg); color: var(--muted-foreground); font-family: var(--font-mono); }
+
+  /* progress bars + ETA */
+  .bar { height: 6px; border-radius: 999px; background: var(--muted-bg); overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--progress); border-radius: 999px; }
+  .progress.state-blocked .bar > span { background: var(--flagged); }
+  .progress.state-done .bar > span { background: var(--done); }
+  .overall { margin-top: 12px; }
+  .overall .line { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-bottom: 5px; }
+  .overall .pct { font-size: 1.05rem; font-weight: 600; color: var(--foreground); }
+  .overall .eta { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .stage-bar { max-width: 220px; margin-top: 6px; }
+  .stage-bar .bar { height: 4px; }
+  .stage-bar .pct { font-size: 11px; color: var(--muted-foreground); margin-left: 6px; }
+
+  /* execution plan graph */
+  .plan { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .plan .phead { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-bottom: 8px; }
+  .wave { position: relative; padding: 0 0 6px 0; }
+  .wave .whead { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted-foreground); margin: 0 0 5px; }
+  .wave .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--background);
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  .chip .cid { font-family: var(--font-mono); color: var(--muted-foreground); }
+  .chip .est { font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+  .chip.done { border-left-color: var(--done); }
+  .chip.done .ctitle { color: var(--muted-foreground); }
+  .chip.in-progress { border-left-color: var(--progress); }
+  .chip.blocked { border-left-color: var(--flagged); }
+  .wave-link { color: var(--muted-foreground); font-size: 13px; line-height: 1; margin: 2px 0 6px 8px; }
+  .plan .why { font-size: 11px; color: var(--muted-foreground); margin: 4px 0 0; }
 
   .refresh-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-top: 12px; }
   .refresh-row button.ghost {
@@ -538,6 +580,143 @@
     return row;
   }
 
+  // Estimates are the run's own guesses, so the page never presents them as
+  // measurements: it shows remaining work and a finish time, both labelled 예상.
+  function ticketsById() {
+    var m = {};
+    (data.tickets || []).forEach(function (tk) { m[tk.id] = tk; });
+    return m;
+  }
+  function minutesSince(iso) {
+    var then = Date.parse(iso);
+    return then ? Math.max(0, (Date.now() - then) / 60000) : 0;
+  }
+  function remainingOf(tk) {
+    var est = tk.estimateMin || 0;
+    if (tk.status === "done" || tk.status === "skipped") return 0;
+    if (tk.status === "in-progress" && tk.startedAt) return Math.max(est * 0.1, est - minutesSince(tk.startedAt));
+    return est;
+  }
+  // A parallel wave costs its slowest ticket; a sequential one costs their sum.
+  function remainingMinutes() {
+    var byId = ticketsById();
+    var waves = (data.plan && data.plan.waves) || null;
+    if (!waves) {
+      return (data.tickets || []).reduce(function (a, tk) { return a + remainingOf(tk); }, 0);
+    }
+    return waves.reduce(function (total, w) {
+      var rs = (w.tickets || []).map(function (id) { return byId[id] ? remainingOf(byId[id]) : 0; });
+      if (!rs.length) return total;
+      return total + (w.mode === "parallel" ? Math.max.apply(null, rs) : rs.reduce(function (a, b) { return a + b; }, 0));
+    }, 0);
+  }
+  function overallPercent() {
+    var tks = (data.tickets || []).filter(function (tk) { return tk.status !== "skipped"; });
+    if (!tks.length) return null;
+    var weighted = tks.some(function (tk) { return tk.estimateMin; });
+    var total = 0, done = 0;
+    tks.forEach(function (tk) {
+      var w = weighted ? (tk.estimateMin || 0) : 1;
+      total += w;
+      if (tk.status === "done") done += w;
+      else if (tk.status === "in-progress") done += w * Math.min(0.9, tk.startedAt && tk.estimateMin ? minutesSince(tk.startedAt) / tk.estimateMin : 0.5);
+    });
+    return total ? Math.round((done / total) * 100) : 0;
+  }
+  function fmtMinutes(m) {
+    m = Math.round(m);
+    if (m < 1) return "1분 미만";
+    if (m < 60) return m + "분";
+    var h = Math.floor(m / 60);
+    return h + "시간" + (m % 60 ? " " + (m % 60) + "분" : "");
+  }
+  function fmtClock(msFromNow) {
+    var d = new Date(Date.now() + msFromNow);
+    return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+  }
+  function bar(pct) {
+    var b = el("div", "bar");
+    var fill = el("span");
+    fill.style.width = Math.max(0, Math.min(100, pct)) + "%";
+    b.appendChild(fill);
+    return b;
+  }
+
+  function renderOverall(host, state) {
+    var pct = overallPercent();
+    if (pct === null) return;
+    var box = el("div", "overall");
+    var line = el("div", "line");
+    line.appendChild(el("span", "pct", pct + "%"));
+    if (data.progress && data.progress.startedAt) {
+      line.appendChild(el("span", null, "경과 " + fmtMinutes(minutesSince(data.progress.startedAt))));
+    }
+    if (state !== "done") {
+      var rem = remainingMinutes();
+      if (rem > 0) {
+        line.appendChild(el("span", "eta",
+          "남은 예상 " + fmtMinutes(rem) + " · 완료 예정 " + fmtClock(rem * 60000)));
+      }
+    }
+    box.appendChild(line);
+    box.appendChild(bar(pct));
+    host.appendChild(box);
+  }
+
+  // The plan is the run's own call on what may run at once; waves render in
+  // order, so the reader sees both the shape and where it currently is.
+  function renderPlan(host) {
+    var plan = data.plan;
+    if (!plan || !plan.waves || !plan.waves.length) return;
+    var byId = ticketsById();
+    var wrap = el("div", "plan");
+    var ph = el("div", "phead");
+    ph.appendChild(el("span", null, "실행 계획"));
+    if (plan.concurrency) ph.appendChild(el("span", "badge", "동시 " + plan.concurrency));
+    if (plan.placement) ph.appendChild(el("span", "badge", plan.placement));
+    wrap.appendChild(ph);
+
+    plan.waves.forEach(function (w, i) {
+      if (i) wrap.appendChild(el("div", "wave-link", "↓"));
+      var wave = el("div", "wave");
+      var wh = el("div", "whead");
+      wh.appendChild(el("span", null, w.id || ("W" + (i + 1))));
+      wh.appendChild(el("span", "badge " + (w.mode === "parallel" ? "new" : "keep"),
+        w.mode === "parallel" ? "병렬 " + (w.tickets || []).length : "순차"));
+      wave.appendChild(wh);
+      var chips = el("div", "chips");
+      (w.tickets || []).forEach(function (id) {
+        var tk = byId[id] || { id: id, title: "" };
+        var chip = el("span", "chip " + (tk.status || "pending"));
+        chip.appendChild(el("span", "cid", tk.id));
+        chip.appendChild(el("span", "ctitle", tk.title || ""));
+        if (tk.estimateMin) chip.appendChild(el("span", "est", "~" + fmtMinutes(tk.estimateMin)));
+        chips.appendChild(chip);
+      });
+      wave.appendChild(chips);
+      if (w.why) wave.appendChild(el("p", "why", w.why));
+      wrap.appendChild(wave);
+    });
+    if (plan.note) wrap.appendChild(el("p", "why", plan.note));
+    host.appendChild(wrap);
+  }
+
+  // A stage's bar: its own `percent` when the run set one, otherwise derived —
+  // done is 100, pending is 0, and an implement stage in flight follows its
+  // tickets. Skipped stages get no bar at all.
+  function stagePercent(s) {
+    if (typeof s.percent === "number") return Math.max(0, Math.min(100, Math.round(s.percent)));
+    if (s.status === "skipped") return null;
+    if (s.status === "done") return 100;
+    if (s.status === "pending") return 0;
+    if (s.status === "in-progress") {
+      var o = overallPercent();
+      if (o !== null && (data.tickets || []).length && /implement|구현/i.test(s.id + " " + (s.name || ""))) return o;
+      return null;
+    }
+    return null;
+  }
+
   function renderProgress() {
     var pr = data.progress;
     var tickets = data.tickets || [];
@@ -562,6 +741,8 @@
     }
     if (pr && pr.note) host.appendChild(el("p", "note", pr.note));
 
+    renderOverall(host, state);
+
     var stuck = tickets.filter(function (tk) { return tk.status === "blocked"; });
     stuck.forEach(function (tk) {
       var box = el("div", "blocker");
@@ -578,6 +759,8 @@
       tickets.forEach(function (tk) { list.appendChild(renderTicket(tk)); });
       host.appendChild(list);
     }
+
+    renderPlan(host);
 
     // The page cannot be pushed to, so it pulls: until the run reports done
     // it reloads itself to pick up the republished version — blocked runs keep
@@ -799,6 +982,15 @@
     if (s.skill) headRow.appendChild(el("span", "skill", s.skill));
     headRow.appendChild(el("span", "badge " + s.status, STATUS_LABEL[s.status] || s.status));
     body.appendChild(headRow);
+    var pct = stagePercent(s);
+    if (pct !== null) {
+      var pbox = el("div", "stage-bar");
+      pbox.appendChild(bar(pct));
+      var plabel = el("div", null);
+      plabel.appendChild(el("span", "pct", pct + "%"));
+      pbox.appendChild(plabel);
+      body.appendChild(pbox);
+    }
     if (s.note) body.appendChild(el("p", "stage-note", s.note));
 
     if (s.decisions && s.decisions.length) {

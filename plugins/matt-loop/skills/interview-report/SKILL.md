@@ -123,6 +123,26 @@ Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and
   - `gates` is the unlazy ledger tally when unlazy is installed; omit it otherwise. `route` is the routed agent name.
   - **The page polls while `state` is not `done`** — it reloads itself every 30s to pick up a republished version, skipping the reload whenever the reader has unsaved edits, with a toggle to stop it. That is why `state: "done"` on the final regeneration matters: it is what stops the polling.
 
+- **`plan` — how the run intends to execute the tickets.** Rendered under the ticket list as an ordered wave graph, so the reader sees which tickets run at once, which wait, and why. Fill it as soon as matt-auto has planned execution (right after the ticket DAG), and keep it through the run — the waves stay put while the tickets inside them change status.
+
+```json
+"plan": {
+  "concurrency": 2,
+  "placement": "local",
+  "note": "선택 — 계획 전체에 대한 한 줄",
+  "waves": [
+    { "id": "W1", "mode": "parallel", "why": "서로 다른 파일만 건드려 충돌 위험이 없다",
+      "tickets": ["T1", "T2"] },
+    { "id": "W2", "mode": "sequential", "why": "같은 섹션을 고쳐 순차로 둔다",
+      "tickets": ["T5"] }
+  ]
+}
+```
+
+  - `mode` is `parallel` or `sequential`; `why` is one Korean line saying what made it so — the file overlap, the risk, the dependency. A wave without `why` is a shape with no reasoning, which is what this panel exists to show.
+  - `concurrency` is how many workers may run at once; `placement` names where they run (`local`, or the environment name).
+- **Estimates and progress bars.** `progress.startedAt` (ISO) drives 경과; each ticket's `estimateMin` (and `startedAt` once it begins, `actualMin` once done) drives the rest. The page computes, and never asks you to pre-compute: the overall percent (estimate-weighted, an in-progress ticket counted by elapsed/estimate and capped at 90%), 남은 예상, and 완료 예정 시각 — a parallel wave costing its slowest ticket, a sequential one their sum. A stage may carry an explicit `percent`; otherwise done is 100, pending is 0, and an in-progress implement stage follows its tickets. **`estimateMin` is the run's own guess and the page labels it 예상** — never present it as measurement, and never back-fill it to make a bar look better.
+
 - **`outcome` — the shipped-changes panel, final regeneration only.** Omit the key entirely on the interview-gate run (nothing is built yet); fill it on the last regeneration, once implementation and review are done. The page renders it under the summary as *결과 — 이번 실행이 바꾼 것*: file counts by status, `+`/`−` totals split into 코드 / 문서 / 기타, and a per-file table. Totals are computed in the page from `files`, so never pass pre-summed numbers.
 
 ```json
@@ -163,6 +183,7 @@ The page lets the user rewrite a decision, flag a node as a problem with a comme
 - Shipping `outcome` on the interview-gate generation → nothing has been built yet; the panel would be a lie.
 - A `blocked` ticket whose `blocker.detail` is vague ("실패함", "확인 필요") → the reader must be able to act on it without opening a terminal.
 - Leaving `state` at `running` on the final regeneration → the page polls forever and the run looks unfinished.
+- A wave whose `why` is missing, or estimates invented to make the bar move → both turn the plan panel into decoration.
 - Running `artifacts share` on a regeneration instead of `artifacts update` → the link the user already has is no longer the one you regenerated.
 - Publishing the graph anywhere but Orca's own artifacts (another host, a pasted screenshot, a hand-rolled upload) → Orca artifacts are the delivery mechanism; when they are unavailable the fallback is the local path, not a substitute service.
 - Retrying a share denied with `artifact_sharing_disabled` → the answer cannot change until a human flips the device setting.
