@@ -65,6 +65,13 @@ def validate(d):
                 errors.append("blocked ticket %s needs blocker.reason and blocker.detail" % tk.get("id"))
     out = d.get("outcome")
     if out is not None:
+        # The final regeneration: the header must say 완료 and the review
+        # lane must be there — matt-auto always runs its review pass, small
+        # path included, and a results panel without it is half a report.
+        if not pr or pr.get("state") != "done":
+            errors.append("outcome present but progress.state is not \"done\" — the final regeneration needs progress")
+        if not d.get("review"):
+            errors.append("outcome present but no review block — the final regeneration carries the review pass")
         for f in out.get("files", []):
             if f.get("status") not in FILE_STATUSES or f.get("kind") not in FILE_KINDS:
                 errors.append("outcome file %s needs status in %s and kind in %s"
