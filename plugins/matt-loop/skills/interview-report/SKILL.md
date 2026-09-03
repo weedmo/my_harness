@@ -26,7 +26,7 @@ The decision log matt-auto accumulated: an ordered list of `{question, decision,
 
 ## Output
 
-One self-contained HTML file — no external fonts, scripts, or CDNs, so it opens correctly offline — written to `docs/agents/matt-auto-log/<slug>.html`, next to the decision log, using the same `<slug>`. Regeneration overwrites the same file; the page keeps user edits safe across regenerations via `localStorage`, keyed by slug.
+One self-contained HTML file — no external fonts, scripts, or CDNs, so it opens correctly offline — written to `docs/agents/matt-auto-log/<slug>.html`, next to the decision log, using the same `<slug>`, rendered from `<slug>.data.json` beside it (see How to build it). Regeneration rewrites both; the page keeps user edits safe across regenerations via `localStorage`, keyed by slug.
 
 Then deliver it (below) and report back *how*: the URL, or the tab plus the path.
 
@@ -43,9 +43,9 @@ Routes, in order of preference — take the first that works, then **stay on it 
 2. **Orca built-in browser tab** — the file opened in the worktree's browser pane inside the Orca desktop; works against a headless remote runtime.
 3. **Path only** — when there is no Orca at all.
 
-Keep the route in `docs/agents/matt-auto-log/<slug>.delivery.json` — `{ "route": "link" | "tab" | "path", "url": …, "browserPageId": …, "denied": "artifact_sharing_disabled" | null }` — and read it before every publish. That is what makes a regeneration from a fresh subagent context land on the same link or the same tab instead of minting a second one. It is run bookkeeping, left out of the outcome tally like the rest of the log folder.
+Keep the route in `docs/agents/matt-auto-log/<slug>.delivery.json` — `{ "route": "link" | "tab" | "path", "bin": "orca" | "orca-ide", "url": …, "browserPageId": …, "denied": "artifact_sharing_disabled" | null }` — and read it before every publish. That is what makes a regeneration from a fresh subagent context land on the same link or the same tab instead of minting a second one. It is run bookkeeping, left out of the outcome tally like the rest of the log folder.
 
-Pick the executable the way `orca-cli` does, once: inside an Orca-managed terminal `orca` is always the Orca CLI; in any other shell **on Linux use `orca-ide`** — bare `orca` there is usually the GNOME screen reader and running it starts speech on the user's machine. The bundled `orca-cli` skill (`$orca-cli`, or `orca skills get orca-cli`) is the authority on every command below; this file only says how the report uses them. Never substitute another host, a screenshot, or a hand-rolled upload.
+Pick the executable once, at the probe, and record it in the delivery file (`"bin"`): inside an Orca-managed terminal `orca` is the Orca CLI shim; in any other shell **on Linux use `orca-ide`** — bare `orca` there is usually the GNOME screen reader and running it starts speech on the user's machine. **If the shim fails with `bad option: --no-sandbox`** (unprivileged user namespaces disabled on that kernel — seen on Linux servers), that is a broken shim, not a missing Orca: fall back to `orca-ide`, which is on `PATH` on those hosts and talks to the same runtime. Only when neither binary works is Orca unavailable. Never let a shim error alone push the run to Route 3. The bundled `orca-cli` skill (`$orca-cli`, or `orca skills get orca-cli`) is the authority on every command below; this file only says how the report uses them. Never substitute another host, a screenshot, or a hand-rolled upload.
 
 ### Route 1 — Orca artifact link
 
@@ -80,10 +80,15 @@ Report the route back in your final message — URL, or tab plus path, and the o
 
 ## How to build it
 
-Copy `assets/template.html` and fill in **only** the data:
+Write the data as JSON to `docs/agents/matt-auto-log/<slug>.data.json`, then render with the script that ships next to this file:
 
-- the `<title>` tag, and
-- the JSON inside `<script id="graph-data" type="application/json">`.
+```
+python3 <this skill's dir>/assets/render.py \
+  --data docs/agents/matt-auto-log/<slug>.data.json \
+  --out  docs/agents/matt-auto-log/<slug>.html
+```
+
+`<this skill's dir>` is the directory holding this SKILL.md — `~/.codex/skills/interview-report` on Codex, the installed plugin's `skills/interview-report` on Claude Code. That is the whole build. The script swaps only the `<title>` and the `<script id="graph-data">` block into `assets/template.html`, validates the data first (required keys, unique decision ids, `progress.state`, every `blocked` ticket's `blocker`, `outcome` file rows), and refuses to write a page that would render wrong — so a regeneration is "edit the JSON, rerun the script", nothing else. **Never splice the template by hand** — no `cp` + `sed`/`perl`/regex over it. The template is 75 KB of CSS and JS full of `#`, `<script>`, and a header comment that repeats the data-block tag; a hand-rolled substitution silently ate 30 KB of it in testing and the page opened broken. If `python3` is somehow missing, say so and stop — do not improvise a replacement.
 
 Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and export machinery lives there, and consistent output between runs is the point of bundling it. The palette follows **robodata's design tokens** (`frontend/src/App.css` in that repo): a layered stack rather than one flat field, on **Claude's warm dark base** — ground `#262624`, panels `#30302e` / `#3a3a38`, borders `#3a3a37` / `#4a4a46` — text `#e3e3e0` over `#a0a09a` muted. A cool near-black drifts blue at these lightness levels; this base stays neutral-warm. Then Catppuccin-family semantics at 10% dim backgrounds (green `#a6e3a1`, blue `#89b4fa`, yellow `#f9e2af`, red `#f38ba8`), `#ff9830` as the accent, 6px card radius with 3px badges, JetBrains Mono for code, and 6px scrollbars. Stat numbers are 22px/700 tabular-nums over an 11px muted label, as they are there. **Both ends stay off the extremes deliberately** — the dark ground is not near-black and the light one is not white, because this page is read for minutes at a time. Never restyle per run.
 
@@ -146,7 +151,7 @@ The page ships **both skins**: the dark one above by default, and a light counte
 ]
 ```
 
-  - `state` is `running` / `blocked` / `done`; `updated` is the ISO timestamp of this regeneration (the page shows "N분 전 갱신" from it).
+  - `state` is `running` / `blocked` / `done`; `updated` is the ISO timestamp of this regeneration, read from the clock (`date -Iseconds`) at the moment you write the file — never rounded or typed from memory; the page shows "N분 전 갱신" from it and a future stamp makes that line lie.
   - Ticket `status` is `done` / `in-progress` / `blocked` / `pending` / `skipped`. `blockedBy` lists the ticket ids it waits on — that is the DAG edge, not a blocker.
   - **`blocker` is required on every `blocked` ticket** and is what the whole panel exists for: `reason` is one of `gate` / `escalation` / `ci` / `conflict` / `dependency` / `worker` / `review` / `other`, and `detail` is the specific, checkable fact — the unmet gate id and its expected-vs-actual, the failing check, the question awaiting an answer. "막혔습니다" with no detail is the failure this panel was built to prevent.
   - `gates` is the unlazy ledger tally when unlazy is installed; omit it otherwise.
@@ -225,6 +230,7 @@ The page lets the user rewrite a decision, flag a node as a problem with a comme
 - Dumping the raw Q&A log into the JSON unedited → the point is translation into plain language, not reformatting.
 - Writing the graph's content in English → the user reads this in Korean; only ids and JSON structure stay English.
 - Editing the template's CSS/JS instead of only the data block → inconsistent, possibly broken output between runs is the failure mode this skill exists to prevent.
+- Building the page with `cp` + `sed`/`perl` instead of `assets/render.py` → the template is full of the characters those substitutions trip on; the script exists because that shortcut shipped a broken page.
 - Changing decision ids on regeneration → orphans the user's saved edits and any exported edits.json.
 - Line counts in `outcome` that were estimated, read off a subagent's report, or summed by hand → they must come from `git diff --numstat`, and a wrong number in a results panel is worse than no panel.
 - Shipping `outcome` on the interview-gate generation → nothing has been built yet; the panel would be a lie.

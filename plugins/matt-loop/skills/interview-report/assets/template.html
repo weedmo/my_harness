@@ -1276,6 +1276,7 @@
     lh.appendChild(el("span", null, "리뷰"));
     lh.appendChild(el("span", "badge " + (r.status === "done" ? "done" : r.status === "blocked" ? "flagged" : "in-progress"),
       TICKET_STATUS_LABEL[r.status] || r.status || "대기"));
+    if (r.skill) lh.appendChild(el("span", "wdur", r.skill));
     lane.appendChild(lh);
     (r.passes || []).forEach(function (pass) {
       var rows = [];
@@ -1285,8 +1286,7 @@
       if (pass.note) rows.push(el("p", "nnote", pass.note));
       lane.appendChild(laneNode(pass.name || pass.id, pass.status, rows));
     });
-    if (r.skill) lane.appendChild(el("div", "nagent", r.skill));
-    if (r.note) lane.appendChild(el("p", "why", r.note));
+    if (r.note) lane.appendChild(el("p", "nnote", r.note));
     return lane;
   }
 
@@ -1321,7 +1321,10 @@
       : [];
 
     var head = el("div", "flow-head");
-    head.appendChild(el("span", "phead", "실행 계획"));
+    // A small-path run has no waves — only the review / PR lanes — so the
+    // heading says what is actually there.
+    head.appendChild(el("span", "phead", waves.length ? "실행 계획"
+      : [data.review ? "리뷰" : null, data.pr ? "PR" : null].filter(Boolean).join(" · ")));
     if (plan.concurrency) head.appendChild(el("span", "badge", "동시 " + plan.concurrency));
     if (plan.placement) head.appendChild(el("span", "badge", plan.placement));
     var liveIndex = waves.findIndex(function (w) {
@@ -1339,7 +1342,7 @@
     var expandAll = false;
     var btnAll = el("button", "wtoggle", "완료 웨이브 펼치기");
     btnAll.classList.add("spacer");
-    head.appendChild(btnAll);
+    if (waves.length > 3) head.appendChild(btnAll);
     host.appendChild(head);
 
     var wrap = el("div", "flow-wrap");
