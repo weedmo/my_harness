@@ -17,6 +17,9 @@ Hard rules:
   descriptions, decision tables) and the spec document. Identifiers that refer to
   real code — module/function/file names, diagram node names, commands — stay in
   English as they appear in the codebase.
+- Never hand the user a link before the render check (step 3) has passed on the
+  version that is live. A diagram with clipped, overflowing, or overlapping text is
+  not a deliverable, even if the design behind it is right.
 
 ## Flow
 
@@ -70,9 +73,79 @@ it is the authority; declare only what its roster serves):
   serialize the live DOM. `await claude.use("artifact")` can resolve `null` —
   then hide the editing affordances and the page stays a plain view.
 
-Publish and hand the user the link, telling them the three ways to respond:
-chat, selecting any part of the page and commenting, or editing the text
-directly and pressing 저장.
+Korean text is wide — size everything for it before drawing. Budget one
+font-size per Hangul glyph (Latin needs about half). Inline SVG: put each box
+and its label in one `<g>`, and make the rect at least
+`chars × font-size + 24px` wide; a label that does not fit gets split across
+lines or shortened, never squeezed. Mermaid: always quote labels
+(`A["라벨"]`), keep them to roughly 12 Hangul characters, break longer ones
+with `<br/>`, and move explanations to the caption — mermaid estimates CJK
+width badly, which is exactly what produces clipped labels and nodes drawn on
+top of each other.
+
+Publish, then run the render check below. Only when it passes, hand the user
+the link and tell them the three ways to respond: chat, selecting any part of
+the page and commenting, or editing the text directly and pressing 저장.
+
+Render check (MANDATORY after every publish that touches a diagram or layout):
+the host lays the page out with its own fonts and mermaid version, so what the
+local file looks like proves nothing — check the live page.
+1. Open the published URL in a browser that carries the user's claude.ai login
+   (the `claude-in-chrome` tools; new tab, never one the user is working in).
+   Fallback when no logged-in browser is reachable: write a scratch copy of the
+   file that adds `<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.2/mermaid.min.js">`
+   (mermaid fences only render natively on the host), serve the scratch
+   directory with `python3 -m http.server <port>` and open the copy over
+   `http://localhost` with the playwright or chrome-devtools tools (`file://`
+   is blocked there). Say in the handoff that the check ran on a local render.
+2. Run this in the page and read the result; anything but `OK` is a defect:
+   ```js
+   (() => {
+     const out = [];
+     const sel = ':scope > rect, :scope > path, :scope > polygon, :scope > circle, :scope > ellipse';
+     const inside = (a, b) => a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1;
+     const hit = (a, b) => !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
+     if (document.body.innerText.includes('\uFFFD')) out.push('garbled: U+FFFD in page text');
+     document.querySelectorAll('body *').forEach(el => {
+       if (getComputedStyle(el).overflow !== 'visible' && el.scrollWidth > el.clientWidth + 1)
+         out.push('clipped: "' + (el.textContent || '').trim().slice(0, 30) + '"');
+     });
+     document.querySelectorAll('svg').forEach((svg, i) => {
+       const shapeOf = g => [...g.querySelectorAll(sel)].map(s => s.getBoundingClientRect()).find(r => r.width > 2 && r.height > 2);
+       const gs = [...svg.querySelectorAll('g')].filter(shapeOf);
+       const leaves = gs.filter(g => !gs.some(o => o !== g && g.contains(o)));
+       const boxes = [];
+       leaves.forEach(g => {
+         const s = shapeOf(g);
+         const texts = [...g.querySelectorAll('text, foreignObject')];
+         if (!texts.length) return;
+         const label = texts[0].textContent.trim().slice(0, 20);
+         boxes.push({ s, label });
+         texts.forEach(t => {
+           if (!inside((t.querySelector('span') || t).getBoundingClientRect(), s)) out.push(`overflow svg#${i}: "${label}"`);
+         });
+       });
+       for (let a = 0; a < boxes.length; a++) for (let b = a + 1; b < boxes.length; b++) {
+         const A = boxes[a].s, B = boxes[b].s;
+         if (hit(A, B) && !inside(A, B) && !inside(B, A)) out.push(`overlap svg#${i}: "${boxes[a].label}" x "${boxes[b].label}"`);
+       }
+     });
+     return out.length ? out.join('\n') : 'OK';
+   })()
+   ```
+   It flags clipped HTML text, replacement characters, a label whose glyphs
+   leave its box, and two labeled boxes that partially overlap (a box fully
+   inside another — a mermaid subgraph around its nodes — is nesting, not a
+   defect). Hand-drawn SVG is only checked where box and label share a `<g>`.
+3. Take a full-page screenshot and look at it yourself — the script cannot see
+   edge labels crossing nodes, arrows through text, or a diagram wider than the
+   page. Then set `document.documentElement.dataset.theme = 'dark'` (and
+   `'light'` if the browser is already dark), re-run the script, and screenshot
+   again — the fonts do not change between themes, but contrast bugs do.
+4. Any finding → fix the source file (shorten or wrap the label, widen the box,
+   change the mermaid direction or split the diagram), republish to the same
+   path, and run the check again. Repeat until it comes back `OK` in both
+   themes. Report in one line what the check covered and which browser it ran in.
 
 ### 4. Understanding loop
 Feedback arrives three ways; treat all of them as design input:
@@ -88,7 +161,8 @@ Feedback arrives three ways; treat all of them as design input:
   update on top of it. A publish conflict is the same signal — merge onto the
   handed-back version, never force.
 Each round: apply feedback to the same Artifact (same file path → same URL),
-answer questions by pointing at the diagram, keep decision-list rows updated.
+run the render check from step 3 on the republished page, answer questions by
+pointing at the diagram, keep decision-list rows updated.
 Repeat until the user confirms the design is understood and settled. If they go
 quiet mid-loop, the design is NOT confirmed — wait or ask, don't advance.
 
