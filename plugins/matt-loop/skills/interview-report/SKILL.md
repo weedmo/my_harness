@@ -1,6 +1,6 @@
 ---
 name: interview-report
-description: Renders matt-auto's decision log (question → decision → rationale, per pipeline stage) into a single self-contained interactive decision-graph HTML — the pipeline stages in order, each decision as an editable node the user can rewrite or flag and export as <slug>.edits.json for matt-auto to rework from, published as an Orca artifact link (`orca artifacts share`/`update`) so the user reads it in a browser instead of opening a local file. Called by matt-auto right after its interview stage and again before its final report — do not trigger this standalone on a bare grill-me/grill-with-docs session; matt-auto is what pulls it in.
+description: Renders matt-auto's decision log (question → decision → rationale, per pipeline stage) into a single self-contained interactive decision-graph HTML — the pipeline stages in order, each decision as an editable node the user can rewrite or flag and export as <slug>.edits.json for matt-auto to rework from, and delivered where the user reads it — this skill owns delivery end to end: an Orca artifact link (`orca artifacts share`/`update`), or the worktree's Orca built-in browser tab when links are unavailable, with the route kept stable for the whole run; matt-auto only says probe / publish and relays the answer. Called by matt-auto right after its interview stage and again before its final report — do not trigger this standalone on a bare grill-me/grill-with-docs session; matt-auto is what pulls it in.
 ---
 
 # Interview Report (decision graph)
@@ -28,17 +28,33 @@ The decision log matt-auto accumulated: an ordered list of `{question, decision,
 
 One self-contained HTML file — no external fonts, scripts, or CDNs, so it opens correctly offline — written to `docs/agents/matt-auto-log/<slug>.html`, next to the decision log, using the same `<slug>`. Regeneration overwrites the same file; the page keeps user edits safe across regenerations via `localStorage`, keyed by slug.
 
-Then publish it as an Orca artifact (below) and report both the link and the path.
+Then deliver it (below) and report back *how*: the URL, or the tab plus the path.
 
-## Publish it as an Orca artifact
+## Delivery — this skill owns it
 
-The file on disk is the source of truth; the link is how the user actually reads it — matt-auto's interview gate hands them this URL, not a path they have to open by hand. Use Orca's own artifact mechanism, nothing else: the bundled `orca-cli` skill's **Artifacts** section is the authority (`$orca-cli`, or `orca skills get orca-cli`), and this section only says how matt-auto uses it. Never substitute another host, a screenshot, or a hand-rolled upload.
+The file on disk is the source of truth; the route is how the user actually reads it. matt-auto never touches the transport — it says one of two things and relays the answer, and every `orca artifacts` / `tab` / `reload` command in a run is issued from here:
 
-Pick the executable the way `orca-cli` does, once: inside an Orca-managed terminal `orca` is always the Orca CLI; in any other shell **on Linux use `orca-ide`** — bare `orca` there is usually the GNOME screen reader and running it starts speech on the user's machine.
+- **probe** — once, early in the run, before the interview: which route this device can offer, so the user learns *before* the gate that there will be no link. Run `<orca> status --json` and `<orca> artifacts list --json`: both fine → `link`; `authentication_required` → `tab` (profile signed out — say so); no CLI or no runtime → `path`. `artifact_sharing_disabled` cannot be probed — it only shows on `share` — so a `link` answer is provisional until the first publish.
+- **publish** — at the interview gate, then on every regeneration: rewrite the file, push it wherever the user is reading it, and answer with the route, the URL or tab, the path, and a one-line reason when the route is not `link`.
+
+Routes, in order of preference — take the first that works, then **stay on it for the whole run**:
+
+1. **Orca artifact link** — the public URL; the interview gate hands the user this, not a path.
+2. **Orca built-in browser tab** — the file opened in the worktree's browser pane inside the Orca desktop; works against a headless remote runtime.
+3. **Path only** — when there is no Orca at all.
+
+Keep the route in `docs/agents/matt-auto-log/<slug>.delivery.json` — `{ "route": "link" | "tab" | "path", "url": …, "browserPageId": …, "denied": "artifact_sharing_disabled" | null }` — and read it before every publish. That is what makes a regeneration from a fresh subagent context land on the same link or the same tab instead of minting a second one. It is run bookkeeping, left out of the outcome tally like the rest of the log folder.
+
+Pick the executable the way `orca-cli` does, once: inside an Orca-managed terminal `orca` is always the Orca CLI; in any other shell **on Linux use `orca-ide`** — bare `orca` there is usually the GNOME screen reader and running it starts speech on the user's machine. The bundled `orca-cli` skill (`$orca-cli`, or `orca skills get orca-cli`) is the authority on every command below; this file only says how the report uses them. Never substitute another host, a screenshot, or a hand-rolled upload.
+
+### Route 1 — Orca artifact link
 
 - **First publish for this slug:** `<orca> artifacts share docs/agents/matt-auto-log/<slug>.html --json` → the share URL comes back as `result.shareUrl` (without `--json` the URL is the whole stdout).
 - **Every regeneration afterwards:** `<orca> artifacts update <the same path> --json`. Orca looks the artifact up by the resolved local path in the active profile, so the same path from the same profile keeps the same link — the user goes on reading the URL they already have. Only if `update` reports no such record (the file was never shared from this profile) fall back to `share`.
 - The HTML must stay self-contained — Orca does not upload relative assets — which the template already guarantees. The CLI transport caps a file at 800 KB; template plus a normal decision log sits far under it, so a size failure means the data block grew wrong.
+- **Refused?** Write the file anyway, record why, and drop to Route 2 for this run:
+  - `artifact_sharing_disabled` → publishing is off for the whole device and **only a human can turn it on**; there is no CLI or RPC way to grant it, so do not retry. Tell the user once: open Settings → Artifacts in the Orca desktop app on this device, turn on "Allow publishing public artifact links", and say the word — re-run `share` only when they have said so, never on every regeneration; when it then succeeds, switch the route to `link` and hand over the URL. On a headless runtime (`orca serve` on a server, paired from a desktop elsewhere) that switch may simply not be reachable, so the tab is the delivery for that run rather than something to wait for.
+  - No Orca CLI on `PATH`, runtime unreachable, or `authentication_required` (profile signed out) → `Orca artifact unavailable: <why>`, then Route 2 (Route 3 when there is no runtime to open a tab in).
 
 ### What the hosted page can and cannot do
 
@@ -48,21 +64,19 @@ Orca serves the file inside a sandboxed iframe (`allow-downloads allow-forms all
 - **`localStorage` throws `SecurityError`** (the frame has an opaque origin). The template already wraps every access in `try`/`catch`, so nothing breaks — but edits live only for that page load. Say so when handing over the link: **export before reloading**, or edit the local file instead. Never "fix" this by removing the guards.
 - The header shows the **original file name as the page title** (`<slug>.html`) and the artifact's expiry — links last 30 days, and each `update` restarts that window.
 
-Publishing can be refused, and that never cancels the report — write the file anyway, say in one line why there is no link, and deliver the page through Orca's built-in browser instead (next section):
+### Route 2 — Orca built-in browser tab
 
-- Code `artifact_sharing_disabled` → publishing is off for the whole device and **only a human can turn it on**; there is no CLI or RPC way to grant it, so do not retry. Tell the user to open Settings → Artifacts in the Orca desktop app on this device, turn on "Allow publishing public artifact links", and say the word — re-run `share` only once they have said so, never on every regeneration. On a headless runtime (`orca serve` on a server, paired from a desktop elsewhere) that switch may simply not be reachable, so treat the tab route as the delivery for that run rather than waiting.
-- No Orca CLI on `PATH`, runtime unreachable, or `authentication_required` (profile signed out) → report `Orca artifact unavailable: <why>` plus the local path.
+A path alone is not a deliverable — on a remote runtime the user cannot double-click it. Open the file in the worktree's Orca browser tab, which the desktop shows even when the runtime is a headless `orca serve` on another machine (verified against a remote runtime):
 
-### No link: open it in Orca's built-in browser
-
-A path alone is not a deliverable — on a remote runtime the user cannot double-click it. When there is no link, open the file in the worktree's Orca browser tab, which the desktop shows even when the runtime is a headless `orca serve` on another machine (verified against a remote runtime):
-
-- **Once per run:** from inside the worktree, `<orca> tab create --url file://<absolute path> --json` → note `result.browserPageId` in the decision log. Before creating one, `<orca> tab list --json` — if a tab already shows that `file://` URL, reuse its `browserPageId` instead of opening a second.
-- **After every regeneration:** `<orca> reload --page <browserPageId> --json`. This is not optional: the built-in browser ignores every script-initiated reload or navigation of a `file://` page (`location.reload()`, `location.href = …`, `history.go(0)` — none of them fire, verified), so the page's own 30 s poll does nothing there and the rewritten file shows up only when you push it. `tab list` tells you if the tab is gone (`browser_tab_not_found`, or the URL no longer listed) — then create it again.
+- **Once per run:** from inside the worktree, `<orca> tab create --url file://<absolute path> --json` → store `result.browserPageId` in the delivery file. Before creating one, `<orca> tab list --json` — if a tab already shows that `file://` URL, reuse its `browserPageId` instead of opening a second.
+- **After every regeneration:** `<orca> reload --page <browserPageId> --json`. This is not optional: the built-in browser ignores every script-initiated reload or navigation of a `file://` page (`location.reload()`, `location.href = …`, `history.go(0)` — none of them fire, verified), so the page's own 30 s poll does nothing there and the rewritten file shows up only when you push it. `tab list` tells you if the tab is gone (`browser_tab_not_found`, or the URL no longer listed) — then create it again and update the delivery file.
 - The page works normally inside that tab: `localStorage` is available (edits survive a reload, unlike the hosted artifact), the theme toggle works, exports download.
-- Only when there is no Orca at all — no CLI, no runtime — is the local path the whole deliverable; say so, and expect the user to open the file in a browser of their own, where the page's own poll does work.
 
-Report the share URL and the saved path back in your final message — a file nobody's told about might as well not exist.
+### Route 3 — path only
+
+Only when there is no Orca at all — no CLI, no runtime — is the local path the whole deliverable; say so, and expect the user to open the file in a browser of their own, where the page's own poll does work.
+
+Report the route back in your final message — URL, or tab plus path, and the one-line reason when it is not a link. A file nobody's told about might as well not exist.
 
 ## How to build it
 
@@ -219,6 +233,8 @@ The page lets the user rewrite a decision, flag a node as a problem with a comme
 - A wave whose `why` is missing, or estimates invented to make the bar move → both turn the plan panel into decoration.
 - Running `artifacts share` on a regeneration instead of `artifacts update` → the link the user already has is no longer the one you regenerated.
 - Publishing the graph anywhere but Orca's own artifacts (another host, a pasted screenshot, a hand-rolled upload) → Orca artifacts are the delivery mechanism; when they are unavailable the fallback is Orca's built-in browser tab on the local file, not a substitute service.
+- Publishing without reading `<slug>.delivery.json` first → a second link or a second tab, and the user is now looking at the wrong one.
+- Letting the caller run `orca artifacts` / `tab` / `reload` itself → two owners of one route drift apart; matt-auto says publish, this skill does it.
 - Handing over a bare path when there is no link, while an Orca runtime is reachable → open the file in the worktree's browser tab; a path on a remote server is not something the user can click.
 - Regenerating the file into an open Orca tab without `orca reload --page` → the tab keeps showing the old version; the page cannot reload itself there.
 - Retrying a share denied with `artifact_sharing_disabled` on every regeneration → the answer cannot change until a human flips the device setting; re-run only when the user says they did.
