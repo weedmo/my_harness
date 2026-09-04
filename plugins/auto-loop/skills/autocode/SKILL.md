@@ -117,8 +117,8 @@ Follow `$loop-gates` (shared): locate unlazy once; if missing, ask once whether 
 present, write `$AUTOCODE_DIR/GATES.md` with one gate per script under `$AUTOCODE_DIR/verify/`
 (portable Node, no dependencies):
 
-- `verify-guard.mjs` — runs the guard on the experiment branch; prints `autocode gate passed: guard` on exit 0.
-- `verify-metric.mjs` — re-runs the metric on the experiment branch and asserts it is at least as good as `best_metric` in `state.json` within the noise band; prints `autocode gate passed: metric`. It re-measures the claim; it never trusts the recorded number.
+- `verify-guard.mjs` — runs the guard inside `.autocode/worktrees/best` (the experiment branch); prints `autocode gate passed: guard` on exit 0.
+- `verify-metric.mjs` — re-runs the metric inside `.autocode/worktrees/best` and asserts it is at least as good as `best_metric` in `state.json` within the noise band; prints `autocode gate passed: metric`. It re-measures the claim; it never trusts the recorded number.
 - `verify-target.mjs` — only with `performance_target`; re-measures and asserts the target is met; prints `autocode gate passed: target`.
 
 Scripts read thresholds from `program.md` / `state.json`, so `CHECK:` lines never change during a
@@ -143,12 +143,16 @@ code itself and never reasons about what to try next — that is the strategist'
 ### 3A: Pre-flight
 
 1. `program.md` exists, target files exist, working tree clean (else stop and say so).
-2. Create the experiment branch in its own worktree — the user's checkout is never moved:
-   `git worktree add "$WORKTREE_DIR/best" -b "autocode/<slug>" HEAD`. `<slug>` is the spec's
-   `slug` when program.md names a spec, else `metric_name`; if the branch exists, append `-2`,
-   `-3`, …. `best` always means the head of this branch, and every command that touches it
-   runs inside `$WORKTREE_DIR/best`. Resolve `pr_base`: `--pr <base>` / `--no-pr` → else
-   program.md `pr_base` → else the branch the run started on.
+2. Create the experiment branch in its own worktree — the user's checkout is never moved.
+   If `$WORKTREE_DIR/best` already exists: a `state.json` whose `terminated_reason` is null means
+   an interrupted run → stop and say `run /autocode resume`; otherwise `git worktree remove
+   --force` it. Then `git worktree prune` and `git worktree add "$WORKTREE_DIR/best" -b
+   "autocode/<slug>" HEAD`. `<slug>` is the spec's `slug` when program.md names a spec, else
+   `metric_name` slugified (`p95_latency_ms` → `p95-latency-ms`); if the branch exists, append
+   `-2`, `-3`, …. Run `worktree_setup` inside it if set. Record `base_branch` and `base_commit`
+   (this HEAD) in `state.json`. `best` always means the head of this branch, and every command
+   that touches it runs inside `$WORKTREE_DIR/best`. Resolve `pr_base`: `--pr <base>` /
+   `--no-pr` → else program.md `pr_base` → else `base_branch`.
 3. Run the guard on the unmodified code inside `$WORKTREE_DIR/best`; abort if it fails.
 4. Resolve routing (3H). Probe Orca only if `--on <env>` was given or program.md `parallel` > 1
    and the user asked for Orca at init: `orca status --json`, `orca orchestration run-list --json`
@@ -169,7 +173,7 @@ finite number (abort with the raw output otherwise). Record `baseline` = median 
 only when it beats `best_metric` by more than `noise_band` in the configured direction. This is
 the only keep/discard rule in the whole loop.
 
-Write `state.json` (`assets/reference.md` § state.json: branch, base_branch, pr_base, pr_url,
+Write `state.json` (`assets/reference.md` § state.json: branch, base_branch, base_commit, pr_base, pr_url,
 baseline, noise_band, best_metric, best_commit, experiments_done, max_experiments, parallel,
 strategist_tier, strategist_agent_id, running, consecutive_discards, escalated,
 terminated_reason). Display the baseline, noise band, branch, PR base, parallelism, strategist
@@ -262,6 +266,7 @@ else:                                                     # inside $WORKTREE_DIR
     if conflict:  git reset --hard; status = conflict     # another keep touched the same lines
     else:
         re-measure once on the squashed tree (serial, same rules)
+        if merged is not finite: git reset --hard; pause the run (3G)
         if better_by(merged, best_metric) > noise_band:
             git commit -m "perf(H{id}): {claim, one line}" -m "{measurement body}"
             status = keep; best_metric = merged; best_commit = HEAD; consecutive_discards = 0
@@ -339,13 +344,15 @@ it into the lesson file of the last experiment as `"gates_caught": n` (`null` wh
   autocode/<slug>` with title `perf: <metric_name> <baseline> → <best> (<improvement>%)` and
   the final summary below as the body, plus the board link (or its path) as the first line.
   Record the URL in `state.json` `pr_url` and in the board (`run.pr`). Never merge, never
-  babysit. If there is no `origin`, the push is refused, or `gh` is missing or unauthenticated:
-  one line with the reason (`PR: not opened — no remote`), the branch name, and the exact
-  `git push` + `gh pr create` lines for the user, and the run still ends normally.
+  babysit. Check `git ls-remote --heads origin <pr_base>` first: if there is no `origin`, the
+  base is not on it (a design-map feature branch that was never pushed), the push is refused, or
+  `gh` is missing or unauthenticated — one line with the reason (`PR: not opened — base not on
+  origin`), the branch name, and the exact `git push` + `gh pr create` lines for the user, and
+  the run still ends normally. Never push the base branch yourself.
 
 Then **publish the board one last time** (3I) with `progress.state: "done"`,
 `run.terminatedReason` set, and the `outcome` block: `outcome.files` measured with
-`git diff --numstat <branch base>..<best_commit>` / `--name-status`, one Korean line per file,
+`git diff --numstat <base_commit>..<best_commit>` / `--name-status` (`base_commit` from `state.json`, not the base branch — the user may have kept committing there), one Korean line per file,
 `.autocode/**` left out. That final page is the report the user keeps; the terminal summary
 points at it.
 
@@ -362,8 +369,9 @@ commit order, refuted hypotheses worth remembering.
   `timeout`.
 - A worktree that cannot be created (dirty state, name clash) is removed and re-created once; then
   the hypothesis is `discard`ed with note `worktree`.
-- If the metric command fails on the experiment branch after a merge, the merge is reverted and
-  the run pauses with a clear message — a broken measurement is not something to loop past.
+- If the metric command fails on the squashed tree in `$WORKTREE_DIR/best`, the staged squash is
+  discarded (`git reset --hard`, `best_commit` untouched) and the run pauses with a clear
+  message — a broken measurement is not something to loop past.
 
 ### 3H: Model routing
 
@@ -434,8 +442,8 @@ board route from
 1. Require `program.md` and `state.json`; otherwise say `No run to resume. Run /autocode init
    then /autocode run.`
 2. Make sure the experiment branch is in its worktree — if `$WORKTREE_DIR/best` is missing,
-   `git worktree add "$WORKTREE_DIR/best" "<branch>"`; never check the branch out in the user's
-   checkout. For every id in `state.running`: if its worktree and result file exist, measure it
+   `git worktree prune` then `git worktree add "$WORKTREE_DIR/best" "<branch>"` and run
+   `worktree_setup` inside it if set; never check the branch out in the user's checkout. For every id in `state.running`: if its worktree and result file exist, measure it
    (3D-2/3D-3); if the worktree exists without a result, remove it and set the hypothesis back to
    `pending`.
 3. Respawn the strategist on the recorded tier with `program.md`, `results.tsv`, the lessons, the

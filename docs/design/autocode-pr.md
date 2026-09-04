@@ -93,7 +93,7 @@ a1b2c3d <base>
 | id | 질문 | 선택 | 이유 |
 |---|---|---|---|
 | D1 | 사용자 checkout | 실험 브랜치를 `.autocode/worktrees/best` worktree에 두고 checkout은 건드리지 않는다 | 루프가 도는 동안 사용자는 자기 브랜치에서 계속 일한다. 가설 worktree가 이미 그 그림이다 |
-| D2 | 채택 커밋의 형태 | keep마다 `merge --squash` 후 측정치를 담은 커밋 1개 | PR 커밋 하나 = 개선 하나. revert 단위가 개선 단위. interaction 롤백은 HEAD~1 그대로 |
+| D2 | 채택 커밋의 형태 | keep마다 `merge --squash` 후 측정치를 담은 커밋 1개 | PR 커밋 하나 = 개선 하나. revert 단위가 개선 단위. interaction 롤백은 스테이징된 squash를 `reset --hard`로 버리는 것 |
 | D3 | PR을 여는 조건 | keep ≥ 1 이고 `pr_base ≠ none`이면 3F에서 연다 (기본 켜짐) | 채택된 것을 모아 PR로 올리는 것이 정상 종료 형태. 끄려면 `--no-pr` 또는 인터뷰에서 none |
 | D4 | PR base | run을 시작한 브랜치가 기본. init 인터뷰에서 확인, `run --pr <base>`로 덮어쓰기 | 실험 브랜치는 시작 브랜치에서 갈라지므로 돌아가는 곳도 거기다. design-map이 만든 feat 브랜치면 PR은 그 feat 브랜치로 |
 | D5 | PR을 여는 시점 | 3F 종료 시 한 번 | interaction 롤백이 push한 커밋을 지우면 force push가 필요해진다(금지). 루프 중의 창은 보드 |
@@ -109,7 +109,7 @@ a1b2c3d <base>
 ## 구현 순서
 
 1. autocode SKILL.md 3A — `autocode/<slug>` 브랜치를 `.autocode/worktrees/best` worktree에 만들고 checkout은 건드리지 않는다. Step 1에 `--pr <base>` · `--no-pr`. pre-flight 출력에 PR base. — 확인: SKILL.md에 checkout을 옮기는 문장이 없고 3A에 `worktree add … best` 명령이 있다.
-2. 3D-3 — best worktree 안에서 `merge --squash` → 재측정 → `perf(H{id})` 커밋(측정치 본문) 또는 `reset --hard`. interaction 롤백 HEAD~1 유지. — 확인: 3D-3 의사코드에 `--no-ff`가 없고 `--squash`와 커밋 메시지 형식이 있다.
+2. 3D-3 — best worktree 안에서 `merge --squash` → 재측정 → `perf(H{id})` 커밋(측정치 본문) 또는 `reset --hard`(interaction · conflict · 측정 실패 모두 스테이징된 squash만 버린다). — 확인: 3D-3 의사코드에 `--no-ff`가 없고 `--squash`와 커밋 메시지 형식이 있다.
 3. 3F — keep ≥ 1 이고 pr_base ≠ none이면 push + `gh pr create`, 원격/gh 없으면 이유 + 명령 출력, keep 0이면 정리. state.json `pr_url`. Step 4 · 5도 맞춘다. — 확인: 3F에 `gh pr create`와 세 갈래(열림 · 생략 이유 · keep 0)가 모두 있다.
 4. reference.md — 인터뷰 필드 `pr_base`, program.md Budget에 `pr_base`, state.json에 `pr_base` · `pr_url`, 최종 요약과 status 블록에 PR 줄, 보드 데이터 `run.pr`, 파일 구조에 `worktrees/best`. — 확인: 예시들이 모두 새 필드를 보인다.
 5. view.html — `run.pr`이 있으면 metric strip에 PR 타일 하나(링크). validate.py는 `run.pr`을 선택 키로 받는다. — 확인: run.pr 있는 픽스처와 없는 픽스처 둘 다 render.py 통과, 있는 쪽 페이지에 링크.

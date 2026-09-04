@@ -82,8 +82,9 @@ spec: {design-map spec path|null}
 
 ```json
 {
-  "branch": "autocode/p95-latency",
+  "branch": "autocode/p95-latency-ms",
   "base_branch": "feat/validator",
+  "base_commit": "a1b2c3d",
   "pr_base": "feat/validator",
   "pr_url": null,
   "baseline": 182.4,
@@ -206,7 +207,7 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 
 ```json
 "run": {
-  "branch": "autocode/p95-latency", "bestCommit": "a1b2c3d",
+  "branch": "autocode/p95-latency-ms", "bestCommit": "a1b2c3d",
   "pr": { "base": "feat/validator", "url": null },
   "metric": { "name": "p95_latency_ms", "direction": "lower", "baseline": 182.4, "noiseBand": 2.1, "best": 151.0, "target": 120 },
   "budget": { "done": 6, "max": 20, "parallel": 2, "placement": "local" },
@@ -245,7 +246,7 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 ```
 ## Autocode Final Summary
 
-- Branch: autocode/{slug} @ {best_commit} (in .autocode/worktrees/best; your checkout is unchanged)
+- Branch: autocode/{slug} @ {best_commit} (in .autocode/worktrees/best; your checkout is unchanged) | removed — nothing kept
 - Baseline: {baseline} → Best: {best_metric} ({improvement}%), noise band ±{noise_band}
 - Experiments: {done} ({kept} keep, {discarded} discard, {crashed} crash, {conflict} conflict, {interaction} interaction)
 - Wall clock: {elapsed}; {experiments/hour}; measurement time share {pct}%
@@ -272,7 +273,7 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 ```
 ## Autocode Status
 
-**Branch**: autocode/{slug} @ {best_commit} (in .autocode/worktrees/best) → PR base {pr_base|none}
+**Branch**: autocode/{slug} @ {best_commit} (in .autocode/worktrees/best; removed after a run with nothing kept) → PR base {pr_base|none}
 **Best**: {metric_name} {best_metric} (baseline {baseline}, {improvement}%, noise ±{noise_band})
 **Experiments**: {done}/{max} — {kept} keep · {discarded} discard · {crashed} crash · {conflict} conflict · {interaction} interaction
 **Kept commits**: {kept} on the branch{ · PR {pr_url}}
