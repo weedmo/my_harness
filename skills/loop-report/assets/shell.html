@@ -504,6 +504,10 @@
     b.appendChild(fill);
     return b;
   }
+  // A full 40-hex commit id is noise in a header line; show the short form.
+  function shortRef(ref) {
+    return typeof ref === "string" && /^[0-9a-f]{12,}$/.test(ref) ? ref.slice(0, 7) : ref;
+  }
   function stat(label, value, sub) {
     var box = el("div", "stat");
     box.appendChild(el("span", "k", label));
@@ -611,7 +615,7 @@
 
   var ctx = {
     data: data, el: el, bar: bar, stat: stat, section: section, kvRow: kvRow,
-    modal: modal, clickable: clickable,
+    modal: modal, clickable: clickable, shortRef: shortRef,
     sinceText: sinceText, minutesSince: minutesSince, fmtMinutes: fmtMinutes, fmtClock: fmtClock,
     prefs: prefs, setPref: setPref,
     PROGRESS_STATE_LABEL: { "running": "진행 중", "blocked": "막힘", "done": "완료" }
@@ -740,7 +744,7 @@
     host.appendChild(el("h2", null, "결과 — 이번 실행이 바꾼 것"));
     var refs = [];
     if (o.branch) refs.push(o.branch);
-    if (o.baseRef && o.headRef) refs.push(o.baseRef + " → " + o.headRef);
+    if (o.baseRef && o.headRef) refs.push(shortRef(o.baseRef) + " → " + shortRef(o.headRef));
     if (refs.length) host.appendChild(el("div", "refs", refs.join("  ·  ")));
 
     if (typeof view.renderOutcome === "function") view.renderOutcome(host, ctx);

@@ -515,7 +515,7 @@ window.LoopView = (function () {
       run.terminatedReason === "target_reached" && isNum(metric.target) ? "목표 " + fmtNum(metric.target) : ""));
     var best = bestValue(), imp = improvement(metric.baseline, best);
     stats.appendChild(ctx.stat("최고", fmtNum(best) + (metric.name ? " " + metric.name : ""),
-      (imp === null ? "" : "기준 " + fmtNum(metric.baseline) + " 대비 " + fmtPct(imp)) + (run.bestCommit ? " · " + run.bestCommit : "")));
+      (imp === null ? "" : "기준 " + fmtNum(metric.baseline) + " 대비 " + fmtPct(imp)) + (run.bestCommit ? " · " + (ctx.shortRef ? ctx.shortRef(run.bestCommit) : run.bestCommit) : "")));
     host.appendChild(stats);
 
     var kept = ms.filter(function (h) { return h.status === "keep"; });
