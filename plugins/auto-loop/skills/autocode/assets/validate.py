@@ -21,11 +21,27 @@ def _num(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
+def _snake_case_keys(obj, where, errors):
+    """The board's keys are camelCase (expectedDelta, dependsOn, ifConfirmed);
+    a hypothesis file mirrored key-for-key (expected_delta, depends_on) would
+    render blank rows without any error, so refuse it here."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if "_" in k:
+                errors.append("%s: key %r is snake_case — the board uses camelCase (see assets/reference.md)" % (where, k))
+            _snake_case_keys(v, where + "." + k, errors)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            _snake_case_keys(v, "%s[%d]" % (where, i), errors)
+
+
 def validate(d):
     errors = []
     run = d.get("run")
     if not isinstance(run, dict):
         return ["missing top-level key: run (an object)"]
+    _snake_case_keys(run, "run", errors)
+    _snake_case_keys(d.get("hypotheses"), "hypotheses", errors)
     metric = run.get("metric") or {}
     if not metric.get("name"):
         errors.append("run.metric.name is required")

@@ -22,5 +22,8 @@
     "harness"
   ],
   "author": "weedmo",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "test": "python3 -m unittest skills/loop-report/tests/test_deliver.py"
+  }
 }

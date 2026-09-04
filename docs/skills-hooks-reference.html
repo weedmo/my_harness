@@ -232,7 +232,7 @@
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
     <tr><td class="name">loop-report</td><td><span class="tag blue">진행 페이지</span></td>
-      <td>긴 위임 루프의 진행 페이지를 만들고 전달. <code>assets/shell.html</code>(디자인 시스템, 진행 상황 헤더·퍼센트·ETA·막힘, 결과 패널, 자동 새로고침) + 각 루프의 <code>view.html</code> + 데이터 JSON을 <code>render.py</code>가 조립. 전달 경로는 Orca artifact 링크 → Orca 내장 브라우저 탭(<code>reload --page</code>) → 경로 순이며 한 실행 동안 고정. 호출 스킬은 probe/publish만 말한다.</td></tr>
+      <td>긴 위임 루프의 진행 페이지를 만들고 전달. <code>assets/shell.html</code>(디자인 시스템, 진행 상황 헤더·퍼센트·ETA·막힘, 결과 패널, 자동 새로고침) + 각 루프의 <code>view.html</code> + 데이터 JSON을 <code>render.py</code>가 조립. 전달은 <code>deliver.py probe | publish | show</code> 스크립트가 맡는다: Orca artifact 링크 → Orca 내장 브라우저 탭 → 경로 순이며 한 실행 동안 고정, 상태는 delivery.json에 스크립트만 기록. 호출 스킬은 스크립트를 실행하고 답을 전달할 뿐이다.</td></tr>
     <tr><td class="name">model-routing</td><td><span class="tag blue">라우팅</span></td>
       <td>Fast / Default / Deep / Max 티어 표 하나 — Codex <code>spawn_agent</code>, Claude Code agent, OpenCode, Orca <code>worker-start</code> 플래그별 정확한 model/effort 쌍, 디스패치 규칙, 에스컬레이션 사다리. 각 루프는 자기 역할을 이 티어에 매핑만 한다.</td></tr>
     <tr><td class="name">loop-gates</td><td><span class="tag blue">완료 게이트</span></td>
