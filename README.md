@@ -7,7 +7,7 @@ for **Claude Code, Codex, opencode, gemini-cli, and Orca**.
 |--------|-------|------|----------|
 | `weed-harness` | repo root | Claude Code-only setup, hooks, and HUD | Claude Code only |
 | `matt-loop` | `plugins/matt-loop/` | matt-auto + vendored Matt Pocock skills (human-in-the-loop conducted Matt flow) | optional |
-| `auto-loop` | `plugins/auto-loop/` | autocode + auto_research autonomous improvement loops | optional |
+| `auto-loop` | `plugins/auto-loop/` | autocode hypothesis-driven parallel code improvement loop | optional |
 
 External loops (superpowers, graphify, …) are referenced, not vendored. The
 `auto-update.sh` SessionStart hook keeps required skills (graphify claude/codex,
@@ -42,7 +42,7 @@ npx github:weedmo/skills --yes --dry-run
 |----------|-----------------|-------|
 | `claude-code` | `~/.claude/skills/` | Installs the Claude-only `setup` skill plus selected loop plugins. If you already installed these via `/plugin install`, skip this platform to avoid duplicates. |
 | `codex` | `~/.codex/skills/` | Native SKILL.md discovery. Restart Codex after install. |
-| `opencode` | `~/.config/opencode/skills/` | Native SKILL.md discovery. Invalid underscores in skill IDs are normalized to hyphens (for example, `auto_research` → `auto-research`). matt-loop also installs routing agents under `~/.config/opencode/agents/` and slash commands for every Matt Loop skill under `~/.config/opencode/command/`. |
+| `opencode` | `~/.config/opencode/skills/` | Native SKILL.md discovery. Invalid underscores in skill IDs are normalized to hyphens. matt-loop also installs routing agents under `~/.config/opencode/agents/` and slash commands for every Matt Loop skill under `~/.config/opencode/command/`. |
 | `gemini-cli` | `~/.gemini/skills/` | No native skill discovery — reference the skill files from `~/.gemini/GEMINI.md` yourself. |
 | `orca` | `~/.agents/skills/` | Universal agent-skills directory; Orca exposes these skills to every agent it drives. Skip this platform if you installed the plugins natively via Claude/Codex (see [Orca](#orca) below) to avoid duplicates. |
 
@@ -140,8 +140,7 @@ skill to `~/.codex/skills/`.
 
 | Skill | Description |
 |-------|-------------|
-| `/autocode` | Autonomous code improvement loop with optional PGE team mode |
-| `/auto_research` | Autonomous ML research loop with deep-interview initialization |
+| `/autocode` | Hypothesis-driven parallel code improvement loop: a strategist on the expensive tier proposes hypotheses, experimenters routed by difficulty run them concurrently in worktrees, measurement stays serial |
 
 ## Docs
 

@@ -40,8 +40,8 @@
     {
       "name": "auto-loop",
       "source": "./plugins/auto-loop",
-      "description": "Autonomous loops - autocode + auto_research",
-      "version": "1.1.0",
+      "description": "Autonomous loop - autocode (hypothesis-driven parallel code improvement)",
+      "version": "2.0.0",
       "author": {
         "name": "weedmo"
       },

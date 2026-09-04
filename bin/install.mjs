@@ -55,7 +55,7 @@ const PLUGINS = {
   },
   "auto-loop": {
     src: path.join(ROOT, "plugins", "auto-loop", "skills"),
-    desc: "autocode + auto_research (autonomous improvement loops)",
+    desc: "autocode (hypothesis-driven parallel code improvement loop)",
   },
 };
 
@@ -70,6 +70,7 @@ const OPENCODE_ASSETS = {
 };
 
 const LEGACY_SKILLS = [
+  "auto_research",
   "find-skills",
   "harness-sync",
   "skill-subscribe",
