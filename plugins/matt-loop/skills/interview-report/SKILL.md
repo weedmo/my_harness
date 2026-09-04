@@ -1,54 +1,69 @@
 ---
 name: interview-report
-description: "Renders matt-auto's decision log (question → decision → rationale, per pipeline stage) into the run's live decision-graph page — the pipeline stages in order, each decision as an editable node the user can rewrite or flag and export as <slug>.edits.json for matt-auto to rework from, plus the ticket waves, review and PR lanes while the run executes. The page itself is built and delivered by the shared `$loop-report` skill (weed-harness): this skill owns the decision-graph view and its data, writes `<slug>.data.json`, and hands it to loop-report to render and publish (artifact link, or the Orca browser tab when links are unavailable). matt-auto only says probe / publish and relays the answer. Called by matt-auto right after its interview stage and again before its final report — do not trigger this standalone on a bare grill-me/grill-with-docs session; matt-auto is what pulls it in."
+description: "Renders matt-auto's decision log (question → decision → rationale, per pipeline stage) into the run's live decision-graph page: stages in order, each decision an editable node the user can rewrite or flag and export as <slug>.edits.json for matt-auto to rework from, plus ticket waves, review and PR lanes while the run executes. Owns the view and writes <slug>.data.json; build (render.py) and delivery (deliver.py) come from the shared `$loop-report` skill. Called by matt-auto after its interview stage and before its final report — never standalone."
 ---
 
 # Interview Report (decision graph)
 
-Turn the decision log matt-auto's delegate produced — every question it faced, its decision, and the one-line rationale, stage by stage — into an interactive graph a person can read in under a minute and *push back on* by editing it.
-
-## Why this exists
-
-The raw log is a flat transcript, complete but not *readable*: a real run answers dozens of questions across interview, seam check, ticket breakdown, and implementation, and nobody wants to scroll a wall of Q&A to find out what got decided where. The graph shows the pipeline as it actually ran — which stage came in what order, and which decisions and policies applied inside each stage — and because the user opted out of live confirms, the graph is also their steering wheel: any node they disagree with, they edit or flag right in the page and export the change for matt-auto to act on.
+Turn the decision log matt-auto's delegate produced — question, decision, one-line rationale,
+stage by stage — into a graph a person reads in under a minute and can *push back on*. The raw
+log is a transcript nobody scrolls; since the user opted out of live confirms, the graph is their
+steering wheel: a node they disagree with, they edit or flag and export for matt-auto.
 
 ## When this runs
 
-Only as part of matt-auto's pipeline:
+Only inside matt-auto's pipeline:
 
-1. Right after the interview stage (step 4) concludes — the graph then covers the interview decisions and marks later stages pending. This run feeds matt-auto's interview gate, so the published page is what the user is asked to approve; get it published before matt-auto presents the gate.
-2. On every board update once tickets exist (the live board), and again before matt-auto's final report (and after the small path's `$implement`, and after ship mode's step 10) — regenerate the same file over the full decision log so the finished graph covers every stage, the last time **with the `outcome` block** so the page opens on what the run actually shipped.
+1. Right after the interview stage — interview decisions, later stages pending. It feeds the
+   interview gate: the published page is what the user approves, so publish before the gate.
+2. On every board update once tickets exist, and before the final report (after the small path's
+   `$implement`, after ship mode's step 10) — regenerate over the full log, the last time **with
+   the `outcome` block**.
 
-Don't run this off a standalone `$grill-me`/`$grill-with-docs` session; this report is specifically about what the delegate decided on the user's behalf.
+Never off a standalone `$grill-me` / `$grill-with-docs` session: the report is about delegate
+decisions.
 
 ## Input
 
-The decision log matt-auto accumulated: an ordered list of `{question, decision, rationale}` per pipeline stage, which of those were escalated to the real user, and each stage's current status (done / in progress / pending / skipped, with why). Once the run executes, also the ticket DAG, the wave plan, each ticket's state, and the review / PR state.
+matt-auto's decision log: ordered `{question, decision, rationale}` per stage, which were
+escalated to the real user, each stage's status (done / in progress / pending / skipped, with
+why); once the run executes, the ticket DAG, wave plan, ticket states, and review / PR state.
 
 ## Output
 
-`docs/agents/matt-auto-log/<slug>.data.json`, next to the decision log, using the same `<slug>` — and from it, `docs/agents/matt-auto-log/<slug>.html`, one self-contained page. Regeneration rewrites both; the page keeps user edits safe across regenerations via `localStorage`, keyed by slug, where storage exists (see loop-report's hosted-page notes).
+`docs/agents/matt-auto-log/<slug>.data.json` (the decision log's `<slug>`) and from it
+`docs/agents/matt-auto-log/<slug>.html`, one self-contained page; regeneration rewrites both.
 
-## How to build and deliver it
+## Build and deliver
 
-This skill owns the *view* — the decision graph, the wave flow, the ticket modal, the review and PR lanes, the edits round-trip — as `assets/view.html` and its data checks in `assets/validate.py`. The page around it and the delivery belong to **`$loop-report`** (weed-harness). So:
+This skill owns the *view* — `assets/view.html` and its checks in `assets/validate.py`; the page
+shell, build, and delivery are **`$loop-report`**'s:
 
 1. Write the data JSON (format below) to `docs/agents/matt-auto-log/<slug>.data.json`.
-2. Hand it to `$loop-report` with this view — probe or publish, exactly as matt-auto asked:
+2. Build, then deliver, as matt-auto asked (probe or publish):
 
    ```
    python3 <loop-report's dir>/assets/render.py \
      --data docs/agents/matt-auto-log/<slug>.data.json \
      --out  docs/agents/matt-auto-log/<slug>.html \
      --view <this skill's dir>/assets/view.html
+   python3 <loop-report's dir>/assets/deliver.py publish --page docs/agents/matt-auto-log/<slug>.html
    ```
 
-   `<this skill's dir>` is the directory holding this SKILL.md; `<loop-report's dir>` is wherever weed-harness installed it (`~/.codex/skills/loop-report` under the npx installer on Codex, the weed-harness plugin's `skills/loop-report` under a native install, `~/.agents/skills/loop-report` under Orca). loop-report validates (common keys, then `validate.py`: stage keys, unique decision ids, ticket statuses and blockers, wave modes and `why`, `outcome` only with `review`), renders, and publishes on the run's route, keeping `<slug>.delivery.json` beside the page. Read its answer — link, tab, or path, with the reason — back to matt-auto verbatim.
+   `<this skill's dir>` holds this SKILL.md; `<loop-report's dir>` is listed in loop-report's
+   SKILL.md. `render.py` validates (common keys, then `validate.py`: stage keys, unique decision
+   ids, ticket statuses and blockers, wave modes and `why`, `outcome` only with `review`). A
+   probe is `deliver.py probe --page …`.
 
-Never splice a template by hand, never edit the shell or the view's CSS/JS, never run `orca artifacts` / `tab` / `reload` from here — those rules and the reasons are loop-report's. If `$loop-report` is not installed, say `loop-report unavailable — weed-harness 3.x required` once; the decision log on disk is then the only report, and matt-auto's board must say so.
+Delivery is `deliver.py`'s alone — never hand-splice the page or edit the view's CSS/JS; relay
+its one-line answer to matt-auto verbatim. If `$loop-report` is missing, say
+`loop-report unavailable — weed-harness 3.x required` once; the decision log on disk is then the
+only report, and matt-auto's board must say so.
 
 ### Data format
 
-The common keys (`title`, `slug`, `generated`, `summary`, `progress`, `outcome`) follow loop-report's contract. The view's own keys:
+Common keys (`title`, `slug`, `generated`, `summary`, `progress`, `outcome`) follow loop-report's
+contract. The view's own keys:
 
 ```json
 {
@@ -62,10 +77,10 @@ The common keys (`title`, `slug`, `generated`, `summary`, `progress`, `outcome`)
       "decisions": [
         {
           "id": "interview-1",
-          "question": "The question, restated plainly",
-          "before": "The policy or de-facto behavior that held before, or null when none existed",
+          "question": "restated plainly",
+          "before": "prior policy or de-facto behavior, or null",
           "change": "new",
-          "decision": "The decision (the after-state)",
+          "decision": "the after-state",
           "rationale": "One-line rationale",
           "escalated": false
         }
@@ -75,12 +90,29 @@ The common keys (`title`, `slug`, `generated`, `summary`, `progress`, `outcome`)
 }
 ```
 
-- `stages` appear in the order the pipeline ran them; the page draws the rail and connectors from that order. Use matt-auto's own stages (Interview, Size branch, Spec, Tickets, Confirm, Implement, Ship) and drop stages that never applied rather than listing empty shells — except skipped stages, which stay visible with `"status": "skipped"` and a `note` saying why (`"small path"`, `"autonomous"`).
-- `status` is one of `done` / `in-progress` / `pending` / `skipped`. A stage may carry an explicit `percent`; otherwise done is 100, pending is 0, and an in-progress implement stage follows its tickets.
-- Decision `id`s must be stable across regenerations (stage prefix + ordinal is fine) — `localStorage` edits and `edits.json` both key on them.
-- `escalated: true` marks decisions the real user answered directly; the page highlights them.
-- **`before` / `change` — the before → after view on every decision.** A decision is a move against what already held, and the node shows that move as two cells: `before` is the prior state — a documented policy, or the de-facto behavior the code already exhibited — or `null` when nothing existed (the page then reads *"없음 — 정해진 바 없었음"*). `change` classifies the move and shows as a badge even while the node is collapsed: `"new"` (신규 — nothing existed), `"redirect"` (방향 전환 — a prior direction existed and this changes it), `"keep"` (유지 — a prior policy was examined and confirmed). `decision` is always the after-state. Fill these whenever the log knows the before-state; a decision without `change` falls back to a plain single-line node, which is the degraded form, not a choice.
-- **`progress` + `tickets` — the live board, present from the ticket stage until the run ends.** Together they render *진행 상황* above everything else: the run-wide percentage, elapsed and remaining time first, then the execution flow — **waves as columns left to right, each ticket a node inside its wave** — and a red blocker box for anything stuck. The decision graph moves below it behind a 결정 검토 disclosure (open by default at the interview gate, collapsed once a run is under way, and the reader's own choice sticks across the live reload). Omit both on the interview-gate generation (no tickets exist yet). A small-path run has no `tickets` or `plan`, but it still carries `progress` — `state` and `current` while `$implement` runs, `state: "done"` on the final regeneration — so the header says where the run is and the review lane has somewhere to render.
+- `stages` in the order the pipeline ran them. Use matt-auto's own stages (Interview, Size branch,
+  Spec, Tickets, Confirm, Implement, Ship); drop stages that never applied — except skipped ones,
+  which stay visible with `"status": "skipped"` and a `note` saying why (`"small path"`,
+  `"autonomous"`).
+- `status`: `done` / `in-progress` / `pending` / `skipped`. Optional explicit `percent`; else done
+  is 100, pending 0, an in-progress implement stage follows its tickets.
+- Decision `id`s stay stable across regenerations (stage prefix + ordinal) — edits key on them.
+- `escalated: true` marks decisions the real user answered directly; highlighted.
+- **`before` / `change` — the before → after view on every decision.** `before` is the prior
+  state — a documented policy or the code's de-facto behavior — or `null` when nothing existed
+  (rendered *"없음 — 정해진 바 없었음"*). `change` classifies the move as a badge, visible even when
+  collapsed: `"new"` (신규), `"redirect"` (방향 전환 — a prior direction changed), `"keep"` (유지 — a
+  prior policy examined and confirmed). `decision` is always the after-state. Fill these whenever
+  the log knows the before-state; a decision without `change` falls back to a single-line node —
+  the degraded form, not a choice.
+- **`progress` + `tickets` — the live board, from the ticket stage until the run ends.** They
+  render *진행 상황* above everything: run-wide percentage, elapsed and remaining time, the flow —
+  **waves as columns left to right, each ticket a node in its wave** — and a red blocker box for
+  anything stuck. The decision graph moves below a 결정 검토 disclosure (open at the interview
+  gate, collapsed once under way; the reader's choice sticks). Omit both on the interview-gate
+  generation. A small-path run has no `tickets` or `plan` but still carries `progress` — `state`
+  and `current` while `$implement` runs, `state: "done"` on the final regeneration — so the
+  header says where the run is and the review lane can render.
 
 ```json
 "tickets": [
@@ -95,12 +127,19 @@ The common keys (`title`, `slug`, `generated`, `summary`, `progress`, `outcome`)
 ]
 ```
 
-  - Ticket `status` is `done` / `in-progress` / `blocked` / `pending` / `skipped`. `blockedBy` lists the ticket ids it waits on — that is the DAG edge, not a blocker.
-  - **`blocker` is required on every `blocked` ticket** and is what the whole panel exists for: `reason` is one of `gate` / `escalation` / `ci` / `conflict` / `dependency` / `worker` / `review` / `other`, and `detail` is the specific, checkable fact — the unmet gate id and its expected-vs-actual, the failing check, the question awaiting an answer. "막혔습니다" with no detail is the failure this panel was built to prevent.
-  - `gates` is the unlazy ledger tally when unlazy is installed (see `$loop-gates`); omit it otherwise.
-  - **Who is doing the work shows on the node**: `route` is the routed agent, and `worker` carries the model and effort that route resolved to plus, for an Orca worker, its `dispatchId` and `worktree`. Fill both — "어떤 티켓을 어떤 서브에이전트가 어떤 모델로" is the question the node answers, and a node with only a route name half-answers it.
+  - Ticket `status`: `done` / `in-progress` / `blocked` / `pending` / `skipped`. `blockedBy` lists
+    the ticket ids it waits on — a DAG edge, not a blocker.
+  - **`blocker` is required on every `blocked` ticket**: `reason` is one of `gate` / `escalation`
+    / `ci` / `conflict` / `dependency` / `worker` / `review` / `other`; `detail` is the checkable
+    fact — the unmet gate id with expected-vs-actual, the failing check, the open question.
+    "막혔습니다" with no detail is the failure this panel exists to prevent.
+  - `gates` is the unlazy ledger tally when installed (`$loop-gates`); omit otherwise.
+  - **Who does the work shows on the node**: `route` is the routed agent; `worker` the model and
+    effort it resolved to plus, for an Orca worker, `dispatchId` and `worktree`. Fill both — a
+    route alone half-answers "어떤 티켓을 어떤 서브에이전트가 어떤 모델로".
 
-- **`plan` — how the run intends to execute the tickets.** Rendered as an ordered wave graph, so the reader sees which tickets run at once, which wait, and why. Fill it as soon as matt-auto has planned execution (right after the ticket DAG), and keep it through the run — the waves stay put while the tickets inside them change status.
+- **`plan` — how the run intends to execute the tickets**, an ordered wave graph. Fill it right
+  after the ticket DAG and keep it through the run — waves stay put as tickets change status.
 
 ```json
 "plan": {
@@ -116,12 +155,24 @@ The common keys (`title`, `slug`, `generated`, `summary`, `progress`, `outcome`)
 }
 ```
 
-  - `mode` is `parallel` or `sequential`; `why` is one Korean line saying what made it so — the file overlap, the risk, the dependency. A wave without `why` is a shape with no reasoning, which is what this panel exists to show; `validate.py` refuses it.
-  - `concurrency` is how many workers may run at once; `placement` names where they run (`local`, or the environment name).
-  - The page lays the waves out **left to right** and prints each wave's own duration (a parallel wave's slowest ticket, a sequential wave's sum). With no `plan` at all it still draws the flow, deriving one column per blocking level from `blockedBy` — so the shape survives a run that never planned waves.
-- **Estimates and progress bars.** `progress.startedAt` (ISO) drives 경과; each ticket's `estimateMin` (and `startedAt` once it begins, `actualMin` once done) drives the rest. The page computes, and never asks you to pre-compute: the overall percent (estimate-weighted, an in-progress ticket counted by elapsed/estimate and capped at 90%), 남은 예상, and 완료 예정 시각 — a parallel wave costing its slowest ticket, a sequential one their sum. **`estimateMin` is the run's own guess and the page labels it 예상** — never present it as measurement, and never back-fill it to make a bar look better.
-- **Ticket detail — what the modal shows.** A node is a summary; clicking it opens the ticket. Put the specifics here rather than in the node: `acceptance` (the ticket's criteria, as written), `steps` (what happened inside the ticket — 티켓 읽기 → `$implement` → 게이트 재검증 → 머지백, each `{ name, status, note }`), `gateList` (`{ id, text, status: met|unmet|manual, check, expect, actual }` — the `CHECK:` command and the expected-vs-actual are what make an unmet gate actionable), `files` and `commits`. Everything is optional; the modal renders the sections that exist.
-- **`review` and `pr` — the tail of the flow.** The run does not end at the last ticket, so the flow does not either: `review` renders a 리뷰 lane (one node per review dimension, with its finding count) and `pr` renders a PR lane (number, `branch → base`, check rows, babysit cycles, link) at the right end of the same left-to-right flow.
+  - `mode` is `parallel` or `sequential`; `why` is one Korean line on what made it so — file
+    overlap, risk, dependency. `validate.py` refuses a wave without `why`.
+  - `concurrency` = workers at once; `placement` = `local` or the environment name.
+  - Waves render **left to right** with each wave's duration (parallel: slowest ticket;
+    sequential: the sum). With no `plan` the page derives columns from `blockedBy` levels.
+- **Estimates.** `progress.startedAt` (ISO) drives 경과; each ticket's `estimateMin` (plus
+  `startedAt` once begun, `actualMin` once done) drives the rest. The page computes — never
+  pre-compute — the overall percent (estimate-weighted, in-progress counted by elapsed/estimate,
+  capped at 90%), 남은 예상, and 완료 예정 시각. **`estimateMin` is the run's own guess, labeled
+  예상** — never present it as measurement, never back-fill it to move a bar.
+- **Ticket detail — the modal.** A node is a summary; clicking opens the ticket. Specifics go
+  here: `acceptance` (criteria as written), `steps` (티켓 읽기 → `$implement` → 게이트 재검증 →
+  머지백, each `{ name, status, note }`), `gateList` (`{ id, text, status: met|unmet|manual,
+  check, expect, actual }` — `CHECK:` and expected-vs-actual make an unmet gate actionable),
+  `files`, `commits`. All optional.
+- **`review` and `pr` — the tail of the flow.** `review` renders a 리뷰 lane (one node per
+  dimension with its finding count); `pr` a PR lane (number, `branch → base`, check rows, babysit
+  cycles, link) at the right end.
 
 ```json
 "review": { "status": "in-progress", "skill": "code-review", "note": "…",
@@ -133,29 +184,41 @@ The common keys (`title`, `slug`, `generated`, `summary`, `progress`, `outcome`)
               { "name": "머지 가능", "status": "ok", "detail": "충돌 없음" } ] }
 ```
 
-  - Check `status` is `ok` / `done` / `failed` / `pending`, and `detail` carries the measured fact, never a guess. Omit `pr` entirely on a run that opens no PR — the lane simply does not appear.
-- **Long runs stay readable.** Once there are more than three waves, finished ones collapse to stubs and the flow scrolls itself to the wave that is actually running; a 완료 웨이브 펼치기 button brings the history back, and each stub expands on its own. Nothing needs doing in the data for this — but it is why a long plan is fine to publish in full.
-- **`outcome`** follows loop-report's contract (files measured from `git diff --numstat` against matt-auto's baseline, bookkeeping under `docs/agents/matt-auto-log/**` and `.unlazy/**` left out). Fill it on the last regeneration only, together with `progress.state: "done"` **and the `review` block** — matt-auto always runs its review pass, small path included, and `validate.py` refuses an `outcome` without it.
+  - Check `status`: `ok` / `done` / `failed` / `pending`; `detail` is the measured fact, never a
+    guess. Omit `pr` on a run that opens no PR.
+- **Long runs**: beyond three waves the page collapses finished ones itself, so publish a long
+  plan in full.
+- **`outcome`** follows loop-report's contract (files from `git diff --numstat` against matt-auto's
+  baseline; `docs/agents/matt-auto-log/**` and `.unlazy/**` left out). Last regeneration only,
+  with `progress.state: "done"` **and the `review` block** — matt-auto always runs its review
+  pass, small path included, and `validate.py` refuses an `outcome` without it.
 
 ### Writing the summary and decision text
 
-**Always write the graph's content in Korean** — `title`, `summary`, stage `name`s and `note`s, and every `question`/`decision`/`rationale`. The page's own UI labels are already Korean; ids and the JSON structure stay English.
-
-Write for someone who has zero context on the run — a teammate skimming this a week later. Every `question`/`decision` pair must stand on its own: translate ("X를 하기로 했다, 왜냐하면 Y"), don't paste the raw transcript line.
+**Always write the graph's content in Korean** — `title`, `summary`, stage `name`s and `note`s,
+every `question` / `decision` / `rationale`; ids and JSON structure stay English. Write for a
+teammate with zero context a week later: every `question`/`decision` pair stands alone —
+translate ("X를 하기로 했다, 왜냐하면 Y"), don't paste the transcript line.
 
 ## The edits round-trip
 
-The page lets the user rewrite a decision, flag a node as a problem with a comment, and click **수정 내보내기**, which downloads `<slug>.edits.json` (and copies it to the clipboard). The page tells them to save it into `docs/agents/matt-auto-log/`. matt-auto checks for that file at every invocation and treats each entry as a change request — that consumption logic is matt-auto's (see its Decision-graph report section), not this skill's. This skill's only obligations are stable decision ids and not breaking the view's export format. On the hosted artifact link `localStorage` is unavailable, so edits live only for that page load — say "export before reloading" when handing over a link; in the Orca tab they persist.
+The user can rewrite a decision, flag a node with a comment, and click **수정 내보내기**, which
+produces `<slug>.edits.json` to save into `docs/agents/matt-auto-log/`. matt-auto checks for it
+at every invocation and treats each entry as a change request — that logic is matt-auto's (its
+Decision-graph report section). This skill's only obligations: stable decision ids and the view's
+export format.
 
 ## Red flags
 
-- Dumping the raw Q&A log into the JSON unedited → the point is translation into plain language, not reformatting.
-- Writing the graph's content in English → the user reads this in Korean; only ids and JSON structure stay English.
-- Building or publishing the page here instead of through `$loop-report` — hand-splicing, editing `view.html`'s CSS/JS, running `orca artifacts` / `tab` / `reload` → one owner for the page and its route; this skill owns the data and the view.
-- Changing decision ids on regeneration → orphans the user's saved edits and any exported edits.json.
-- Shipping `outcome` on the interview-gate generation → nothing has been built yet; the panel would be a lie.
-- A `blocked` ticket whose `blocker.detail` is vague ("실패함", "확인 필요") → the reader must be able to act on it without opening a terminal.
-- Leaving `state` at `running` on the final regeneration, or a `progress.updated` typed from memory → the page polls forever, or its "N분 전 갱신" line lies.
-- A wave whose `why` is missing, or estimates invented to make the bar move → both turn the plan panel into decoration.
-- Writing the file anywhere but `docs/agents/matt-auto-log/<slug>.html` → matt-auto and the edits round-trip both assume that path.
-- Running this outside matt-auto, off a bare grilling session → out of scope; the report is specifically about delegate decisions.
+- Raw Q&A log pasted into the JSON unedited → the point is translation.
+- Graph content in English → only ids and structure stay English.
+- Decision ids changed on regeneration → orphans saved and exported edits.
+- `outcome` on the interview-gate generation → nothing has been built yet.
+- A `blocked` ticket with vague `blocker.detail` ("실패함", "확인 필요") → it must be actionable
+  without a terminal.
+- `state` left at `running` on the final regeneration, or `progress.updated` typed from memory →
+  the page polls forever, or "N분 전 갱신" lies.
+- A wave without `why`, or estimates invented to move the bar → the plan panel becomes decoration.
+- The file anywhere but `docs/agents/matt-auto-log/<slug>.html` → matt-auto and the round-trip
+  assume it.
+- Run outside matt-auto, off a bare grilling session → out of scope.

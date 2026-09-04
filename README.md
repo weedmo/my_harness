@@ -6,8 +6,8 @@ for **Claude Code, Codex, opencode, gemini-cli, and Orca**.
 | Plugin | Where | What | Required |
 |--------|-------|------|----------|
 | `weed-harness` | repo root | The shared runtime every loop builds on — `loop-report` (live progress page + Orca delivery), `model-routing` (model/effort tiers), `loop-gates` (unlazy-backed completion) — plus the Claude Code-only setup, hooks, and HUD | yes, every platform |
-| `matt-loop` | `plugins/matt-loop/` | matt-auto + vendored Matt Pocock skills (a conducted Matt flow with a decision graph) | optional, needs weed-harness 3.x |
-| `auto-loop` | `plugins/auto-loop/` | autocode hypothesis-driven parallel code improvement loop with a live experiment board | optional, needs weed-harness 3.x |
+| `matt-loop` | `plugins/matt-loop/` | matt-auto + vendored Matt Pocock skills (a conducted Matt flow with a decision graph) | optional, needs weed-harness 3.1+ |
+| `auto-loop` | `plugins/auto-loop/` | autocode hypothesis-driven parallel code improvement loop with a live experiment board | optional, needs weed-harness 3.1+ |
 
 The split: **weed-harness is the loop runtime** (what every long delegated run
 needs — a page the user can watch, one routing table, gates that make "done"
@@ -123,7 +123,7 @@ workflow guidance.
 
 | Skill | Platforms | Description |
 |-------|-----------|-------------|
-| `loop-report` | all | Builds the live progress page of a delegated run from `assets/shell.html` + the loop's view + a data JSON (`assets/render.py`), and delivers it: Orca artifact link, or the Orca built-in browser tab when links are unavailable, or the path — route kept stable per run |
+| `loop-report` | all | Builds the live progress page of a delegated run from `assets/shell.html` + the loop's view + a data JSON (`assets/render.py`), and delivers it with `assets/deliver.py` (`probe` / `publish` / `show`): Orca artifact link, or the Orca built-in browser tab when links are unavailable, or the path — route kept stable per run; `npm test` runs its tests against a fake Orca CLI |
 | `model-routing` | all | The Fast / Default / Deep / Max tier table with the exact model and reasoning-effort pair per platform (Codex `spawn_agent`, Claude Code agents, OpenCode, Orca `worker-start` flags), dispatch rules, and the escalation ladder |
 | `loop-gates` | all | How the loops use the upstream unlazy skill: ledger per unit of work, coordinator-side `--reverify`, two retries then handoff, boundaries with Orca |
 | `/setup` | Claude Code | Terminal UI + basic settings only: statusLine HUD, custom hooks (language-rule, auto-update) |

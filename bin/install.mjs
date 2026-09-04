@@ -273,7 +273,8 @@ for (const platform of platforms) {
         if (!DRY) {
           fs.mkdirSync(dest, { recursive: true });
           fs.rmSync(to, { recursive: true, force: true });
-          fs.cpSync(from, to, { recursive: true });
+          // Skill assets ship; a skill's tests/ (and its fake CLIs) do not.
+          fs.cpSync(from, to, { recursive: true, filter: (src) => path.basename(src) !== "tests" });
           if (platform === "opencode") {
             normalizeOpenCodeSkill(to, skill, installedName);
           }
