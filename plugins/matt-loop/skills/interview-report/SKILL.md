@@ -96,6 +96,12 @@ contract. The view's own keys:
   `"autonomous"`).
 - `status`: `done` / `in-progress` / `pending` / `skipped`. Optional explicit `percent`; else done
   is 100, pending 0, an in-progress implement stage follows its tickets.
+- **`design` stage — only on a `matt-auto --spec` run**, and then first: `id: "design"`,
+  `name: "설계 (design-map)"`, `status: "done"`, `note` the spec's artifact URL. Its decisions
+  keep the spec's own ids (`D1`, `D2`…) and carry `source: "design-map"` plus `before` /
+  `change` (`null` / `"new"` unless the spec names a prior state). The view renders a sourced
+  decision **read-only** — 설계에서 확정 badge, no edit box, no flag — so it never appears in
+  `<slug>.edits.json`; `validate.py` refuses a sourced decision without `change`.
 - Decision `id`s stay stable across regenerations (stage prefix + ordinal) — edits key on them.
 - `escalated: true` marks decisions the real user answered directly; highlighted.
 - **`before` / `change` — the before → after view on every decision.** `before` is the prior

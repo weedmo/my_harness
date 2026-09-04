@@ -124,12 +124,14 @@ Long-running delegated loops share one runtime, shipped in **weed-harness** (rep
 On top of it, two loops with different graphs:
 
 - **matt-loop** (`plugins/matt-loop/skills/`): **matt-auto** conducts Matt Pocock's main flow
-  (interview → spec → tickets → implementation → optional PR via `--dev`/`--main`), publishing
+  (interview → spec → tickets → implementation → optional PR via `--dev`/`--main`; `--spec`
+  starts from a confirmed design-map spec), publishing
   its decision graph through loop-report and running independent tickets as parallel Orca
   workers; **pr-babysit** shepherds one open PR without merging; **resolving-merge-conflicts**
   resolves an active merge/rebase on the Deep tier
 - **auto-loop** (`plugins/auto-loop/skills/`): **autocode** runs a hypothesis-driven parallel
-  improvement loop, publishing its experiment board through loop-report
+  improvement loop (`init --spec` pre-fills it from a design-map spec), publishing its
+  experiment board through loop-report
 - **graphify** (`graphify install --platform codex`) stays a standalone install
 
 Native plugin and npx installation availability differs by platform; see the repository README.

@@ -245,7 +245,7 @@
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
     <tr><td class="name">autocode</td><td><span class="tag purple">루프</span></td>
-      <td>가설 주도 병렬 코드 개선 루프. 고비용 티어의 Strategist가 가설(맞으면/틀리면 다음 행동 포함)을 세우고, 난이도별로 라우팅된 Experimenter가 worktree에서 동시에 구현·guard, 측정은 직렬. 결과 1건마다 가설을 갱신하고, 메트릭 추이·프론티어·실험 기록을 담은 실험 보드를 loop-report로 매 상태 변화마다 재발행. 종료는 loop-gates(unlazy) 재검증으로 확정. 서브커맨드: init / run / status / resume.</td></tr>
+      <td>가설 주도 병렬 코드 개선 루프. 고비용 티어의 Strategist가 가설(맞으면/틀리면 다음 행동 포함)을 세우고, 난이도별로 라우팅된 Experimenter가 worktree에서 동시에 구현·guard, 측정은 직렬. 결과 1건마다 가설을 갱신하고, 메트릭 추이·프론티어·실험 기록을 담은 실험 보드를 loop-report로 매 상태 변화마다 재발행. 종료는 loop-gates(unlazy) 재검증으로 확정. 서브커맨드: init [--spec &lt;path&gt;] / run / status / resume — <code>--spec</code>은 확정된 design-map spec의 metric 블록으로 인터뷰를 선채운다.</td></tr>
   </table>
   </div>
 
@@ -256,7 +256,7 @@
     <tr><td class="name">setup</td><td><span class="tag orange">유지관리</span></td>
       <td>Claude Code 전용. 터미널 UI + 기본 설정만 담당 — statusLine HUD 설치, 커스텀 훅(language-rule, auto-update) 등록. 스킬 설치는 하지 않으며 멱등이라 반복 실행해도 안전.</td></tr>
     <tr><td class="name">design-map</td><td><span class="tag orange">설계</span></td>
-      <td>Claude Code 전용. 코드베이스를 탐색해 설계를 다이어그램 Artifact로 제시하고, 합의될 때까지 반복한 뒤 로컬 spec 파일로 남기고 code-review로 게이트.</td></tr>
+      <td>Claude Code 전용. 코드베이스를 탐색해 설계를 다이어그램 Artifact로 제시하고, 합의될 때까지 반복한 뒤 로컬 spec 파일로 남기고 code-review로 게이트. handoff에서 브랜치를 만들어 spec을 단독 커밋하고, Codex·OpenCode의 <code>matt-auto --spec</code> / <code>autocode init --spec</code>에 넘긴다(Orca 터미널 자동, 아니면 붙여넣을 한 줄).</td></tr>
   </table>
   </div>
 
@@ -266,7 +266,7 @@
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
     <tr><td class="name">matt-auto</td><td><span class="tag brown">Codex</span></td>
-      <td>Matt Pocock 메인 플로우(grilling 인터뷰 → spec → 티켓 → 티켓별 구현)를 처음부터 끝까지 지휘. 결정 위임자가 일상 질문에 답하고 인터뷰 게이트 하나만 사람이 승인. 모델은 model-routing 티어로 자동 라우팅, 결정 그래프와 티켓 보드는 interview-report → loop-report로 발행, 병렬 웨이브만 Orca 워커.</td></tr>
+      <td>Matt Pocock 메인 플로우(grilling 인터뷰 → spec → 티켓 → 티켓별 구현)를 처음부터 끝까지 지휘. 결정 위임자가 일상 질문에 답하고 인터뷰 게이트 하나만 사람이 승인. 모델은 model-routing 티어로 자동 라우팅, 결정 그래프와 티켓 보드는 interview-report → loop-report로 발행, 병렬 웨이브만 Orca 워커. <code>--spec &lt;path&gt;</code>로 확정된 design-map spec을 받으면 그 결정은 읽기 전용 design 단계가 되고 인터뷰는 열린 질문만 묻는다.</td></tr>
     <tr><td class="name">interview-report</td><td><span class="tag brown">보고</span></td>
       <td>matt-auto의 결정 그래프 뷰(<code>assets/view.html</code> + <code>validate.py</code>) — 스테이지, 편집 가능한 결정 노드와 <code>&lt;slug&gt;.edits.json</code> 왕복, 티켓 웨이브, 리뷰·PR 레인. 페이지 조립과 전달은 loop-report.</td></tr>
     <tr><td class="name">pr-babysit</td><td><span class="tag brown">PR</span></td>

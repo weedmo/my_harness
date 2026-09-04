@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: plugin versions agree across manifests and marketplace
+        run: node bin/check-versions.mjs
       - name: loop-report deliver.py against the fake Orca CLI
         run: python3 -m unittest skills/loop-report/tests/test_deliver.py
       - name: render fixtures with both views

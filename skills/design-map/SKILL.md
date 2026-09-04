@@ -172,12 +172,48 @@ edited decisions in place since your last publish; the live version is the
 source of truth. Then write the spec as a local markdown file (Korean prose,
 English code identifiers), default
 `docs/design/<topic>.md` in the repo (create the directory if needed; if the repo
-has an existing spec/docs convention, follow it instead). Contents:
-- Goal and non-goals
-- The confirmed structure (embed the final mermaid diagram source)
-- Decisions made, with one-line rationale each (from the decision list)
-- Implementation order: a short numbered list of steps with a verify check per step
-Do NOT publish it anywhere — no issues, no PRs.
+has an existing spec/docs convention, follow it instead). The file is the bridge
+to the implementing loop — `matt-auto --spec` and `autocode init --spec` read the
+frontmatter keys and these headings by name, in another CLI with no access to
+this conversation — so keep the shape exactly:
+
+```markdown
+---
+design-map: 1
+slug: <topic>
+kind: feature            # feature | optimize
+loop: matt-auto          # matt-auto | autocode | implement
+followup: autocode       # optional: a second loop to run after `loop` finishes
+status: confirmed        # draft while iterating; confirmed only after the user's confirmation
+artifact: <this session's artifact URL>
+branch: <filled at handoff>
+handoff:                 # filled at handoff — one line per platform
+  codex: "use $matt-auto --spec docs/design/<topic>.md"
+  opencode: "/matt-auto --spec docs/design/<topic>.md"
+  claude: "/matt-loop:matt-auto --spec docs/design/<topic>.md"
+metric:                  # required when loop or followup is autocode; allowed otherwise
+  name: <metric name>
+  command: <prints one number on its last line>
+  direction: lower       # lower | higher
+  target: null
+  target_files: [<paths>]
+  guard: <test command>
+  forbidden: [<paths>]
+---
+# <title>
+## 큰 틀        — 5–10 sentences a delegate can act on without this conversation
+## 목표 / ## 비목표
+## 확정 구조   — the final mermaid diagram source
+## 결정        — table: id · 질문 · 선택 · 이유 (from the decision list)
+## 구현 순서   — numbered steps, each with a verify check
+```
+
+`kind` is `optimize` when the design exists to move a measured number, `feature`
+otherwise. `loop` follows it — `autocode` for optimize, `matt-auto` for feature,
+`implement` when the whole thing is one file under thirty minutes. A design that
+changes structure *and* then moves a number is `loop: matt-auto` with
+`followup: autocode` and the metric block filled. Do NOT publish it anywhere — no
+issues, no PRs.
 
 ### 6. Review gate
 Run the `code-review` skill with the spec file as the path target (low effort).
@@ -187,6 +223,42 @@ adversarially review the spec (contradictions, missing edge cases, steps that ca
 be verified) and apply what survives.
 
 ### 7. Handoff
-Report in chat: spec path, Artifact link, and the first implementation step.
-Stop there — implementation starts only when the user asks. Offer to enter plan
-mode or start step 1 on request.
+The spec crosses to the implementing CLI as a committed file — nothing else
+does; the receiving session never sees this conversation. Design here, implement
+elsewhere (Codex or OpenCode) is the default split. In order:
+
+1. **Facts.** `git branch --show-current`, `git remote -v`, `git status --porcelain`.
+   Note which loop skills this session can see — matt-loop is deliberately absent
+   on some machines, so Claude Code is an option only where the loop is installed.
+2. **One question** (AskUserQuestion, one round): the loop (recommend the
+   frontmatter's `loop`); the platform — Codex (recommended) / OpenCode / Claude
+   Code (only when installed here) / 명령만 받기; the base branch (recommend the
+   current one when it is `main` or `dev`, else `main`); the branch name
+   (recommend `feat/<slug>`, or stay on the base).
+3. **Commit the spec alone.** If `git status --porcelain` shows tracked changes
+   other than the spec, do not switch branches — ask once (commit on the current
+   branch / stop). Otherwise `git checkout -b <name> <base>` (skip when staying),
+   fill `branch` and the three `handoff` lines in the frontmatter, then
+   `git add <spec> && git commit -o <spec> -m "docs(design): add <slug> spec"` —
+   `-o` commits that one path whatever else is staged. Leave the checkout on that
+   branch: the terminal below opens in this checkout.
+4. **Hand over.** Codex / OpenCode: pick the Orca binary by loop-report's rule —
+   inside an Orca terminal (`ORCA_*` env) or off Linux try `orca` then `orca-ide`;
+   otherwise only `orca-ide` (bare `orca` on Linux is the GNOME screen reader,
+   never run it). `<bin> status --json` failing → no Orca → print the line. Else
+   `<bin> terminal create --worktree path:<repo> --command <codex|opencode> --json`;
+   on `selector_not_found` run `<bin> repo add --path <repo> --json` and retry
+   once; any other failure → print the line. Poll
+   `<bin> terminal read --terminal <handle> --screen --json` until the CLI's
+   input prompt is on screen (Codex: `› Ask Codex`; up to 60 s, else print the
+   line), then `<bin> terminal send --terminal <handle> --text "<handoff line>" --enter --json`,
+   poll again until `Working (` appears, and stop there. Claude Code or 명령만
+   받기: print the platform's line for the user to type — matt-auto and
+   implement are `disable-model-invocation`, so never invoke them yourself.
+   The lines: Codex `use $matt-auto --spec <path>`, OpenCode
+   `/matt-auto --spec <path>`, Claude Code `/matt-loop:matt-auto --spec <path>`
+   (autocode: `… init --spec <path>`; implement: `use $implement on <path>`, no
+   flag, no gate).
+5. **Report and stop**: spec path, Artifact link, `base → branch`, where it went
+   (terminal handle, or "붙여넣기") and the handoff line. Do not watch the run —
+   from here its own loop-report page is the window.

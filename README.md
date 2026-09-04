@@ -127,13 +127,13 @@ workflow guidance.
 | `model-routing` | all | The Fast / Default / Deep / Max tier table with the exact model and reasoning-effort pair per platform (Codex `spawn_agent`, Claude Code agents, OpenCode, Orca `worker-start` flags), dispatch rules, and the escalation ladder |
 | `loop-gates` | all | How the loops use the upstream unlazy skill: ledger per unit of work, coordinator-side `--reverify`, two retries then handoff, boundaries with Orca |
 | `/setup` | Claude Code | Terminal UI + basic settings only: statusLine HUD, custom hooks (language-rule, auto-update) |
-| `/design-map` | Claude Code | Visual-first design flow on an Artifact diagram, ending in a spec file |
+| `/design-map` | Claude Code | Visual-first design flow on an Artifact diagram, ending in a spec file with a frontmatter the loops read; the handoff commits the spec on a branch and hands it to `matt-auto --spec` / `autocode init --spec` on Codex or OpenCode (Orca terminal when reachable, else a line to paste) |
 
 ### matt-loop
 
 | Skill | Description |
 |-------|-------------|
-| `matt-auto` | Conductor for Matt Pocock's main flow (interview → spec → tickets → implementation) with a decision delegate, one interview gate, and automatic model/effort routing via `model-routing`; publishes its decision graph and live ticket board through `interview-report` → `loop-report`; `--dev` / `--main` / `--pr <base>` also opens a PR and shepherds it to merge-ready via pr-babysit; independent tickets run in parallel as Orca-orchestrated workers when Orca is reachable |
+| `matt-auto` | Conductor for Matt Pocock's main flow (interview → spec → tickets → implementation) with a decision delegate, one interview gate, and automatic model/effort routing via `model-routing`; publishes its decision graph and live ticket board through `interview-report` → `loop-report`; `--spec <path>` takes a confirmed design-map spec (its decisions become a read-only design stage, the interview asks only what is left open); `--dev` / `--main` / `--pr <base>` also opens a PR and shepherds it to merge-ready via pr-babysit; independent tickets run in parallel as Orca-orchestrated workers when Orca is reachable |
 | `interview-report` | matt-auto's decision-graph view (`assets/view.html` + `validate.py`) — stages, editable decision nodes with the `<slug>.edits.json` round-trip, ticket waves, review and PR lanes — rendered and delivered by `loop-report` |
 | `pr-babysit` | Shepherd one open GitHub PR through CI and review with automatic model/effort routing on Codex, OpenCode, and Claude Code |
 | `resolving-merge-conflicts` | Resolve an active merge/rebase conflict; direct OpenCode / Claude Code use routes to a deep model |
@@ -152,7 +152,7 @@ skill to `~/.codex/skills/`.
 
 | Skill | Description |
 |-------|-------------|
-| `/autocode` | Hypothesis-driven parallel code improvement loop: a strategist on the expensive tier proposes hypotheses, experimenters routed by difficulty (via `model-routing`) run them concurrently in worktrees, measurement stays serial; the run publishes a live experiment board (metric trend, frontier, experiment log) through `loop-report`, and terminates on unlazy gates per `loop-gates` |
+| `/autocode` | Hypothesis-driven parallel code improvement loop (`init --spec <path>` pre-fills the interview from a confirmed design-map spec): a strategist on the expensive tier proposes hypotheses, experimenters routed by difficulty (via `model-routing`) run them concurrently in worktrees, measurement stays serial; the run publishes a live experiment board (metric trend, frontier, experiment log) through `loop-report`, and terminates on unlazy gates per `loop-gates` |
 
 ## Docs
 

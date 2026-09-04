@@ -1,7 +1,7 @@
 ---
 name: autocode
-description: "Hypothesis-driven parallel code improvement loop. A strategist on the expensive model tier proposes falsifiable hypotheses with pre-committed if_confirmed / if_refuted actions; experimenters routed by hypothesis difficulty implement them concurrently in git worktrees; the coordinator measures serially, keeps by arithmetic, and feeds every single result back to the strategist so the frontier is revised as results arrive, not per batch. Subcommands: init [N], run [--parallel N] [--on <env>], status, resume."
-argument-hint: "<subcommand: init|run|status|resume> [max experiments] [--parallel N] [--on <env>]"
+description: "Hypothesis-driven parallel code improvement loop. A strategist on the expensive model tier proposes falsifiable hypotheses with pre-committed if_confirmed / if_refuted actions; experimenters routed by hypothesis difficulty implement them concurrently in git worktrees; the coordinator measures serially, keeps by arithmetic, and feeds every single result back to the strategist so the frontier is revised as results arrive, not per batch. Subcommands: init [N] [--spec <path>] (a confirmed design-map spec pre-fills the interview), run [--parallel N] [--on <env>], status, resume."
+argument-hint: "<subcommand: init|run|status|resume> [max experiments] [--spec <path>] [--parallel N] [--on <env>]"
 ---
 
 # Autocode — Hypothesis-Driven Parallel Improvement
@@ -33,7 +33,7 @@ the named section only at the step that writes or sends that data.
 
 | Command | Action | User Confirmation |
 |---|---|---|
-| `/autocode init [N]` | Interview → `program.md`. N = max experiments (default 20, 0 = unlimited) | Required (interview + approval) |
+| `/autocode init [N] [--spec <path>]` | Interview → `program.md`. N = max experiments (default 20, 0 = unlimited). `--spec` pre-fills the interview from a confirmed design-map spec | Required (interview + approval) |
 | `/autocode run [--parallel N] [--on <env>]` | Run the loop until budget, target, or exhaustion | None (autonomous) |
 | `/autocode status` | Frontier, running experiments, best metric, routing tally | None |
 | `/autocode resume` | Continue from `state.json` after interruption | None |
@@ -48,7 +48,9 @@ autocode.delivery.json). Full tree: `assets/reference.md` § File structure.
 
 ## Step 1: Parse Subcommand
 
-- No args or `init` → Step 2. Optional integer N = `max_experiments`.
+- No args or `init` → Step 2. Optional integer N = `max_experiments`. `--spec <path>` names a
+  design-map spec: read it; frontmatter `status` other than `confirmed` → print
+  `spec not confirmed: run /design-map first` and stop.
 - `run` → Step 3. `--parallel N` (default from program.md, max 4) and `--on <env>` (Orca
   environment for remote workers) override program.md for this run only.
 - `status` → Step 4. `resume` → Step 5.
@@ -62,7 +64,8 @@ autocode.delivery.json). Full tree: `assets/reference.md` § File structure.
 Scan the repo before asking anything: language and build system, test command, existing benchmark
 or profiling scripts, hot-path candidates (large functions, loops over collections, I/O in request
 paths), and how many modules the target spans. Use these facts to propose defaults in the
-interview and to classify problem difficulty in 2C.
+interview and to classify problem difficulty in 2C. With `--spec`, read the spec's `## 큰 틀`
+and `## 확정 구조` alongside the recon.
 
 ### 2B: Interview (one question at a time, dynamic follow-ups)
 
@@ -76,6 +79,11 @@ question wording, defaults, and the five follow-ups (hot-path files, interface c
 external systems, typecheck/lint in the guard, optional `screen_command` when the metric runs
 > 60 s) are in `assets/reference.md` § Interview fields.
 
+With `--spec`, the frontmatter `metric` block answers `metric_name`, `metric_command`,
+`metric_direction`, `performance_target`, `target_files`, `guard_command`, and `forbidden_zones`
+(the key per field is in § Interview fields); ask the primary question only for fields it leaves
+empty. A pre-filled value is an answer: the follow-ups it triggers still run.
+
 ### 2C: Difficulty classification (strategist tier)
 
 Classify the problem from the recon and the answers, and show the classification in the approval
@@ -87,13 +95,16 @@ step so the user can override it:
 Classify **hard** when any of: scope is system-wide; the target spans more than three modules; the
 metric is already within a known bound (the user or recon says prior optimization attempts
 plateaued); concurrency, distributed state, or numerical stability is involved; or the user says
-it is hard. Otherwise **standard**. The tier can still escalate at run time (3G).
+it is hard. Otherwise **standard**. The tier can still escalate at run time (3G). With `--spec`,
+the reach of its 확정 구조 is evidence for the classification.
 
 ### 2D: Generate `program.md`
 
 Template: `assets/reference.md` § program.md (Target, Metric, Guard, Worktree, Constraints,
 Budget, Routing, Plateau — `consecutive_discard_threshold: 5`, `window: 8`, `unlazy_gates` —
-Strategy Hints); fill every field from 2B/2C. Also create `results.tsv` with header
+Strategy Hints); fill every field from 2B/2C. With `--spec`, set the template's `spec` line to
+the path and put the spec's `## 큰 틀` and `## 결정` table under Strategy Hints. Also create
+`results.tsv` with header
 `seq\thypothesis\troute\tcommit\tmetric\tdelta\tstatus\tnote`, the directories from Step 0, and
 add `.autocode/` to `.gitignore` (ask first; worktrees live under it and must never be committed).
 

@@ -29,6 +29,10 @@ def validate(d):
             if dec.get("id") in seen:
                 errors.append("duplicate decision id: " + str(dec.get("id")))
             seen.add(dec.get("id"))
+            if dec.get("source") and not dec.get("change"):
+                # A decision carried in from a spec (design-map) must render as a
+                # full before → after node, never the degraded single line.
+                errors.append("decision %s has source but no change" % dec.get("id"))
     ticket_ids = set()
     for tk in d.get("tickets", []) or []:
         ticket_ids.add(tk.get("id"))

@@ -8,19 +8,19 @@ at the point where each one is needed; nothing here changes the procedure.
 Ask with `AskUserQuestion`, one question at a time, proposing the reconnaissance-derived
 answer as the recommended option. Loop until every required field is filled.
 
-| Field | Question | Default |
-|---|---|---|
-| `target_files` | "Which file(s) or directories may experiments modify?" | — |
-| `metric_name` | "What metric measures success? (e.g. p95_latency_ms, bundle_bytes)" | — |
-| `metric_command` | "Shell command that prints the metric as a single number on the last line?" | — |
-| `metric_direction` | "Lower or higher is better?" | lower |
-| `guard_command` | "Tests/lint/typecheck that must pass before a change is measured?" | detected test cmd |
-| `worktree_setup` | "Command to prepare a fresh checkout so guard and metric run? (deps, build)" | none |
-| `scope` | "How far may changes go? function / module / system" | module |
-| `forbidden_zones` | "Files or areas that must not change?" | none |
-| `max_experiments` | "Maximum number of experiments? (0 = unlimited)" | N or 20 |
-| `performance_target` | "Target metric value for early termination?" | none |
-| `parallel` | "How many experiments may run concurrently? (1–4)" | 2 |
+| Field | Question | Default | `--spec` key |
+|---|---|---|---|
+| `target_files` | "Which file(s) or directories may experiments modify?" | — | metric.target_files |
+| `metric_name` | "What metric measures success? (e.g. p95_latency_ms, bundle_bytes)" | — | metric.name |
+| `metric_command` | "Shell command that prints the metric as a single number on the last line?" | — | metric.command |
+| `metric_direction` | "Lower or higher is better?" | lower | metric.direction |
+| `guard_command` | "Tests/lint/typecheck that must pass before a change is measured?" | detected test cmd | metric.guard |
+| `worktree_setup` | "Command to prepare a fresh checkout so guard and metric run? (deps, build)" | none | — |
+| `scope` | "How far may changes go? function / module / system" | module | — |
+| `forbidden_zones` | "Files or areas that must not change?" | none | metric.forbidden |
+| `max_experiments` | "Maximum number of experiments? (0 = unlimited)" | N or 20 | — |
+| `performance_target` | "Target metric value for early termination?" | none | metric.target |
+| `parallel` | "How many experiments may run concurrently? (1–4)" | 2 | — |
 
 Follow-ups: a directory target → "Any hot-path files inside it?"; scope ≥ module → "Must public
 interfaces stay compatible?"; system scope → "External systems or data formats involved?";
@@ -31,6 +31,7 @@ guard is tests only → "Add typecheck or lint to the guard?"; metric command ru
 
 ~~~markdown
 # Autocode Program
+spec: {design-map spec path|null}
 
 ## Target
 - **files**: {target_files}
