@@ -76,3 +76,4 @@ skills/skill-stocktake/
 
 # vendored gstack browse: exclude heavy test fixtures (28M) from harness release
 skills/browse/test/
+__pycache__/

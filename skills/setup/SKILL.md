@@ -14,7 +14,7 @@ setup은 **터미널 UI와 기본 설정만** 다룬다:
 - **`statusLine` HUD** — 터미널 하단 상태줄
 - **custom hooks 등록** — language-rule(언어 규칙), auto-update(필수 스킬 자동 최신화)
 
-**스킬/플러그인 설치는 setup의 책임이 아니다.** 각 loop 플러그인(auto-loop, matt-loop 등)은 해당 플랫폼의 네이티브 플러그인 시스템이나 저장소의 npx 설치기를 사용한다. 지원되는 의존성의 최신화는 auto-update.sh 훅이 세션 시작마다 수행한다.
+**스킬/플러그인 설치는 setup의 책임이 아니다.** 각 loop 플러그인(auto-loop, matt-loop 등)은 해당 플랫폼의 네이티브 플러그인 시스템이나 저장소의 npx 설치기를 사용한다. weed-harness의 공통 스킬(loop-report, model-routing, loop-gates)은 플러그인 설치만으로 함께 들어오고, 루프가 쓰는 unlazy 스킬은 npx 설치기와 auto-update.sh 훅이 보장한다. 지원되는 의존성의 최신화는 auto-update.sh 훅이 세션 시작마다 수행한다.
 
 ## 왜 필요한가
 
@@ -64,7 +64,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/install.sh" status   # 현재 상태만
 | UserPromptSubmit | (none) | language-rule.sh |
 | SessionStart | (none) | auto-update.sh |
 
-`auto-update.sh`는 세션 시작마다 이미 설치된 필수 스킬을 자동 최신화: graphifyy 신버전이 PyPI에 있으면 업그레이드 후 claude/codex 양쪽에 재설치, superpowers 플러그인 업데이트(best-effort), `~/.codex/skills`의 matt-* 스킬을 marketplace 클론과 재동기화.
+`auto-update.sh`는 세션 시작마다 이미 설치된 필수 스킬을 자동 최신화: graphifyy 신버전이 PyPI에 있으면 업그레이드 후 claude/codex 양쪽에 재설치, superpowers 플러그인 업데이트(best-effort), weed-plugins 세 플러그인 업데이트, `~/.codex/skills`의 weed-plugins 스킬(공통 런타임 + 두 루프)을 marketplace 클론과 재동기화, unlazy 스킬 보장 및 하루 한 번 업데이트.
 
 각 hook script 가 사용자 `~/.claude/hooks/` 에 없으면 plugin에서 복사. 등록은 같은 matcher group에 합쳐짐.
 

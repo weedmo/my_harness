@@ -1,6 +1,6 @@
 ---
 name: interview-report
-description: Renders matt-auto's decision log (question → decision → rationale, per pipeline stage) into a single self-contained interactive decision-graph HTML — the pipeline stages in order, each decision as an editable node the user can rewrite or flag and export as <slug>.edits.json for matt-auto to rework from, and delivered where the user reads it — this skill owns delivery end to end: an Orca artifact link (`orca artifacts share`/`update`), or the worktree's Orca built-in browser tab when links are unavailable, with the route kept stable for the whole run; matt-auto only says probe / publish and relays the answer. Called by matt-auto right after its interview stage and again before its final report — do not trigger this standalone on a bare grill-me/grill-with-docs session; matt-auto is what pulls it in.
+description: "Renders matt-auto's decision log (question → decision → rationale, per pipeline stage) into the run's live decision-graph page — the pipeline stages in order, each decision as an editable node the user can rewrite or flag and export as <slug>.edits.json for matt-auto to rework from, plus the ticket waves, review and PR lanes while the run executes. The page itself is built and delivered by the shared `$loop-report` skill (weed-harness): this skill owns the decision-graph view and its data, writes `<slug>.data.json`, and hands it to loop-report to render and publish (artifact link, or the Orca browser tab when links are unavailable). matt-auto only says probe / publish and relays the answer. Called by matt-auto right after its interview stage and again before its final report — do not trigger this standalone on a bare grill-me/grill-with-docs session; matt-auto is what pulls it in."
 ---
 
 # Interview Report (decision graph)
@@ -15,97 +15,47 @@ The raw log is a flat transcript, complete but not *readable*: a real run answer
 
 Only as part of matt-auto's pipeline:
 
-1. Right after the interview stage (step 4) concludes — the graph then covers the interview decisions and marks later stages pending. This run feeds matt-auto's interview gate, so the published link is what the user is asked to approve; get it published before matt-auto presents the gate.
-2. Again before matt-auto's final report (and after the small path's `$implement`, and after ship mode's step 10) — regenerate the same file over the full decision log so the finished graph covers every stage, this time **with the `outcome` block** so the page opens on what the run actually shipped.
+1. Right after the interview stage (step 4) concludes — the graph then covers the interview decisions and marks later stages pending. This run feeds matt-auto's interview gate, so the published page is what the user is asked to approve; get it published before matt-auto presents the gate.
+2. On every board update once tickets exist (the live board), and again before matt-auto's final report (and after the small path's `$implement`, and after ship mode's step 10) — regenerate the same file over the full decision log so the finished graph covers every stage, the last time **with the `outcome` block** so the page opens on what the run actually shipped.
 
 Don't run this off a standalone `$grill-me`/`$grill-with-docs` session; this report is specifically about what the delegate decided on the user's behalf.
 
 ## Input
 
-The decision log matt-auto accumulated: an ordered list of `{question, decision, rationale}` per pipeline stage, which of those were escalated to the real user, and each stage's current status (done / in progress / pending / skipped, with why).
+The decision log matt-auto accumulated: an ordered list of `{question, decision, rationale}` per pipeline stage, which of those were escalated to the real user, and each stage's current status (done / in progress / pending / skipped, with why). Once the run executes, also the ticket DAG, the wave plan, each ticket's state, and the review / PR state.
 
 ## Output
 
-One self-contained HTML file — no external fonts, scripts, or CDNs, so it opens correctly offline — written to `docs/agents/matt-auto-log/<slug>.html`, next to the decision log, using the same `<slug>`, rendered from `<slug>.data.json` beside it (see How to build it). Regeneration rewrites both; the page keeps user edits safe across regenerations via `localStorage`, keyed by slug.
+`docs/agents/matt-auto-log/<slug>.data.json`, next to the decision log, using the same `<slug>` — and from it, `docs/agents/matt-auto-log/<slug>.html`, one self-contained page. Regeneration rewrites both; the page keeps user edits safe across regenerations via `localStorage`, keyed by slug, where storage exists (see loop-report's hosted-page notes).
 
-Then deliver it (below) and report back *how*: the URL, or the tab plus the path.
+## How to build and deliver it
 
-## Delivery — this skill owns it
+This skill owns the *view* — the decision graph, the wave flow, the ticket modal, the review and PR lanes, the edits round-trip — as `assets/view.html` and its data checks in `assets/validate.py`. The page around it and the delivery belong to **`$loop-report`** (weed-harness). So:
 
-The file on disk is the source of truth; the route is how the user actually reads it. matt-auto never touches the transport — it says one of two things and relays the answer, and every `orca artifacts` / `tab` / `reload` command in a run is issued from here:
+1. Write the data JSON (format below) to `docs/agents/matt-auto-log/<slug>.data.json`.
+2. Hand it to `$loop-report` with this view — probe or publish, exactly as matt-auto asked:
 
-- **probe** — once, early in the run, before the interview: which route this device can offer, so the user learns *before* the gate that there will be no link. Run `<orca> status --json` and `<orca> artifacts list --json`: both fine → `link`; `authentication_required` → `tab` (profile signed out — say so); no CLI or no runtime → `path`. `artifact_sharing_disabled` cannot be probed — it only shows on `share` — so a `link` answer is provisional until the first publish.
-- **publish** — at the interview gate, then on every regeneration: rewrite the file, push it wherever the user is reading it, and answer with the route, the URL or tab, the path, and a one-line reason when the route is not `link`.
+   ```
+   python3 <loop-report's dir>/assets/render.py \
+     --data docs/agents/matt-auto-log/<slug>.data.json \
+     --out  docs/agents/matt-auto-log/<slug>.html \
+     --view <this skill's dir>/assets/view.html
+   ```
 
-Routes, in order of preference — take the first that works, then **stay on it for the whole run**:
+   `<this skill's dir>` is the directory holding this SKILL.md; `<loop-report's dir>` is wherever weed-harness installed it (`~/.codex/skills/loop-report` under the npx installer on Codex, the weed-harness plugin's `skills/loop-report` under a native install, `~/.agents/skills/loop-report` under Orca). loop-report validates (common keys, then `validate.py`: stage keys, unique decision ids, ticket statuses and blockers, wave modes and `why`, `outcome` only with `review`), renders, and publishes on the run's route, keeping `<slug>.delivery.json` beside the page. Read its answer — link, tab, or path, with the reason — back to matt-auto verbatim.
 
-1. **Orca artifact link** — the public URL; the interview gate hands the user this, not a path.
-2. **Orca built-in browser tab** — the file opened in the worktree's browser pane inside the Orca desktop; works against a headless remote runtime.
-3. **Path only** — when there is no Orca at all.
-
-Keep the route in `docs/agents/matt-auto-log/<slug>.delivery.json` — `{ "route": "link" | "tab" | "path", "bin": "orca" | "orca-ide", "url": …, "browserPageId": …, "denied": "artifact_sharing_disabled" | null }` — and read it before every publish. That is what makes a regeneration from a fresh subagent context land on the same link or the same tab instead of minting a second one. It is run bookkeeping, left out of the outcome tally like the rest of the log folder.
-
-Pick the executable once, at the probe, and record it in the delivery file (`"bin"`): inside an Orca-managed terminal `orca` is the Orca CLI shim; in any other shell **on Linux use `orca-ide`** — bare `orca` there is usually the GNOME screen reader and running it starts speech on the user's machine. **If the shim fails with `bad option: --no-sandbox`** (unprivileged user namespaces disabled on that kernel — seen on Linux servers), that is a broken shim, not a missing Orca: fall back to `orca-ide`, which is on `PATH` on those hosts and talks to the same runtime. Only when neither binary works is Orca unavailable. Never let a shim error alone push the run to Route 3. The bundled `orca-cli` skill (`$orca-cli`, or `orca skills get orca-cli`) is the authority on every command below; this file only says how the report uses them. Never substitute another host, a screenshot, or a hand-rolled upload.
-
-### Route 1 — Orca artifact link
-
-- **First publish for this slug:** `<orca> artifacts share docs/agents/matt-auto-log/<slug>.html --json` → the share URL comes back as `result.shareUrl` (without `--json` the URL is the whole stdout).
-- **Every regeneration afterwards:** `<orca> artifacts update <the same path> --json`. Orca looks the artifact up by the resolved local path in the active profile, so the same path from the same profile keeps the same link — the user goes on reading the URL they already have. Only if `update` reports no such record (the file was never shared from this profile) fall back to `share`.
-- The HTML must stay self-contained — Orca does not upload relative assets — which the template already guarantees. The CLI transport caps a file at 800 KB; template plus a normal decision log sits far under it, so a size failure means the data block grew wrong.
-- **Refused?** Write the file anyway, record why, and drop to Route 2 for this run:
-  - `artifact_sharing_disabled` → publishing is off for the whole device and **only a human can turn it on**; there is no CLI or RPC way to grant it, so do not retry. Tell the user once: open Settings → Artifacts in the Orca desktop app on this device, turn on "Allow publishing public artifact links", and say the word — re-run `share` only when they have said so, never on every regeneration; when it then succeeds, switch the route to `link` and hand over the URL. On a headless runtime (`orca serve` on a server, paired from a desktop elsewhere) that switch may simply not be reachable, so the tab is the delivery for that run rather than something to wait for.
-  - No Orca CLI on `PATH`, runtime unreachable, or `authentication_required` (profile signed out) → `Orca artifact unavailable: <why>`, then Route 2 (Route 3 when there is no runtime to open a tab in).
-
-### What the hosted page can and cannot do
-
-Orca serves the file inside a sandboxed iframe (`allow-downloads allow-forms allow-modals allow-popups allow-scripts`, no `allow-same-origin`) under an Orca chrome header. Verified against a live artifact, this means:
-
-- **Scripts run**, so the graph renders, edits, flags, and **Export edits** all work — the export's blob download is covered by `allow-downloads`.
-- **`localStorage` throws `SecurityError`** (the frame has an opaque origin). The template already wraps every access in `try`/`catch`, so nothing breaks — but edits live only for that page load. Say so when handing over the link: **export before reloading**, or edit the local file instead. Never "fix" this by removing the guards.
-- The header shows the **original file name as the page title** (`<slug>.html`) and the artifact's expiry — links last 30 days, and each `update` restarts that window.
-
-### Route 2 — Orca built-in browser tab
-
-A path alone is not a deliverable — on a remote runtime the user cannot double-click it. Open the file in the worktree's Orca browser tab, which the desktop shows even when the runtime is a headless `orca serve` on another machine (verified against a remote runtime):
-
-- **Once per run:** from inside the worktree, `<orca> tab create --url file://<absolute path> --json` → store `result.browserPageId` in the delivery file. Before creating one, `<orca> tab list --json` — if a tab already shows that `file://` URL, reuse its `browserPageId` instead of opening a second.
-- **After every regeneration:** `<orca> reload --page <browserPageId> --json`. This is not optional: the built-in browser ignores every script-initiated reload or navigation of a `file://` page (`location.reload()`, `location.href = …`, `history.go(0)` — none of them fire, verified), so the page's own 30 s poll does nothing there and the rewritten file shows up only when you push it. `tab list` tells you if the tab is gone (`browser_tab_not_found`, or the URL no longer listed) — then create it again and update the delivery file.
-- The page works normally inside that tab: `localStorage` is available (edits survive a reload, unlike the hosted artifact), the theme toggle works, exports download.
-
-### Route 3 — path only
-
-Only when there is no Orca at all — no CLI, no runtime — is the local path the whole deliverable; say so, and expect the user to open the file in a browser of their own, where the page's own poll does work.
-
-Report the route back in your final message — URL, or tab plus path, and the one-line reason when it is not a link. A file nobody's told about might as well not exist.
-
-## How to build it
-
-Write the data as JSON to `docs/agents/matt-auto-log/<slug>.data.json`, then render with the script that ships next to this file:
-
-```
-python3 <this skill's dir>/assets/render.py \
-  --data docs/agents/matt-auto-log/<slug>.data.json \
-  --out  docs/agents/matt-auto-log/<slug>.html
-```
-
-`<this skill's dir>` is the directory holding this SKILL.md — `~/.codex/skills/interview-report` on Codex, the installed plugin's `skills/interview-report` on Claude Code. That is the whole build. The script swaps only the `<title>` and the `<script id="graph-data">` block into `assets/template.html`, validates the data first (required keys, unique decision ids, `progress.state`, every `blocked` ticket's `blocker`, `outcome` file rows), and refuses to write a page that would render wrong — so a regeneration is "edit the JSON, rerun the script", nothing else. **Never splice the template by hand** — no `cp` + `sed`/`perl`/regex over it. The template is 75 KB of CSS and JS full of `#`, `<script>`, and a header comment that repeats the data-block tag; a hand-rolled substitution silently ate 30 KB of it in testing and the page opened broken. If `python3` is somehow missing, say so and stop — do not improvise a replacement.
-
-Do not touch the CSS or the JavaScript — the rendering, editing, flagging, and export machinery lives there, and consistent output between runs is the point of bundling it. The palette follows **robodata's design tokens** (`frontend/src/App.css` in that repo): a layered stack rather than one flat field, on **Claude's warm dark base** — ground `#262624`, panels `#30302e` / `#3a3a38`, borders `#3a3a37` / `#4a4a46` — text `#e3e3e0` over `#a0a09a` muted. A cool near-black drifts blue at these lightness levels; this base stays neutral-warm. Then Catppuccin-family semantics at 10% dim backgrounds (green `#a6e3a1`, blue `#89b4fa`, yellow `#f9e2af`, red `#f38ba8`), `#ff9830` as the accent, 6px card radius with 3px badges, JetBrains Mono for code, and 6px scrollbars. Stat numbers are 22px/700 tabular-nums over an 11px muted label, as they are there. **Both ends stay off the extremes deliberately** — the dark ground is not near-black and the light one is not white, because this page is read for minutes at a time. Never restyle per run.
-
-The page ships **both skins**: the dark one above by default, and a light counterpart behind the 라이트/다크 toggle in the header — the same system read on paper — a warm yellow-grey stack in the same family as the dark base, ground `#f6f4ee` with `#fcfbf7` panels and `#e3dfd4` borders, never white — and the pastels darkened (`#40a02b`, `#1e66f5`, `#c81e3a`) to hold contrast on it — every token is restated for light, not filtered, so badges and bars keep their meaning at readable contrast. The choice rides in `window.name`, because the sandboxed frame has no `localStorage` and the page reloads itself while a run is live — `window.name` belongs to the browsing context rather than the origin, so it survives the reload (verified against a live artifact). A `#theme=light` / `#theme=dark` fragment still works for direct links, but the toggle never *assigns* to `location.hash`: inside Orca's frame that reloads the document and the fragment is dropped, which silently reverted the theme. Don't add a third palette or hard-code a color outside the token blocks. The page also **uses the width the reader gave it** — `main` runs to 1680px and the execution flow spans it all, while running text (summary, notes, decision nodes) stays capped at a 78ch measure. Don't reintroduce a narrow fixed column: on a wide screen the whole flow, review and PR lanes included, should be visible without scrolling.
+Never splice a template by hand, never edit the shell or the view's CSS/JS, never run `orca artifacts` / `tab` / `reload` from here — those rules and the reasons are loop-report's. If `$loop-report` is not installed, say `loop-report unavailable — weed-harness 3.x required` once; the decision log on disk is then the only report, and matt-auto's board must say so.
 
 ### Data format
 
+The common keys (`title`, `slug`, `generated`, `summary`, `progress`, `outcome`) follow loop-report's contract. The view's own keys:
+
 ```json
 {
-  "title": "Feature name",
-  "slug": "feature-slug",
-  "generated": "2026-09-01",
-  "summary": "2-4 plain-language sentences: what got decided and why, for someone with zero context.",
   "stages": [
     {
       "id": "interview",
-      "name": "Interview",
+      "name": "인터뷰",
       "skill": "grill-with-docs",
       "status": "done",
       "note": "",
@@ -126,19 +76,13 @@ The page ships **both skins**: the dark one above by default, and a light counte
 ```
 
 - `stages` appear in the order the pipeline ran them; the page draws the rail and connectors from that order. Use matt-auto's own stages (Interview, Size branch, Spec, Tickets, Confirm, Implement, Ship) and drop stages that never applied rather than listing empty shells — except skipped stages, which stay visible with `"status": "skipped"` and a `note` saying why (`"small path"`, `"autonomous"`).
-- `status` is one of `done` / `in-progress` / `pending` / `skipped`.
+- `status` is one of `done` / `in-progress` / `pending` / `skipped`. A stage may carry an explicit `percent`; otherwise done is 100, pending is 0, and an in-progress implement stage follows its tickets.
 - Decision `id`s must be stable across regenerations (stage prefix + ordinal is fine) — `localStorage` edits and `edits.json` both key on them.
 - `escalated: true` marks decisions the real user answered directly; the page highlights them.
 - **`before` / `change` — the before → after view on every decision.** A decision is a move against what already held, and the node shows that move as two cells: `before` is the prior state — a documented policy, or the de-facto behavior the code already exhibited — or `null` when nothing existed (the page then reads *"없음 — 정해진 바 없었음"*). `change` classifies the move and shows as a badge even while the node is collapsed: `"new"` (신규 — nothing existed), `"redirect"` (방향 전환 — a prior direction existed and this changes it), `"keep"` (유지 — a prior policy was examined and confirmed). `decision` is always the after-state. Fill these whenever the log knows the before-state; a decision without `change` falls back to a plain single-line node, which is the degraded form, not a choice.
 - **`progress` + `tickets` — the live board, present from the ticket stage until the run ends.** Together they render *진행 상황* above everything else: the run-wide percentage, elapsed and remaining time first, then the execution flow — **waves as columns left to right, each ticket a node inside its wave** — and a red blocker box for anything stuck. The decision graph moves below it behind a 결정 검토 disclosure (open by default at the interview gate, collapsed once a run is under way, and the reader's own choice sticks across the live reload). Omit both on the interview-gate generation (no tickets exist yet). A small-path run has no `tickets` or `plan`, but it still carries `progress` — `state` and `current` while `$implement` runs, `state: "done"` on the final regeneration — so the header says where the run is and the review lane has somewhere to render.
 
 ```json
-"progress": {
-  "state": "running",
-  "updated": "2026-09-02T05:50:00Z",
-  "current": "T3 구현 중 — 게이트 재검증에서 2개가 남았습니다",
-  "note": "선택 — 읽는 사람이 알아야 할 한 줄"
-},
 "tickets": [
   { "id": "T3", "title": "결과 패널 렌더링", "status": "blocked",
     "blockedBy": [], "gates": { "met": 3, "total": 5 },
@@ -151,14 +95,12 @@ The page ships **both skins**: the dark one above by default, and a light counte
 ]
 ```
 
-  - `state` is `running` / `blocked` / `done`; `updated` is the ISO timestamp of this regeneration, read from the clock (`date -Iseconds`) at the moment you write the file — never rounded or typed from memory; the page shows "N분 전 갱신" from it and a future stamp makes that line lie.
   - Ticket `status` is `done` / `in-progress` / `blocked` / `pending` / `skipped`. `blockedBy` lists the ticket ids it waits on — that is the DAG edge, not a blocker.
   - **`blocker` is required on every `blocked` ticket** and is what the whole panel exists for: `reason` is one of `gate` / `escalation` / `ci` / `conflict` / `dependency` / `worker` / `review` / `other`, and `detail` is the specific, checkable fact — the unmet gate id and its expected-vs-actual, the failing check, the question awaiting an answer. "막혔습니다" with no detail is the failure this panel was built to prevent.
-  - `gates` is the unlazy ledger tally when unlazy is installed; omit it otherwise.
+  - `gates` is the unlazy ledger tally when unlazy is installed (see `$loop-gates`); omit it otherwise.
   - **Who is doing the work shows on the node**: `route` is the routed agent, and `worker` carries the model and effort that route resolved to plus, for an Orca worker, its `dispatchId` and `worktree`. Fill both — "어떤 티켓을 어떤 서브에이전트가 어떤 모델로" is the question the node answers, and a node with only a route name half-answers it.
-  - **The page polls while `state` is not `done`** — it reloads itself every 30s to pick up a republished version, skipping the reload whenever the reader has unsaved edits, with a toggle to stop it. The interview-gate page (no `progress` yet) polls too, so a reader who leaves it open sees the run start once they approve. That is why `state: "done"` on the final regeneration matters: it is what stops the polling. Inside Orca's built-in browser the poll is inert — see "No link" above; there you push each regeneration with `orca reload --page`.
 
-- **`plan` — how the run intends to execute the tickets.** Rendered under the ticket list as an ordered wave graph, so the reader sees which tickets run at once, which wait, and why. Fill it as soon as matt-auto has planned execution (right after the ticket DAG), and keep it through the run — the waves stay put while the tickets inside them change status.
+- **`plan` — how the run intends to execute the tickets.** Rendered as an ordered wave graph, so the reader sees which tickets run at once, which wait, and why. Fill it as soon as matt-auto has planned execution (right after the ticket DAG), and keep it through the run — the waves stay put while the tickets inside them change status.
 
 ```json
 "plan": {
@@ -174,11 +116,10 @@ The page ships **both skins**: the dark one above by default, and a light counte
 }
 ```
 
-  - `mode` is `parallel` or `sequential`; `why` is one Korean line saying what made it so — the file overlap, the risk, the dependency. A wave without `why` is a shape with no reasoning, which is what this panel exists to show.
+  - `mode` is `parallel` or `sequential`; `why` is one Korean line saying what made it so — the file overlap, the risk, the dependency. A wave without `why` is a shape with no reasoning, which is what this panel exists to show; `validate.py` refuses it.
   - `concurrency` is how many workers may run at once; `placement` names where they run (`local`, or the environment name).
   - The page lays the waves out **left to right** and prints each wave's own duration (a parallel wave's slowest ticket, a sequential wave's sum). With no `plan` at all it still draws the flow, deriving one column per blocking level from `blockedBy` — so the shape survives a run that never planned waves.
-- **Estimates and progress bars.** `progress.startedAt` (ISO) drives 경과; each ticket's `estimateMin` (and `startedAt` once it begins, `actualMin` once done) drives the rest. The page computes, and never asks you to pre-compute: the overall percent (estimate-weighted, an in-progress ticket counted by elapsed/estimate and capped at 90%), 남은 예상, and 완료 예정 시각 — a parallel wave costing its slowest ticket, a sequential one their sum. A stage may carry an explicit `percent`; otherwise done is 100, pending is 0, and an in-progress implement stage follows its tickets. **`estimateMin` is the run's own guess and the page labels it 예상** — never present it as measurement, and never back-fill it to make a bar look better.
-
+- **Estimates and progress bars.** `progress.startedAt` (ISO) drives 경과; each ticket's `estimateMin` (and `startedAt` once it begins, `actualMin` once done) drives the rest. The page computes, and never asks you to pre-compute: the overall percent (estimate-weighted, an in-progress ticket counted by elapsed/estimate and capped at 90%), 남은 예상, and 완료 예정 시각 — a parallel wave costing its slowest ticket, a sequential one their sum. **`estimateMin` is the run's own guess and the page labels it 예상** — never present it as measurement, and never back-fill it to make a bar look better.
 - **Ticket detail — what the modal shows.** A node is a summary; clicking it opens the ticket. Put the specifics here rather than in the node: `acceptance` (the ticket's criteria, as written), `steps` (what happened inside the ticket — 티켓 읽기 → `$implement` → 게이트 재검증 → 머지백, each `{ name, status, note }`), `gateList` (`{ id, text, status: met|unmet|manual, check, expect, actual }` — the `CHECK:` command and the expected-vs-actual are what make an unmet gate actionable), `files` and `commits`. Everything is optional; the modal renders the sections that exist.
 - **`review` and `pr` — the tail of the flow.** The run does not end at the last ticket, so the flow does not either: `review` renders a 리뷰 lane (one node per review dimension, with its finding count) and `pr` renders a PR lane (number, `branch → base`, check rows, babysit cycles, link) at the right end of the same left-to-right flow.
 
@@ -194,57 +135,27 @@ The page ships **both skins**: the dark one above by default, and a light counte
 
   - Check `status` is `ok` / `done` / `failed` / `pending`, and `detail` carries the measured fact, never a guess. Omit `pr` entirely on a run that opens no PR — the lane simply does not appear.
 - **Long runs stay readable.** Once there are more than three waves, finished ones collapse to stubs and the flow scrolls itself to the wave that is actually running; a 완료 웨이브 펼치기 button brings the history back, and each stub expands on its own. Nothing needs doing in the data for this — but it is why a long plan is fine to publish in full.
-
-- **`outcome` — the shipped-changes panel, final regeneration only.** Omit the key entirely on the interview-gate run (nothing is built yet); fill it on the last regeneration, once implementation and review are done — together with `progress.state: "done"` and the `review` block, small path included; `render.py` refuses an `outcome` without them. The page renders it under the summary as *결과 — 이번 실행이 바꾼 것*: file counts by status, `+`/`−` totals split into 코드 / 문서 / 기타, and a per-file table. Totals are computed in the page from `files`, so never pass pre-summed numbers.
-
-```json
-"outcome": {
-  "baseRef": "2dacebe",
-  "headRef": "3b0523e",
-  "branch": "matt-auto/feature-slug",
-  "note": "이 diff가 무엇인지 한 줄 — 생략 가능",
-  "files": [
-    { "path": "src/foo.ts", "status": "added", "kind": "code",
-      "added": 120, "removed": 0, "note": "이 파일이 하는 일, 한 줄" }
-  ]
-}
-```
-
-  - `status` is `added` / `modified` / `deleted` / `renamed`; `kind` is `code` / `docs` / `other` — docs covers `.md`/`.mdx`/`.txt`/`.rst` and anything under a docs directory, other covers lockfiles, generated output, and binary assets, code is the rest.
-  - `added` / `removed` are line counts **measured from git** (`git diff --numstat <baseRef>..<headRef>`) — never estimated, never eyeballed. A binary file gets `0`/`0` and a `note` saying so.
-  - Leave out the run's own bookkeeping — `docs/agents/matt-auto-log/**` and `.unlazy/**` — so the panel counts the work, not the reporting about it.
-  - `path` is repo-relative; `note` is one Korean line per file and is what makes the table worth reading — a bare path list is the degraded form.
+- **`outcome`** follows loop-report's contract (files measured from `git diff --numstat` against matt-auto's baseline, bookkeeping under `docs/agents/matt-auto-log/**` and `.unlazy/**` left out). Fill it on the last regeneration only, together with `progress.state: "done"` **and the `review` block** — matt-auto always runs its review pass, small path included, and `validate.py` refuses an `outcome` without it.
 
 ### Writing the summary and decision text
 
-**Always write the graph's content in Korean** — `title`, `summary`, stage `name`s and `note`s, and every `question`/`decision`/`rationale`. The template's own UI labels are already Korean; ids and the JSON structure stay English.
+**Always write the graph's content in Korean** — `title`, `summary`, stage `name`s and `note`s, and every `question`/`decision`/`rationale`. The page's own UI labels are already Korean; ids and the JSON structure stay English.
 
 Write for someone who has zero context on the run — a teammate skimming this a week later. Every `question`/`decision` pair must stand on its own: translate ("X를 하기로 했다, 왜냐하면 Y"), don't paste the raw transcript line.
 
 ## The edits round-trip
 
-The page lets the user rewrite a decision, flag a node as a problem with a comment, and click **Export edits**, which downloads `<slug>.edits.json` (and copies it to the clipboard). The page tells them to save it into `docs/agents/matt-auto-log/`. matt-auto checks for that file at every invocation and treats each entry as a change request — that consumption logic is matt-auto's (see its Decision-graph report section), not this skill's. This skill's only obligations are stable decision ids and not breaking the template's export format.
+The page lets the user rewrite a decision, flag a node as a problem with a comment, and click **수정 내보내기**, which downloads `<slug>.edits.json` (and copies it to the clipboard). The page tells them to save it into `docs/agents/matt-auto-log/`. matt-auto checks for that file at every invocation and treats each entry as a change request — that consumption logic is matt-auto's (see its Decision-graph report section), not this skill's. This skill's only obligations are stable decision ids and not breaking the view's export format. On the hosted artifact link `localStorage` is unavailable, so edits live only for that page load — say "export before reloading" when handing over a link; in the Orca tab they persist.
 
 ## Red flags
 
 - Dumping the raw Q&A log into the JSON unedited → the point is translation into plain language, not reformatting.
 - Writing the graph's content in English → the user reads this in Korean; only ids and JSON structure stay English.
-- Editing the template's CSS/JS instead of only the data block → inconsistent, possibly broken output between runs is the failure mode this skill exists to prevent.
-- Building the page with `cp` + `sed`/`perl` instead of `assets/render.py` → the template is full of the characters those substitutions trip on; the script exists because that shortcut shipped a broken page.
+- Building or publishing the page here instead of through `$loop-report` — hand-splicing, editing `view.html`'s CSS/JS, running `orca artifacts` / `tab` / `reload` → one owner for the page and its route; this skill owns the data and the view.
 - Changing decision ids on regeneration → orphans the user's saved edits and any exported edits.json.
-- Line counts in `outcome` that were estimated, read off a subagent's report, or summed by hand → they must come from `git diff --numstat`, and a wrong number in a results panel is worse than no panel.
 - Shipping `outcome` on the interview-gate generation → nothing has been built yet; the panel would be a lie.
 - A `blocked` ticket whose `blocker.detail` is vague ("실패함", "확인 필요") → the reader must be able to act on it without opening a terminal.
-- Leaving `state` at `running` on the final regeneration → the page polls forever and the run looks unfinished.
+- Leaving `state` at `running` on the final regeneration, or a `progress.updated` typed from memory → the page polls forever, or its "N분 전 갱신" line lies.
 - A wave whose `why` is missing, or estimates invented to make the bar move → both turn the plan panel into decoration.
-- Running `artifacts share` on a regeneration instead of `artifacts update` → the link the user already has is no longer the one you regenerated.
-- Publishing the graph anywhere but Orca's own artifacts (another host, a pasted screenshot, a hand-rolled upload) → Orca artifacts are the delivery mechanism; when they are unavailable the fallback is Orca's built-in browser tab on the local file, not a substitute service.
-- Publishing without reading `<slug>.delivery.json` first → a second link or a second tab, and the user is now looking at the wrong one.
-- Letting the caller run `orca artifacts` / `tab` / `reload` itself → two owners of one route drift apart; matt-auto says publish, this skill does it.
-- Handing over a bare path when there is no link, while an Orca runtime is reachable → open the file in the worktree's browser tab; a path on a remote server is not something the user can click.
-- Regenerating the file into an open Orca tab without `orca reload --page` → the tab keeps showing the old version; the page cannot reload itself there.
-- Retrying a share denied with `artifact_sharing_disabled` on every regeneration → the answer cannot change until a human flips the device setting; re-run only when the user says they did.
-- Calling bare `orca` from a non-Orca Linux shell → that is the GNOME screen reader; use `orca-ide`.
-- Skipping the report, or leaving the gate without a deliverable, because publishing failed → the local HTML is still the report; only the link is missing, and the reason belongs in one line.
 - Writing the file anywhere but `docs/agents/matt-auto-log/<slug>.html` → matt-auto and the edits round-trip both assume that path.
 - Running this outside matt-auto, off a bare grilling session → out of scope; the report is specifically about delegate decisions.

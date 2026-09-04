@@ -5,19 +5,25 @@ for **Claude Code, Codex, opencode, gemini-cli, and Orca**.
 
 | Plugin | Where | What | Required |
 |--------|-------|------|----------|
-| `weed-harness` | repo root | Claude Code-only setup, hooks, and HUD | Claude Code only |
-| `matt-loop` | `plugins/matt-loop/` | matt-auto + vendored Matt Pocock skills (human-in-the-loop conducted Matt flow) | optional |
-| `auto-loop` | `plugins/auto-loop/` | autocode hypothesis-driven parallel code improvement loop | optional |
+| `weed-harness` | repo root | The shared runtime every loop builds on — `loop-report` (live progress page + Orca delivery), `model-routing` (model/effort tiers), `loop-gates` (unlazy-backed completion) — plus the Claude Code-only setup, hooks, and HUD | yes, every platform |
+| `matt-loop` | `plugins/matt-loop/` | matt-auto + vendored Matt Pocock skills (a conducted Matt flow with a decision graph) | optional, needs weed-harness 3.x |
+| `auto-loop` | `plugins/auto-loop/` | autocode hypothesis-driven parallel code improvement loop with a live experiment board | optional, needs weed-harness 3.x |
 
-External loops (superpowers, graphify, …) are referenced, not vendored. The
-`auto-update.sh` SessionStart hook keeps required skills (graphify claude/codex,
-superpowers, matt-*) up to date once they are present.
+The split: **weed-harness is the loop runtime** (what every long delegated run
+needs — a page the user can watch, one routing table, gates that make "done"
+measurable), and each loop plugin is only its own graph (matt-auto's decision
+stages and ticket waves, autocode's hypothesis frontier). External loops
+(superpowers, graphify, …) and the [unlazy](https://github.com/Leonxlnx/unlazy)
+skill are referenced, not vendored: the installer ensures unlazy with
+`npx skills add Leonxlnx/unlazy -g`, and the `auto-update.sh` SessionStart hook
+keeps it, graphify, superpowers, and the three plugins up to date once present.
 
 ## Install (recommended): npx installer
 
-One command installs skill packs to any combination of the four supported
-platforms. Claude Code receives `weed-harness` setup automatically; the loop
-plugins are opt-in.
+One command installs skill packs to any combination of the supported
+platforms. `weed-harness` is always installed (its Claude Code-only `setup`
+and `design-map` skills are skipped elsewhere); the loop plugins are opt-in.
+Unless `--no-unlazy` is given, the installer also ensures the unlazy skill.
 
 ```bash
 # Interactive: pick platforms, then pick plugins
@@ -40,8 +46,8 @@ npx github:weedmo/skills --yes --dry-run
 
 | Platform | Skill directory | Notes |
 |----------|-----------------|-------|
-| `claude-code` | `~/.claude/skills/` | Installs the Claude-only `setup` skill plus selected loop plugins. If you already installed these via `/plugin install`, skip this platform to avoid duplicates. |
-| `codex` | `~/.codex/skills/` | Native SKILL.md discovery. Restart Codex after install. |
+| `claude-code` | `~/.claude/skills/` | Installs weed-harness (shared runtime + Claude-only `setup` / `design-map`) plus selected loop plugins. If you already installed these via `/plugin install`, skip this platform to avoid duplicates. |
+| `codex` | `~/.codex/skills/` | Native SKILL.md discovery. Installs weed-harness's shared skills plus selected loop plugins. Restart Codex after install. |
 | `opencode` | `~/.config/opencode/skills/` | Native SKILL.md discovery. Invalid underscores in skill IDs are normalized to hyphens. matt-loop also installs routing agents under `~/.config/opencode/agents/` and slash commands for every Matt Loop skill under `~/.config/opencode/command/`. |
 | `gemini-cli` | `~/.gemini/skills/` | No native skill discovery — reference the skill files from `~/.gemini/GEMINI.md` yourself. |
 | `orca` | `~/.agents/skills/` | Universal agent-skills directory; Orca exposes these skills to every agent it drives. Skip this platform if you installed the plugins natively via Claude/Codex (see [Orca](#orca) below) to avoid duplicates. |
@@ -62,7 +68,7 @@ Every plugin is also installable through each CLI's own plugin system.
 ```bash
 /plugin marketplace add weedmo/skills
 
-/plugin install weed-harness@weed-plugins   # Claude-only setup, hooks, and HUD
+/plugin install weed-harness@weed-plugins   # shared loop runtime + Claude setup, hooks, HUD (required)
 /plugin install matt-loop@weed-plugins      # optional
 /plugin install auto-loop@weed-plugins      # optional
 ```
@@ -75,13 +81,14 @@ then `claude plugin install <name>@weed-plugins`.
 ```bash
 codex plugin marketplace add weedmo/skills
 
+codex plugin add weed-harness@weed-plugins   # shared loop runtime (required by the loops)
 codex plugin add matt-loop@weed-plugins      # optional
 codex plugin add auto-loop@weed-plugins      # optional
 ```
 
 Start a new Codex session so the packaged skills are discovered. Each package
 carries `.codex-plugin/plugin.json` metadata, and the repo-local Codex
-marketplace (`.agents/plugins/marketplace.json`) lists both loop plugins.
+marketplace (`.agents/plugins/marketplace.json`) lists all three plugins.
 
 opencode and gemini-cli have no compatible plugin marketplace — use the npx
 installer for those.
@@ -112,17 +119,22 @@ workflow guidance.
 
 ## Skills
 
-### weed-harness (Claude Code only)
+### weed-harness (the shared loop runtime)
 
-| Skill | Description |
-|-------|-------------|
-| `/setup` | Terminal UI + basic settings only: statusLine HUD, custom hooks (language-rule, auto-update) |
+| Skill | Platforms | Description |
+|-------|-----------|-------------|
+| `loop-report` | all | Builds the live progress page of a delegated run from `assets/shell.html` + the loop's view + a data JSON (`assets/render.py`), and delivers it: Orca artifact link, or the Orca built-in browser tab when links are unavailable, or the path — route kept stable per run |
+| `model-routing` | all | The Fast / Default / Deep / Max tier table with the exact model and reasoning-effort pair per platform (Codex `spawn_agent`, Claude Code agents, OpenCode, Orca `worker-start` flags), dispatch rules, and the escalation ladder |
+| `loop-gates` | all | How the loops use the upstream unlazy skill: ledger per unit of work, coordinator-side `--reverify`, two retries then handoff, boundaries with Orca |
+| `/setup` | Claude Code | Terminal UI + basic settings only: statusLine HUD, custom hooks (language-rule, auto-update) |
+| `/design-map` | Claude Code | Visual-first design flow on an Artifact diagram, ending in a spec file |
 
 ### matt-loop
 
 | Skill | Description |
 |-------|-------------|
-| `matt-auto` | Conductor for Matt Pocock's main flow (interview → spec → tickets → implementation) with human-in-the-loop gates and automatic model/effort routing on Codex, OpenCode, and Claude Code; `--dev` / `--main` / `--pr <base>` also opens a PR and shepherds it to merge-ready via pr-babysit; `--orca` runs independent tickets in parallel as Orca-orchestrated workers in their own worktrees |
+| `matt-auto` | Conductor for Matt Pocock's main flow (interview → spec → tickets → implementation) with a decision delegate, one interview gate, and automatic model/effort routing via `model-routing`; publishes its decision graph and live ticket board through `interview-report` → `loop-report`; `--dev` / `--main` / `--pr <base>` also opens a PR and shepherds it to merge-ready via pr-babysit; independent tickets run in parallel as Orca-orchestrated workers when Orca is reachable |
+| `interview-report` | matt-auto's decision-graph view (`assets/view.html` + `validate.py`) — stages, editable decision nodes with the `<slug>.edits.json` round-trip, ticket waves, review and PR lanes — rendered and delivered by `loop-report` |
 | `pr-babysit` | Shepherd one open GitHub PR through CI and review with automatic model/effort routing on Codex, OpenCode, and Claude Code |
 | `resolving-merge-conflicts` | Resolve an active merge/rebase conflict; direct OpenCode / Claude Code use routes to a deep model |
 | vendored Matt Pocock skills | The remaining upstream skills matt-auto conducts: `grilling`, `grill-me`, `grill-with-docs`, `ask-matt`, `to-spec`, `to-tickets`, `handoff`, `tdd`, `implement`, `diagnosing-bugs`, `codebase-design`, `domain-modeling`, `research`, `prototype`, `code-review`, `qa`, `request-refactor-plan`, `setup-matt-pocock-skills` |
@@ -140,7 +152,7 @@ skill to `~/.codex/skills/`.
 
 | Skill | Description |
 |-------|-------------|
-| `/autocode` | Hypothesis-driven parallel code improvement loop: a strategist on the expensive tier proposes hypotheses, experimenters routed by difficulty run them concurrently in worktrees, measurement stays serial |
+| `/autocode` | Hypothesis-driven parallel code improvement loop: a strategist on the expensive tier proposes hypotheses, experimenters routed by difficulty (via `model-routing`) run them concurrently in worktrees, measurement stays serial; the run publishes a live experiment board (metric trend, frontier, experiment log) through `loop-report`, and terminates on unlazy gates per `loop-gates` |
 
 ## Docs
 
