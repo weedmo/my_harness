@@ -152,7 +152,7 @@ skill to `~/.codex/skills/`.
 
 | Skill | Description |
 |-------|-------------|
-| `/autocode` | Hypothesis-driven parallel code improvement loop (`init --spec <path>` pre-fills the interview from a confirmed design-map spec): a strategist on the expensive tier proposes hypotheses, experimenters routed by difficulty (via `model-routing`) run them concurrently in worktrees, measurement stays serial; the run publishes a live experiment board (metric trend, frontier, experiment log) through `loop-report`, and terminates on unlazy gates per `loop-gates` |
+| `/autocode` | Hypothesis-driven parallel code improvement loop (`init --spec <path>` pre-fills the interview from a confirmed design-map spec): a strategist on the expensive tier proposes hypotheses, experimenters routed by difficulty (via `model-routing`) run them concurrently in worktrees, measurement stays serial; the run publishes a live experiment board (metric trend, frontier, experiment log) through `loop-report`, terminates on unlazy gates per `loop-gates`, and collects the kept changes — one squash commit each with its measurement, on `autocode/<slug>` in its own worktree so the user's checkout never moves — into a PR against the branch it started from (`run --pr <base>` / `--no-pr`; never merged) |
 
 ## Docs
 

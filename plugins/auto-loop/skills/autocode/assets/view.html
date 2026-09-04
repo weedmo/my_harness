@@ -6,6 +6,7 @@
 
   View data (validated by validate.py next to this file):
     { run: { branch, bestCommit,
+             pr?: { base, url },            // resolved PR base ("none" = off); url once 3F opens it
              metric: { name, direction: lower|higher, baseline, noiseBand, best, target },
              budget: { done, max, parallel, placement },
              strategist: { tier: deep|max, escalated, consecutiveDiscards },
@@ -297,6 +298,20 @@ window.LoopView = (function () {
       "연속 기각 " + (strategist.consecutiveDiscards || 0));
     if (strategist.escalated) tier.querySelector(".sub").appendChild(el("span", "badge escalated", "에스컬레이션됨"));
     stats.appendChild(tier);
+    if (run.pr && run.pr.base) {
+      var prTile;
+      if (run.pr.url) {
+        prTile = ctx.stat("PR", "열림", "→ " + run.pr.base);
+        var v = prTile.querySelector(".v"); v.textContent = "";
+        var a = el("a", null, "열림"); a.href = run.pr.url; a.target = "_blank"; a.rel = "noopener";
+        v.appendChild(a);
+      } else if (run.pr.base === "none") {
+        prTile = ctx.stat("PR", "없음", "--no-pr");
+      } else {
+        prTile = ctx.stat("PR", "종료 시", "→ " + run.pr.base + " · 채택이 있을 때");
+      }
+      stats.appendChild(prTile);
+    }
     host.appendChild(stats);
   }
 

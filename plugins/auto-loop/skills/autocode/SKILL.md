@@ -1,7 +1,7 @@
 ---
 name: autocode
-description: "Hypothesis-driven parallel code improvement loop. A strategist on the expensive model tier proposes falsifiable hypotheses with pre-committed if_confirmed / if_refuted actions; experimenters routed by hypothesis difficulty implement them concurrently in git worktrees; the coordinator measures serially, keeps by arithmetic, and feeds every single result back to the strategist so the frontier is revised as results arrive, not per batch. Subcommands: init [N] [--spec <path>] (a confirmed design-map spec pre-fills the interview), run [--parallel N] [--on <env>], status, resume."
-argument-hint: "<subcommand: init|run|status|resume> [max experiments] [--spec <path>] [--parallel N] [--on <env>]"
+description: "Hypothesis-driven parallel code improvement loop. A strategist on the expensive model tier proposes falsifiable hypotheses with pre-committed if_confirmed / if_refuted actions; experimenters routed by hypothesis difficulty implement them concurrently in git worktrees; the coordinator measures serially, keeps by arithmetic, and feeds every single result back to the strategist so the frontier is revised as results arrive, not per batch. Kept changes land as one squash commit each (measurements in the message) on an experiment branch that lives in its own worktree — the user's checkout never moves — and the run ends by opening a PR of the kept changes against the branch it started from (never merged). Subcommands: init [N] [--spec <path>] (a confirmed design-map spec pre-fills the interview), run [--parallel N] [--on <env>] [--pr <base> | --no-pr], status, resume."
+argument-hint: "<subcommand: init|run|status|resume> [max experiments] [--spec <path>] [--parallel N] [--on <env>] [--pr <base> | --no-pr]"
 ---
 
 # Autocode — Hypothesis-Driven Parallel Improvement
@@ -34,7 +34,7 @@ the named section only at the step that writes or sends that data.
 | Command | Action | User Confirmation |
 |---|---|---|
 | `/autocode init [N] [--spec <path>]` | Interview → `program.md`. N = max experiments (default 20, 0 = unlimited). `--spec` pre-fills the interview from a confirmed design-map spec | Required (interview + approval) |
-| `/autocode run [--parallel N] [--on <env>]` | Run the loop until budget, target, or exhaustion | None (autonomous) |
+| `/autocode run [--parallel N] [--on <env>] [--pr <base> \| --no-pr]` | Run the loop until budget, target, or exhaustion; then open the PR of kept changes | None (autonomous) |
 | `/autocode status` | Frontier, running experiments, best metric, routing tally | None |
 | `/autocode resume` | Continue from `state.json` after interruption | None |
 
@@ -51,8 +51,9 @@ autocode.delivery.json). Full tree: `assets/reference.md` § File structure.
 - No args or `init` → Step 2. Optional integer N = `max_experiments`. `--spec <path>` names a
   design-map spec: read it; frontmatter `status` other than `confirmed` → print
   `spec not confirmed: run /design-map first` and stop.
-- `run` → Step 3. `--parallel N` (default from program.md, max 4) and `--on <env>` (Orca
-  environment for remote workers) override program.md for this run only.
+- `run` → Step 3. `--parallel N` (default from program.md, max 4), `--on <env>` (Orca
+  environment for remote workers), and `--pr <base>` / `--no-pr` (the PR base, or none) override
+  program.md for this run only.
 - `status` → Step 4. `resume` → Step 5.
 
 ---
@@ -74,7 +75,8 @@ the recommended option; loop until every required field is filled. The fields �
 `metric_name`, `metric_command` (prints the metric as a single number on the last line),
 `metric_direction` (default lower), `guard_command` (default: detected test command),
 `worktree_setup`, `scope` (function / module / system, default module), `forbidden_zones`,
-`max_experiments` (N or 20), `performance_target`, `parallel` (1–4, default 2) — with their
+`max_experiments` (N or 20), `performance_target`, `parallel` (1–4, default 2), `pr_base`
+(default: the current branch; `none` = no PR) — with their
 question wording, defaults, and the five follow-ups (hot-path files, interface compatibility,
 external systems, typecheck/lint in the guard, optional `screen_command` when the metric runs
 > 60 s) are in `assets/reference.md` § Interview fields.
@@ -101,8 +103,8 @@ the reach of its 확정 구조 is evidence for the classification.
 ### 2D: Generate `program.md`
 
 Template: `assets/reference.md` § program.md (Target, Metric, Guard, Worktree, Constraints,
-Budget, Routing, Plateau — `consecutive_discard_threshold: 5`, `window: 8`, `unlazy_gates` —
-Strategy Hints); fill every field from 2B/2C. With `--spec`, set the template's `spec` line to
+Budget — including `pr_base` — Routing, Plateau — `consecutive_discard_threshold: 5`,
+`window: 8`, `unlazy_gates` — Strategy Hints); fill every field from 2B/2C. With `--spec`, set the template's `spec` line to
 the path and put the spec's `## 큰 틀` and `## 결정` table under Strategy Hints. Also create
 `results.tsv` with header
 `seq\thypothesis\troute\tcommit\tmetric\tdelta\tstatus\tnote`, the directories from Step 0, and
@@ -141,9 +143,13 @@ code itself and never reasons about what to try next — that is the strategist'
 ### 3A: Pre-flight
 
 1. `program.md` exists, target files exist, working tree clean (else stop and say so).
-2. Create the experiment branch `autocode/{YYYY-MM-DD-HHMM}` from the current branch. `best`
-   always means the head of this branch.
-3. Run the guard on the unmodified code; abort if it fails.
+2. Create the experiment branch in its own worktree — the user's checkout is never moved:
+   `git worktree add "$WORKTREE_DIR/best" -b "autocode/<slug>" HEAD`. `<slug>` is the spec's
+   `slug` when program.md names a spec, else `metric_name`; if the branch exists, append `-2`,
+   `-3`, …. `best` always means the head of this branch, and every command that touches it
+   runs inside `$WORKTREE_DIR/best`. Resolve `pr_base`: `--pr <base>` / `--no-pr` → else
+   program.md `pr_base` → else the branch the run started on.
+3. Run the guard on the unmodified code inside `$WORKTREE_DIR/best`; abort if it fails.
 4. Resolve routing (3H). Probe Orca only if `--on <env>` was given or program.md `parallel` > 1
    and the user asked for Orca at init: `orca status --json`, `orca orchestration run-list --json`
    (if the `orca` shim fails with `bad option: --no-sandbox`, retry with `orca-ide`). Without
@@ -153,19 +159,21 @@ code itself and never reasons about what to try next — that is the strategist'
    .autocode/report/autocode.html` (3I; the page need not exist yet — probe does not render) and
    print its answer with the other pre-flight facts (`Report delivery: link` / `tab — <why>` /
    `path — <why>`), so the user knows before the first experiment where the board will be.
+   Print `PR: autocode/<slug> → <pr_base>` (or `PR: none`) in the same block.
 
 ### 3B: Baseline and noise band
 
-Run the metric command **three times** on the unmodified code, serially. Validate each value is a
+Run the metric command **three times** on the unmodified code in `$WORKTREE_DIR/best`, serially. Validate each value is a
 finite number (abort with the raw output otherwise). Record `baseline` = median of the three and
 `noise_band` = max |run − median|, floored at 0.5% of |median|. A change counts as an improvement
 only when it beats `best_metric` by more than `noise_band` in the configured direction. This is
 the only keep/discard rule in the whole loop.
 
-Write `state.json` (`assets/reference.md` § state.json: branch, baseline, noise_band, best_metric,
-best_commit, experiments_done, max_experiments, parallel, strategist_tier, strategist_agent_id,
-running, consecutive_discards, escalated, terminated_reason). Display the baseline, noise band,
-branch, parallelism, strategist tier, and worker placement, then **publish the board for the
+Write `state.json` (`assets/reference.md` § state.json: branch, base_branch, pr_base, pr_url,
+baseline, noise_band, best_metric, best_commit, experiments_done, max_experiments, parallel,
+strategist_tier, strategist_agent_id, running, consecutive_discards, escalated,
+terminated_reason). Display the baseline, noise band, branch, PR base, parallelism, strategist
+tier, and worker placement, then **publish the board for the
 first time** (3I) — `progress.state: running`, the metric strip with baseline and noise band, an
 empty frontier. From here on every state change republishes it.
 
@@ -249,16 +257,24 @@ The coordinator itself runs the metric, one experiment at a time, in the worktre
 improved = better_by(metric, best_metric) > noise_band   # in metric_direction
 if not improved:
     status = discard; consecutive_discards += 1
-else:
-    git merge --no-ff autocode/H{id}  into the experiment branch
-    if conflict:  git merge --abort; status = conflict   # another keep touched the same lines
+else:                                                     # inside $WORKTREE_DIR/best
+    git merge --squash autocode/H{id}
+    if conflict:  git reset --hard; status = conflict     # another keep touched the same lines
     else:
-        re-measure once on the merged branch (serial, same rules)
+        re-measure once on the squashed tree (serial, same rules)
         if better_by(merged, best_metric) > noise_band:
+            git commit -m "perf(H{id}): {claim, one line}" -m "{measurement body}"
             status = keep; best_metric = merged; best_commit = HEAD; consecutive_discards = 0
         else:
-            git reset --hard HEAD~1; status = interaction   # kept changes cancelled each other
+            git reset --hard; status = interaction        # kept changes cancelled each other
 ```
+
+One kept hypothesis is one commit on the experiment branch, and the message carries what the
+experimenter's commit cannot: the measurement body (`assets/reference.md` § Keep commit —
+metric before → after with the delta, the noise band, the route, the claim, the board link).
+The experimenter's `experiment(H{id})` commit stays on `autocode/H{id}` as the squash's source
+and is deleted with the branch below; `reset --hard` after a failed re-measure discards the
+staged squash and leaves `best_commit` untouched.
 
 Then: append `results.tsv` (`seq, H{id}, route, commit, metric, delta, status, note`), write a
 lesson to `$LESSONS_DIR/lesson_{seq}.json` (`{iteration, type, description, action, tags}`),
@@ -300,8 +316,8 @@ measured (they are paid for; their evidence is still useful):
 - frontier empty and the strategist returned nothing twice → `exhausted`
 - plateau persisted through 3E → `plateau`
 
-Then: remove leftover worktrees, release any Orca dispatches, leave the experiment branch checked
-out at `best_commit`.
+Then: remove leftover hypothesis worktrees and release any Orca dispatches. The user's checkout
+is where it was; the experiment branch sits at `best_commit` in `$WORKTREE_DIR/best`.
 
 When `unlazy_gates: true`, run `node "$UNLAZY_DIR/scripts/gate-check.mjs" --reverify
 $AUTOCODE_DIR/GATES.md` first, per `$loop-gates`. Compose the summary only on `ALL MET`; otherwise
@@ -310,6 +326,22 @@ gates. `target_reached` in particular must be backed by the target gate's measur
 Count **gates caught** = the number of gates that came back UNMET on that `--reverify`; write
 it into the lesson file of the last experiment as `"gates_caught": n` (`null` when
 `unlazy_gates` is false) and print it in the summary (`—` when false).
+
+**Collect the kept changes into a PR** — three cases, decided by arithmetic:
+
+- **No keep** → `git worktree remove --force "$WORKTREE_DIR/best"`, `git branch -D
+  autocode/<slug>`; the summary says `PR: none — nothing kept`. The evidence stays in
+  `results.tsv`, the lessons, and the board.
+- **keep ≥ 1 and `pr_base` is `none`** → leave the branch and its worktree; the summary prints
+  the branch and `PR: skipped (--no-pr)`.
+- **keep ≥ 1 with a `pr_base`** → from `$WORKTREE_DIR/best`: `git push -u origin
+  autocode/<slug>` (plain push, never force), then `gh pr create --base <pr_base> --head
+  autocode/<slug>` with title `perf: <metric_name> <baseline> → <best> (<improvement>%)` and
+  the final summary below as the body, plus the board link (or its path) as the first line.
+  Record the URL in `state.json` `pr_url` and in the board (`run.pr`). Never merge, never
+  babysit. If there is no `origin`, the push is refused, or `gh` is missing or unauthenticated:
+  one line with the reason (`PR: not opened — no remote`), the branch name, and the exact
+  `git push` + `gh pr create` lines for the user, and the run still ends normally.
 
 Then **publish the board one last time** (3I) with `progress.state: "done"`,
 `run.terminatedReason` set, and the `outcome` block: `outcome.files` measured with
@@ -320,8 +352,8 @@ points at it.
 **Final summary**: `assets/reference.md` § Final summary — branch @ best_commit, baseline → best
 with improvement % and noise band, experiment tally by status, wall clock / experiments per hour /
 measurement time share, strategist tier and escalation, route tally and re-routes,
-`Gates caught: {n}`, termination reason, kept changes in merge order, refuted hypotheses worth
-remembering.
+`Gates caught: {n}`, termination reason, the PR line (URL, or why none), kept changes in
+commit order, refuted hypotheses worth remembering.
 
 ### 3G: Failure handling
 
@@ -382,8 +414,8 @@ Publish first after the baseline (3B), then on every state change (3D), on plate
 (3E), and last at termination (3F) with `progress.state: "done"` and the `outcome`.
 
 **Data** — the common keys follow loop-report's contract (`title`, `slug: "autocode"`,
-`generated`, `summary`, `progress`, `outcome`); the view's keys are `run` and `hypotheses`, with
-the JSON and its rules (Korean one-liners for claims/notes/obstacles, `terminatedReason` null
+`generated`, `summary`, `progress`, `outcome`); the view's keys are `run` (including
+`run.pr { base, url }`) and `hypotheses`, with the JSON and its rules (Korean one-liners for claims/notes/obstacles, `terminatedReason` null
 until 3F, `progress.current` / `blockers`, never pre-sum what the page derives) in
 `assets/reference.md` § Board data. Read it before the first publish.
 
@@ -392,17 +424,20 @@ until 3F, `progress.current` / `blockers`, never pre-sum what the page derives) 
 ## Step 4: Status (`/autocode status`)
 
 Read `state.json`, `results.tsv`, and `hypotheses/*.json`; display the block from
-`assets/reference.md` § Status (branch, best vs baseline, experiment tally, running, frontier,
-strategist, routes used, rate, and the board route from
+`assets/reference.md` § Status (branch and PR base, best vs baseline, experiment tally, kept
+commits, running, frontier, strategist, routes used, rate, the PR URL once opened, and the
+board route from
 `python3 <loop-report's dir>/assets/deliver.py show --page .autocode/report/autocode.html`).
 
 ## Step 5: Resume (`/autocode resume`)
 
 1. Require `program.md` and `state.json`; otherwise say `No run to resume. Run /autocode init
    then /autocode run.`
-2. Check out the experiment branch. For every id in `state.running`: if its worktree and result
-   file exist, measure it (3D-2/3D-3); if the worktree exists without a result, remove it and set
-   the hypothesis back to `pending`.
+2. Make sure the experiment branch is in its worktree — if `$WORKTREE_DIR/best` is missing,
+   `git worktree add "$WORKTREE_DIR/best" "<branch>"`; never check the branch out in the user's
+   checkout. For every id in `state.running`: if its worktree and result file exist, measure it
+   (3D-2/3D-3); if the worktree exists without a result, remove it and set the hypothesis back to
+   `pending`.
 3. Respawn the strategist on the recorded tier with `program.md`, `results.tsv`, the lessons, the
    latest retrospective if any, and the current frontier — it has no memory of the previous
    session, so this prompt is its whole context.
@@ -429,3 +464,8 @@ strategist, routes used, rate, and the board route from
   a route for every case, and the timing is the coordinator's.
 - Delivering the page with anything but `deliver.py`, or splicing the page by hand → delivery and
   the build have one owner; run publish and relay what comes back.
+- Checking the experiment branch out in the user's checkout, or merging a keep with `--no-ff` →
+  the branch lives in `$WORKTREE_DIR/best`, and one keep is one squash commit with its
+  measurement in the message.
+- Pushing after every keep, or merging the PR → an interaction rollback would then need a force
+  push; the PR is opened once at 3F, and merging it is the user's call.

@@ -131,7 +131,8 @@ On top of it, two loops with different graphs:
   resolves an active merge/rebase on the Deep tier
 - **auto-loop** (`plugins/auto-loop/skills/`): **autocode** runs a hypothesis-driven parallel
   improvement loop (`init --spec` pre-fills it from a design-map spec), publishing its
-  experiment board through loop-report
+  experiment board through loop-report and ending in a PR of the kept changes (one squash
+  commit each, on a worktree branch; `run --pr <base>` / `--no-pr`)
 - **graphify** (`graphify install --platform codex`) stays a standalone install
 
 Native plugin and npx installation availability differs by platform; see the repository README.

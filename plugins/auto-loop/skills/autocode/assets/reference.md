@@ -21,6 +21,7 @@ answer as the recommended option. Loop until every required field is filled.
 | `max_experiments` | "Maximum number of experiments? (0 = unlimited)" | N or 20 | — |
 | `performance_target` | "Target metric value for early termination?" | none | metric.target |
 | `parallel` | "How many experiments may run concurrently? (1–4)" | 2 | — |
+| `pr_base` | "Which branch should the PR of kept changes target? (none = no PR)" | current branch | — |
 
 Follow-ups: a directory target → "Any hot-path files inside it?"; scope ≥ module → "Must public
 interfaces stay compatible?"; system scope → "External systems or data formats involved?";
@@ -61,6 +62,7 @@ spec: {design-map spec path|null}
 - **max_experiments**: {N} (0 = unlimited)
 - **performance_target**: {value|null}
 - **parallel**: {1-4}
+- **pr_base**: {branch|none}
 
 ## Routing
 - **problem_difficulty**: {standard|hard}
@@ -80,7 +82,10 @@ spec: {design-map spec path|null}
 
 ```json
 {
-  "branch": "autocode/2026-09-03-1410",
+  "branch": "autocode/p95-latency",
+  "base_branch": "feat/validator",
+  "pr_base": "feat/validator",
+  "pr_url": null,
   "baseline": 182.4,
   "noise_band": 2.1,
   "best_metric": 182.4,
@@ -165,6 +170,24 @@ Include verbatim in the strategist's first prompt:
 For an Orca worker, append the lifecycle lines (report with `worker_done`, ask with
 `orchestration ask`).
 
+## Keep commit (3D-3)
+
+One squash commit per kept hypothesis, written by the coordinator inside `worktrees/best`:
+
+```
+perf(H007): memoize the compiled validator by schema identity
+
+metric   p95_latency_ms 182.4 -> 147.3 (-19.2%)
+noise    ±2.1
+route    experimenter-fast (haiku/low)
+claim    per-request schema compilation dominates p95
+board    https://claude.ai/code/artifact/… (or the page path)
+```
+
+The subject is `perf(H{id}): ` + the claim's action in one line; the body is the measurement
+the experimenter's commit could not know. `metric` is best-before → measured-after on the
+squashed tree (the re-measure, not the worktree number).
+
 ## Result message (3D-4)
 
 One message per measured result, to the same strategist conversation:
@@ -183,7 +206,8 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 
 ```json
 "run": {
-  "branch": "autocode/2026-09-04-1410", "bestCommit": "a1b2c3d",
+  "branch": "autocode/p95-latency", "bestCommit": "a1b2c3d",
+  "pr": { "base": "feat/validator", "url": null },
   "metric": { "name": "p95_latency_ms", "direction": "lower", "baseline": 182.4, "noiseBand": 2.1, "best": 151.0, "target": 120 },
   "budget": { "done": 6, "max": 20, "parallel": 2, "placement": "local" },
   "strategist": { "tier": "deep", "escalated": false, "consecutiveDiscards": 1 },
@@ -205,6 +229,8 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
   `worker` the model/effort the route resolved to (plus worktree, and the dispatch id for an
   Orca worker). Claims, notes, and obstacles are translated into one plain Korean line each;
   the strategist's English JSON is not pasted through.
+- `run.pr` is `{ base, url }` — `base` the resolved `pr_base` (`"none"` when the PR is off),
+  `url` null until 3F opens it; the page shows the tile only when `run.pr` is present.
 - `run.terminatedReason` is null until 3F, then one of `budget_exhausted`, `target_reached`,
   `exhausted`, `plateau`, or `paused` (3G's measurement pause). `validate.py` refuses an
   `outcome` without it.
@@ -219,7 +245,7 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 ```
 ## Autocode Final Summary
 
-- Branch: autocode/{stamp} @ {best_commit}
+- Branch: autocode/{slug} @ {best_commit} (in .autocode/worktrees/best; your checkout is unchanged)
 - Baseline: {baseline} → Best: {best_metric} ({improvement}%), noise band ±{noise_band}
 - Experiments: {done} ({kept} keep, {discarded} discard, {crashed} crash, {conflict} conflict, {interaction} interaction)
 - Wall clock: {elapsed}; {experiments/hour}; measurement time share {pct}%
@@ -227,8 +253,9 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 - Experimenter routes: fast {n} / default {n} / deep {n}; re-routed {n}
 - Gates caught: {n}
 - Termination: {reason}
+- PR: {url} → {pr_base} | none — nothing kept | skipped (--no-pr) | not opened — {reason}, then `git push -u origin {branch}` + `gh pr create --base {pr_base} --head {branch}`
 
-### Kept changes (in merge order)
+### Kept changes (in commit order)
 1. H{id} — {claim} ({delta}%)
 ...
 
@@ -245,9 +272,10 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 ```
 ## Autocode Status
 
-**Branch**: autocode/{stamp} @ {best_commit}
+**Branch**: autocode/{slug} @ {best_commit} (in .autocode/worktrees/best) → PR base {pr_base|none}
 **Best**: {metric_name} {best_metric} (baseline {baseline}, {improvement}%, noise ±{noise_band})
 **Experiments**: {done}/{max} — {kept} keep · {discarded} discard · {crashed} crash · {conflict} conflict · {interaction} interaction
+**Kept commits**: {kept} on the branch{ · PR {pr_url}}
 **Running** ({n}/{parallel}): H012 (default, 4 min) · H015 (fast, 1 min)
 **Frontier**: {pending count} pending — next: H016 (p1), H013 (p2)
 **Strategist**: {deep|max}{ (escalated)} · consecutive discards {n}
@@ -266,6 +294,7 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 ├── hypotheses/
 │   ├── H001.json                   # strategist output
 │   └── H001.result.json            # experimenter output
+├── worktrees/best/                 # the experiment branch autocode/<slug>; the user's checkout never moves
 ├── worktrees/H001/                 # one git worktree per running experiment (removed after measure)
 ├── lessons/lesson_001.json
 ├── logs/H001.log                   # metric stdout/stderr

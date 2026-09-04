@@ -55,6 +55,13 @@ def validate(d):
     strategist = run.get("strategist") or {}
     if strategist.get("tier") not in TIERS:
         errors.append("run.strategist.tier must be one of " + ", ".join(sorted(TIERS)))
+    pr = run.get("pr")
+    if pr is not None:
+        # Optional; when present it is the resolved PR base plus the URL 3F fills in.
+        if not isinstance(pr, dict) or not isinstance(pr.get("base"), str) or not pr.get("base"):
+            errors.append("run.pr must be an object with a non-empty string base (\"none\" when the PR is off)")
+        elif pr.get("url") is not None and not isinstance(pr.get("url"), str):
+            errors.append("run.pr.url must be a string or null")
     reason = run.get("terminatedReason")
     if reason is not None and reason not in TERMINATED:
         errors.append("run.terminatedReason %r is not one of %s" % (reason, sorted(TERMINATED)))

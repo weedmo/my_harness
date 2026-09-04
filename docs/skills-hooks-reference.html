@@ -245,7 +245,7 @@
   <table>
     <tr><th>스킬</th><th>분류</th><th>역할</th></tr>
     <tr><td class="name">autocode</td><td><span class="tag purple">루프</span></td>
-      <td>가설 주도 병렬 코드 개선 루프. 고비용 티어의 Strategist가 가설(맞으면/틀리면 다음 행동 포함)을 세우고, 난이도별로 라우팅된 Experimenter가 worktree에서 동시에 구현·guard, 측정은 직렬. 결과 1건마다 가설을 갱신하고, 메트릭 추이·프론티어·실험 기록을 담은 실험 보드를 loop-report로 매 상태 변화마다 재발행. 종료는 loop-gates(unlazy) 재검증으로 확정. 서브커맨드: init [--spec &lt;path&gt;] / run / status / resume — <code>--spec</code>은 확정된 design-map spec의 metric 블록으로 인터뷰를 선채운다.</td></tr>
+      <td>가설 주도 병렬 코드 개선 루프. 고비용 티어의 Strategist가 가설(맞으면/틀리면 다음 행동 포함)을 세우고, 난이도별로 라우팅된 Experimenter가 worktree에서 동시에 구현·guard, 측정은 직렬. 결과 1건마다 가설을 갱신하고, 메트릭 추이·프론티어·실험 기록을 담은 실험 보드를 loop-report로 매 상태 변화마다 재발행. 종료는 loop-gates(unlazy) 재검증으로 확정. 채택된 변경은 사용자 checkout을 옮기지 않고 <code>.autocode/worktrees/best</code>의 <code>autocode/&lt;slug&gt;</code> 브랜치에 keep마다 측정치를 담은 squash 커밋 1개로 쌓이고, 종료 시 시작 브랜치로 PR을 연다(병합은 사람). 서브커맨드: init [--spec &lt;path&gt;] / run [--pr &lt;base&gt; | --no-pr] / status / resume — <code>--spec</code>은 확정된 design-map spec의 metric 블록으로 인터뷰를 선채운다.</td></tr>
   </table>
   </div>
 
