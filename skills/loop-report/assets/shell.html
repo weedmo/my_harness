@@ -1,0 +1,826 @@
+<!--
+  loop-report shell: the page every long-running loop publishes its progress
+  into. render.py assembles the final HTML from this file plus a view file and
+  a data JSON file; nothing here is edited by hand.
+
+  The shell owns what every loop shares:
+    - the design system (tokens, both themes, components)
+    - header, summary, the 진행 상황 header (state, percent, elapsed, ETA,
+      current line, blockers), the 결과 panel (files changed, measured from
+      git), the auto-refresh poll, the theme toggle, the modal
+  A view owns the loop's own graph — what runs, in what shape. It is a
+  `<style>` + `<script>` fragment spliced in at the two markers below and it
+  registers itself as `window.LoopView` (see SKILL.md, "The view interface").
+  A page without a view still renders: header, summary, progress, outcome.
+
+  Common data contract (validated by render.py):
+    { title, slug, generated, summary,
+      progress?: { state: running|blocked|done, updated, startedAt, current, note,
+                   blockers?: [ { title, reason, detail } ] },
+      outcome?: { baseRef, headRef, branch, note,
+                  files: [ { path, status, kind, added, removed, note } ] } }
+  Everything else in the data belongs to the view.
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REPLACE: report title</title>
+<style>
+  /* Design tokens follow robodata's frontend (frontend/src/App.css): layered
+     panels rather than one flat field, Catppuccin-family semantic colors at 10%
+     dim backgrounds, and #ff9830 as the accent. Both ends are pulled off the
+     extremes on purpose — a report is read for minutes at a time and either
+     extreme tires the eye — and the dark surfaces sit on Claude's warm base
+     (#262624 ground, #30302e panels), which stays neutral-warm rather than
+     drifting blue the way a cool near-black does. */
+  :root {
+    color-scheme: dark;
+    --background: #262624;
+    --bg-deep: #1f1e1d;
+    --card: #30302e;
+    --secondary: #3a3a38;
+    --foreground: #e3e3e0;
+    --muted-foreground: #a0a09a;
+    --dim: #72726c;
+    --accent: #414140;
+    --border: #3a3a37;
+    --border-strong: #4a4a46;
+    --ring: #5c5c56;
+    --radius: 6px;
+    --radius-md: 5px;
+    --radius-sm: 4px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", "Fira Code", SFMono-Regular, ui-monospace, Menlo, monospace;
+
+    --brand: #ff9830;
+    --brand-bg: rgb(255 152 48 / 0.08);
+    --done: #a6e3a1;
+    --done-bg: rgb(166 227 161 / 0.10);
+    --progress: #89b4fa;
+    --progress-bg: rgb(137 180 250 / 0.10);
+    --escalated: #f9e2af;
+    --escalated-bg: rgb(249 226 175 / 0.10);
+    --edited: #ff9830;
+    --edited-bg: rgb(255 152 48 / 0.10);
+    --flagged: #f38ba8;
+    --flagged-bg: rgb(243 139 168 / 0.10);
+    --muted-bg: rgb(255 255 255 / 0.04);
+    --on-primary: #1f1e1d;
+    --primary-hover: #ffab55;
+  }
+  /* Light is the same system read on paper — a warm yellow-grey stack rather
+     than a white one, so it sits in the same family as the warm dark base, with
+     the pastels darkened to hold contrast on it. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --background: #f6f4ee;
+    --bg-deep: #ece9e0;
+    --card: #fcfbf7;
+    --secondary: #f0ede4;
+    --foreground: #37362f;
+    --muted-foreground: #74726a;
+    --dim: #a09e94;
+    --accent: #e9e5da;
+    --border: #e3dfd4;
+    --border-strong: #cfcabb;
+    --ring: #b3ae9f;
+
+    --brand: #c2610b;
+    --brand-bg: rgb(194 97 11 / 0.09);
+    --done: #40a02b;
+    --done-bg: rgb(64 160 43 / 0.10);
+    --progress: #1e66f5;
+    --progress-bg: rgb(30 102 245 / 0.09);
+    --escalated: #b07d10;
+    --escalated-bg: rgb(176 125 16 / 0.11);
+    --edited: #c2610b;
+    --edited-bg: rgb(194 97 11 / 0.10);
+    --flagged: #c81e3a;
+    --flagged-bg: rgb(200 30 58 / 0.09);
+    --muted-bg: rgb(0 0 0 / 0.04);
+    --on-primary: #ffffff;
+    --primary-hover: #a75209;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px clamp(16px, 3vw, 56px) 72px;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--background); }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ring); }
+  /* The page fills the screen the reader gave it; only running text is held to
+     a readable measure, so a flow can use every pixel it wants. */
+  main { max-width: min(1680px, 100%); margin: 0 auto; }
+  .measure { max-width: 78ch; }
+  .head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
+  .head .titles { min-width: 0; flex: 1 1 auto; }
+  h1 { font-size: 1.6rem; font-weight: 600; line-height: 1.25; margin: 0 0 6px; }
+  #btn-theme, button.ghost {
+    flex: none;
+    font: inherit;
+    font-size: 12px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  #btn-theme:hover, button.ghost:hover { background: var(--accent); border-color: var(--border-strong); color: var(--foreground); }
+  code { font-family: var(--font-mono); font-size: 0.92em; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
+
+  .meta { color: var(--muted-foreground); font-size: 12px; margin: 0; }
+  .summary {
+    max-width: 78ch;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 12px;
+  }
+  .summary .icon { margin-right: 8px; }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    background: var(--muted-bg);
+    color: var(--muted-foreground);
+  }
+  .badge.done { background: var(--done-bg); color: var(--done); }
+  .badge.in-progress { background: var(--progress-bg); color: var(--progress); }
+  .badge.pending, .badge.skipped { background: var(--muted-bg); color: var(--muted-foreground); }
+  .badge.escalated { background: var(--escalated-bg); color: var(--escalated); }
+  .badge.edited { background: var(--edited-bg); color: var(--edited); }
+  .badge.flagged, .badge.blocked { background: var(--flagged-bg); color: var(--flagged); }
+  .badge.gates { background: var(--muted-bg); color: var(--muted-foreground); font-family: var(--font-mono); }
+  .badge.new { background: var(--progress-bg); color: var(--progress); }
+  .badge.redirect { background: var(--edited-bg); color: var(--edited); }
+  .badge.keep { background: var(--muted-bg); color: var(--muted-foreground); }
+  .badge.code { background: var(--progress-bg); color: var(--progress); }
+  .badge.docs { background: var(--done-bg); color: var(--done); }
+  .badge.other { background: var(--muted-bg); color: var(--muted-foreground); }
+  .badge.added { background: var(--done-bg); color: var(--done); }
+  .badge.modified { background: var(--edited-bg); color: var(--edited); }
+  .badge.deleted { background: var(--flagged-bg); color: var(--flagged); }
+  .badge.renamed { background: var(--muted-bg); color: var(--muted-foreground); }
+
+  /* ── live progress ─────────────────────────────────────────── */
+  .progress {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 14px 18px;
+    margin: 14px 0 0;
+  }
+  .progress .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .progress h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+  .progress .stamp { color: var(--muted-foreground); font-size: 11px; margin-left: auto; }
+  .progress .current { max-width: 78ch; margin: 8px 0 0; font-size: 13px; }
+  .progress .current .lbl { color: var(--muted-foreground); margin-right: 6px; }
+  .progress .note { max-width: 78ch; color: var(--muted-foreground); font-size: 12px; margin: 6px 0 0; }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--progress); flex: none;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  .progress.state-blocked .live-dot { background: var(--flagged); animation: none; }
+  .progress.state-done .live-dot { background: var(--done); animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+  .blocker {
+    border: 1px solid color-mix(in srgb, var(--flagged) 40%, var(--border));
+    background: var(--flagged-bg);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-top: 12px;
+  }
+  .blocker .why { font-weight: 600; color: var(--flagged); }
+  .blocker .detail { color: var(--foreground); font-size: 13px; margin: 2px 0 0; }
+
+  /* progress bars + ETA */
+  .bar { height: 6px; border-radius: 999px; background: var(--muted-bg); overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--progress); border-radius: 999px; }
+  .progress.state-blocked .bar > span { background: var(--flagged); }
+  .progress.state-done .bar > span { background: var(--done); }
+  .bar.done > span { background: var(--done); }
+  .overall { margin-top: 12px; }
+  .overall .line { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-bottom: 5px; }
+  .overall .pct { font-size: 22px; font-weight: 700; line-height: 1; color: var(--foreground); font-variant-numeric: tabular-nums; }
+  .overall .eta { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .stage-bar { display: flex; align-items: center; gap: 8px; max-width: 240px; margin-top: 7px; }
+  .stage-bar .bar { height: 4px; flex: 1 1 auto; }
+  .stage-bar .pct { font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; flex: none; }
+
+  .refresh-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-top: 12px; }
+  .refresh-row button.ghost { height: 26px; padding: 0 10px; }
+
+  /* ── flow: columns left to right, nodes inside ──────────────── */
+  .flow-wrap { overflow-x: auto; padding-bottom: 4px; margin-top: 14px; }
+  .flow { display: flex; align-items: flex-start; gap: 0; min-width: min-content; }
+  .wcol { display: flex; flex-direction: column; gap: 8px; flex: 0 1 auto; min-width: 208px; max-width: 320px; }
+  .wcol .whead {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--muted-foreground);
+    padding-bottom: 2px;
+  }
+  .wcol .wdur { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .conn { flex: 0 0 34px; align-self: flex-start; margin-top: 38px; display: flex; align-items: center; justify-content: center; position: relative; height: 20px; }
+  .conn::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    border-top: 1px dashed var(--border-strong);
+  }
+  .conn span { position: relative; color: var(--muted-foreground); font-size: 12px; background: var(--card); padding: 0 3px; }
+  .tnode {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--background);
+    padding: 9px 11px;
+  }
+  .tnode.done, .tnode.keep { border-left-color: var(--done); }
+  .tnode.in-progress, .tnode.running { border-left-color: var(--progress); box-shadow: 0 0 0 1px color-mix(in srgb, var(--progress) 35%, transparent); }
+  .tnode.blocked, .tnode.crash { border-left-color: var(--flagged); box-shadow: 0 0 0 1px color-mix(in srgb, var(--flagged) 35%, transparent); }
+  .tnode .nhead { display: flex; align-items: baseline; gap: 6px; }
+  .tnode .ndot {
+    width: 7px; height: 7px; border-radius: 50%; flex: none;
+    background: var(--border-strong); align-self: center;
+  }
+  .tnode.done .ndot, .tnode.keep .ndot { background: var(--done); }
+  .tnode.in-progress .ndot, .tnode.running .ndot { background: var(--progress); animation: pulse 1.8s ease-in-out infinite; }
+  .tnode.blocked .ndot, .tnode.crash .ndot { background: var(--flagged); }
+  .tnode .nid { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); }
+  .tnode .ntitle { font-size: 13px; font-weight: 500; }
+  .tnode .nmeta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .tnode .nagent {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--muted-foreground);
+    background: var(--muted-bg);
+    border-radius: var(--radius-sm);
+    padding: 1px 6px;
+  }
+  .tnode .nwhy { font-size: 11px; color: var(--flagged); margin: 6px 0 0; }
+  .tnode .nnote { font-size: 11px; color: var(--muted-foreground); margin: 6px 0 0; }
+  .tnode[role="button"] { cursor: pointer; }
+  .tnode[role="button"]:hover { border-color: var(--muted-foreground); }
+
+  /* long flows: finished columns shrink to a stub so the live one stays on screen */
+  .wcol.collapsed { min-width: 74px; max-width: 74px; }
+  .wcol.collapsed .tnode, .wcol.collapsed .why { display: none; }
+  .wcol .wtoggle, .flow-head .wtoggle {
+    font: inherit; font-size: 11px;
+    color: var(--muted-foreground);
+    background: transparent; border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px; cursor: pointer; text-align: left;
+    white-space: pre-line; line-height: 1.35;
+  }
+  .wcol .wtoggle:hover, .flow-head .wtoggle:hover { color: var(--foreground); border-color: var(--muted-foreground); }
+  .flow-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .flow-head .phead { font-size: 12px; color: var(--muted-foreground); }
+  .flow-head .spacer { margin-left: auto; }
+  .why { font-size: 11px; color: var(--muted-foreground); margin: 4px 0 0; }
+
+  /* lanes at the end of a flow (review, PR, …) */
+  .lane { min-width: 230px; max-width: 340px; display: flex; flex-direction: column; gap: 8px; }
+  .lane .lhead { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-foreground); padding-bottom: 2px; }
+  .checkrow { display: flex; align-items: baseline; gap: 8px; font-size: 12px; padding: 3px 0; }
+  .checkrow .cdot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); flex: none; align-self: center; }
+  .checkrow.ok .cdot, .checkrow.done .cdot { background: var(--done); }
+  .checkrow.failed .cdot { background: var(--flagged); }
+  .checkrow.pending .cdot { background: var(--escalated); }
+  .checkrow .cdetail { color: var(--muted-foreground); }
+  .tnode .plink { font-size: 11px; color: var(--progress); word-break: break-all; }
+
+  /* ── detail modal ──────────────────────────────────────────── */
+  .modal-back {
+    position: fixed; inset: 0;
+    background: rgb(0 0 0 / 0.55);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+    z-index: 40;
+  }
+  .modal {
+    width: min(880px, 100%);
+    background: var(--background);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 20px 22px 24px;
+  }
+  .modal .mhead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .modal h2 { font-size: 1.1rem; margin: 0; }
+  .modal .mid { font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); }
+  .modal .mclose { margin-left: auto; font: inherit; font-size: 12px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--muted-foreground); height: 28px; padding: 0 10px; cursor: pointer; }
+  .modal .mclose:hover { background: var(--accent); color: var(--foreground); }
+  .modal .note { color: var(--muted-foreground); font-size: 13px; }
+  .msec { margin-top: 18px; }
+  .msec > h3 {
+    font-size: 11px; font-weight: 600; color: var(--muted-foreground);
+    margin: 0 0 8px; letter-spacing: 0.04em;
+  }
+  .msec ul.plain { margin: 0; padding-left: 18px; font-size: 13px; }
+  .kv { display: grid; grid-template-columns: 96px 1fr; gap: 4px 12px; font-size: 13px; }
+  .kv dt { color: var(--muted-foreground); font-size: 12px; }
+  .kv dd { margin: 0; }
+  .kv dd.mono { font-family: var(--font-mono); font-size: 12px; }
+  .steps { display: flex; flex-direction: column; gap: 6px; }
+  .step { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+  .step .sdot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); flex: none; align-self: center; }
+  .step.done .sdot { background: var(--done); }
+  .step.in-progress .sdot { background: var(--progress); }
+  .step.blocked .sdot, .step.failed .sdot { background: var(--flagged); }
+  .step .snote { color: var(--muted-foreground); font-size: 12px; }
+  .glist { display: flex; flex-direction: column; gap: 8px; }
+  .gate {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .gate.met { border-left-color: var(--done); }
+  .gate.unmet { border-left-color: var(--flagged); }
+  .gate.manual { border-left-color: var(--escalated); }
+  .gate .gid { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); margin-right: 6px; }
+  .gate .gcmd { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); margin-top: 4px; word-break: break-all; }
+  .gate .gcmp { font-size: 12px; margin-top: 4px; }
+  .mfiles { font-size: 12px; }
+  .mfiles div { display: flex; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--border); }
+  .mfiles div:last-child { border-bottom: 0; }
+  .mfiles .p { font-family: var(--font-mono); word-break: break-all; flex: 1 1 auto; }
+
+  /* ── outcome (final run only) ──────────────────────────────── */
+  .outcome {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 16px 18px;
+    margin: 14px 0 0;
+  }
+  .outcome h2 { font-size: 1rem; font-weight: 600; margin: 0 0 2px; }
+  .outcome .refs {
+    color: var(--muted-foreground);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    margin-bottom: 14px;
+  }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .stat {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--background);
+    padding: 8px 14px;
+    min-width: 130px;
+  }
+  .stat .k { color: var(--muted-foreground); font-size: 11px; display: block; margin-bottom: 3px; }
+  .stat .v { font-size: 22px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .stat .sub { color: var(--muted-foreground); font-size: 11px; display: block; }
+  .outcome .note { max-width: 78ch; color: var(--muted-foreground); font-size: 13px; margin: 12px 0 0; }
+  .add { color: var(--done); font-variant-numeric: tabular-nums; }
+  .del { color: var(--flagged); font-variant-numeric: tabular-nums; }
+  .files-wrap { overflow-x: auto; margin-top: 14px; }
+  table.files { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.files th, table.files td {
+    text-align: left;
+    padding: 7px 10px 7px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  table.files tr:last-child td { border-bottom: 0; }
+  table.files th { color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+  table.files td.num { text-align: right; padding-right: 14px; }
+  table.files .path { font-family: var(--font-mono); font-size: 12px; white-space: normal; word-break: break-all; }
+  table.files .fnote { color: var(--muted-foreground); font-size: 12px; font-family: var(--font-sans); white-space: normal; }
+
+  /* ── generic section card for views ────────────────────────── */
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 14px 18px;
+    margin: 14px 0 0;
+  }
+  .panel h2 { font-size: 1rem; font-weight: 600; margin: 0 0 8px; }
+
+  @media (max-width: 640px) {
+    body { padding: 24px 14px 56px; }
+    h1 { font-size: 1.35rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; }
+  }
+</style>
+<!-- view:style -->
+</head>
+<body>
+<main>
+  <div class="head">
+    <div class="titles">
+      <h1 id="r-title"></h1>
+      <div class="meta" id="r-meta"></div>
+    </div>
+    <button id="btn-theme" type="button"></button>
+  </div>
+  <div class="summary"><span class="icon">💡</span><span id="r-summary"></span></div>
+  <div id="r-gate-refresh"></div>
+  <section class="progress" id="r-progress" hidden></section>
+  <section class="outcome" id="r-outcome" hidden></section>
+  <div id="r-view"></div>
+</main>
+
+<script id="graph-data" type="application/json">
+{
+  "title": "REPLACE",
+  "slug": "replace",
+  "generated": "REPLACE",
+  "summary": "REPLACE"
+}
+</script>
+
+<!-- view:script -->
+
+<script>
+(function () {
+  "use strict";
+
+  var data = JSON.parse(document.getElementById("graph-data").textContent);
+  var view = window.LoopView || {};
+  var AUTO_REFRESH_MS = 30000;
+
+  // ── helpers shared with the view ───────────────────────────
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function sinceText(iso) {
+    var then = Date.parse(iso);
+    if (!then) return "";
+    var mins = Math.round((Date.now() - then) / 60000);
+    if (mins < 1) return "방금 갱신";
+    if (mins < 60) return mins + "분 전 갱신";
+    return Math.round(mins / 60) + "시간 전 갱신";
+  }
+  function minutesSince(iso) {
+    var then = Date.parse(iso);
+    return then ? Math.max(0, (Date.now() - then) / 60000) : 0;
+  }
+  function fmtMinutes(m) {
+    m = Math.round(m);
+    if (m < 1) return "1분 미만";
+    if (m < 60) return m + "분";
+    var h = Math.floor(m / 60);
+    return h + "시간" + (m % 60 ? " " + (m % 60) + "분" : "");
+  }
+  function fmtClock(msFromNow) {
+    var d = new Date(Date.now() + msFromNow);
+    return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+  }
+  function bar(pct, cls) {
+    var b = el("div", "bar" + (cls ? " " + cls : ""));
+    var fill = el("span");
+    fill.style.width = Math.max(0, Math.min(100, pct)) + "%";
+    b.appendChild(fill);
+    return b;
+  }
+  // A full 40-hex commit id is noise in a header line; show the short form.
+  function shortRef(ref) {
+    return typeof ref === "string" && /^[0-9a-f]{12,}$/.test(ref) ? ref.slice(0, 7) : ref;
+  }
+  function stat(label, value, sub) {
+    var box = el("div", "stat");
+    box.appendChild(el("span", "k", label));
+    box.appendChild(el("span", "v", value));
+    if (sub) box.appendChild(el("span", "sub", sub));
+    return box;
+  }
+  function section(title) {
+    var s = el("div", "msec");
+    s.appendChild(el("h3", null, title));
+    return s;
+  }
+  function kvRow(dl, key, value, mono) {
+    if (!value) return;
+    dl.appendChild(el("dt", null, key));
+    dl.appendChild(el("dd", mono ? "mono" : null, value));
+  }
+  // A node is a summary; the modal is what actually happened inside it. The
+  // view builds the body; the shell owns open/close and the Esc key.
+  function modal(opts, build) {
+    var back = el("div", "modal-back");
+    var box = el("div", "modal");
+    box.addEventListener("click", function (e) { e.stopPropagation(); });
+    var head = el("div", "mhead");
+    if (opts.id) head.appendChild(el("span", "mid", opts.id));
+    head.appendChild(el("h2", null, opts.title || ""));
+    if (opts.badge) head.appendChild(opts.badge);
+    var close = el("button", "mclose", "닫기 (Esc)");
+    head.appendChild(close);
+    box.appendChild(head);
+    build(box);
+    back.appendChild(box);
+    function dismiss() {
+      if (back.parentNode) back.parentNode.removeChild(back);
+      document.removeEventListener("keydown", onKey);
+    }
+    function onKey(e) { if (e.key === "Escape") dismiss(); }
+    back.addEventListener("click", dismiss);
+    close.addEventListener("click", dismiss);
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(back);
+  }
+  // Make a node open a modal on click / Enter / Space.
+  function clickable(node, title, onOpen) {
+    node.setAttribute("role", "button");
+    node.setAttribute("tabindex", "0");
+    if (title) node.title = title;
+    node.addEventListener("click", onOpen);
+    node.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); }
+    });
+  }
+
+  // ── per-page preferences without storage ───────────────────
+  // The sandboxed artifact frame has no localStorage, and the page reloads
+  // itself while a run is live, so small choices (theme, an open/closed
+  // section) ride in `window.name`, which belongs to the browsing context
+  // rather than the origin and therefore survives the reload.
+  var PREFIX = "loop-report-ui:";
+  function prefs() {
+    var out = {};
+    try {
+      if (window.name.indexOf(PREFIX) === 0) {
+        window.name.slice(PREFIX.length).split(";").forEach(function (kv) {
+          var i = kv.indexOf("=");
+          if (i > 0) out[kv.slice(0, i)] = kv.slice(i + 1);
+        });
+      }
+    } catch (e) {}
+    return out;
+  }
+  function setPref(key, value) {
+    var p = prefs();
+    p[key] = value;
+    try {
+      window.name = PREFIX + Object.keys(p).map(function (k) { return k + "=" + p[k]; }).join(";");
+    } catch (e) {}
+  }
+
+  // ── theme ──────────────────────────────────────────────────
+  // The hash is only honoured for direct links: assigning to it inside Orca's
+  // frame reloads the document and the fragment is dropped, so the toggle
+  // never writes it. `replaceState` throws in an opaque origin — hence the
+  // try/catch around the cosmetic URL update.
+  var THEMES = { dark: { next: "light", label: "☀︎ 라이트" }, light: { next: "dark", label: "☾ 다크" } };
+  function currentTheme() {
+    if (/theme=light/.test(location.hash)) return "light";
+    if (/theme=dark/.test(location.hash)) return "dark";
+    return prefs().theme === "light" ? "light" : "dark";
+  }
+  function applyTheme(name) {
+    document.documentElement.setAttribute("data-theme", name);
+    var btn = document.getElementById("btn-theme");
+    btn.textContent = THEMES[name].label;
+    btn.setAttribute("aria-label", name === "dark" ? "라이트 테마로 전환" : "다크 테마로 전환");
+  }
+  applyTheme(currentTheme());
+  window.addEventListener("hashchange", function () { applyTheme(currentTheme()); });
+  document.getElementById("btn-theme").addEventListener("click", function () {
+    var next = THEMES[currentTheme()].next;
+    setPref("theme", next);
+    try { history.replaceState(null, "", "#theme=" + next); } catch (e) {}
+    applyTheme(next);
+  });
+
+  var ctx = {
+    data: data, el: el, bar: bar, stat: stat, section: section, kvRow: kvRow,
+    modal: modal, clickable: clickable, shortRef: shortRef,
+    sinceText: sinceText, minutesSince: minutesSince, fmtMinutes: fmtMinutes, fmtClock: fmtClock,
+    prefs: prefs, setPref: setPref,
+    PROGRESS_STATE_LABEL: { "running": "진행 중", "blocked": "막힘", "done": "완료" }
+  };
+
+  // ── header ─────────────────────────────────────────────────
+  var kind = view.kind || "진행 보고";
+  document.title = data.title + " — " + kind;
+  document.getElementById("r-title").textContent = data.title;
+  var metaExtra = typeof view.meta === "function" ? view.meta(data, ctx) : null;
+  document.getElementById("r-meta").textContent =
+    kind + " — " + data.generated + (metaExtra ? " · " + metaExtra : "");
+  document.getElementById("r-summary").textContent = data.summary;
+
+  // ── progress ───────────────────────────────────────────────
+  // The header answers "얼마나 진행됐고 얼마나 남았나" before anything else on
+  // the page. Percent and remaining time come from the view (only it knows
+  // what a unit of work is); elapsed comes from progress.startedAt.
+  function renderOverall(host, state, p) {
+    if (!p || typeof p.percent !== "number") return;
+    var pct = Math.max(0, Math.min(100, Math.round(p.percent)));
+    var box = el("div", "overall");
+    var line = el("div", "line");
+    line.appendChild(el("span", "pct", pct + "%"));
+    if (data.progress && data.progress.startedAt) {
+      line.appendChild(el("span", null, "경과 " + fmtMinutes(minutesSince(data.progress.startedAt))));
+    }
+    if (state !== "done" && p.remainingMin > 0) {
+      line.appendChild(el("span", "eta",
+        "남은 예상 " + fmtMinutes(p.remainingMin) + " · 완료 예정 " + fmtClock(p.remainingMin * 60000)));
+    }
+    box.appendChild(line);
+    box.appendChild(bar(pct, state === "done" ? "done" : ""));
+    host.appendChild(box);
+  }
+
+  var progressShown = false;
+  function renderProgress() {
+    var pr = data.progress;
+    var p = typeof view.progress === "function" ? view.progress(data, ctx) : null;
+    if (!pr && !p) return;
+    progressShown = true;
+    var host = document.getElementById("r-progress");
+    var state = (pr && pr.state) || "running";
+    host.className = "progress state-" + state;
+
+    var top = el("div", "top");
+    top.appendChild(el("span", "live-dot"));
+    top.appendChild(el("h2", null, "진행 상황 — " + (ctx.PROGRESS_STATE_LABEL[state] || state) +
+      (p && p.count ? " (" + p.count + ")" : "")));
+    if (pr && pr.updated) top.appendChild(el("span", "stamp", sinceText(pr.updated)));
+    host.appendChild(top);
+
+    renderOverall(host, state, p);
+
+    if (pr && pr.current) {
+      var cur = el("p", "current");
+      cur.appendChild(el("span", "lbl", "지금:"));
+      cur.appendChild(el("span", null, pr.current));
+      host.appendChild(cur);
+    }
+    if (pr && pr.note) host.appendChild(el("p", "note", pr.note));
+
+    // Blockers: the shell's own list plus whatever the view derives. Each one
+    // carries the checkable fact — "막혔습니다" with no detail is the failure
+    // this box exists to prevent.
+    var stuck = ((pr && pr.blockers) || []).concat(
+      typeof view.blockers === "function" ? (view.blockers(data, ctx) || []) : []);
+    stuck.forEach(function (b) {
+      var box = el("div", "blocker");
+      box.appendChild(el("div", "why", "막힘 — " + (b.title || "")));
+      box.appendChild(el("p", "detail", (b.reason || "이유 미기재") + (b.detail ? ": " + b.detail : "")));
+      host.appendChild(box);
+    });
+
+    if (typeof view.renderProgress === "function") view.renderProgress(host, ctx);
+
+    if (state !== "done") startPolling(host);
+    host.hidden = false;
+  }
+
+  // The page cannot be pushed to, so it pulls: until the run reports done it
+  // reloads itself to pick up the regenerated version — blocked runs keep
+  // polling too, since a retry can clear the blocker, and so does a page with
+  // no progress yet (a gate), so a reader who leaves it open sees the run
+  // start. Never while the reader has unsaved edits in the view.
+  function startPolling(host) {
+    var auto = true;
+    var row = el("div", "refresh-row");
+    var btn = el("button", "ghost", "자동 새로고침 끄기");
+    var label = el("span", null, AUTO_REFRESH_MS / 1000 + "초마다 최신 상태를 다시 불러옵니다");
+    btn.addEventListener("click", function () {
+      auto = !auto;
+      btn.textContent = auto ? "자동 새로고침 끄기" : "자동 새로고침 켜기";
+      label.textContent = auto
+        ? AUTO_REFRESH_MS / 1000 + "초마다 최신 상태를 다시 불러옵니다"
+        : "자동 새로고침이 꺼져 있습니다";
+    });
+    row.appendChild(btn);
+    row.appendChild(label);
+    host.appendChild(row);
+    // Orca's built-in browser ignores script-initiated reloads of a file://
+    // page entirely; there the agent pushes the regeneration with
+    // `orca reload --page <id>` instead, and this timer is a harmless no-op.
+    setInterval(function () {
+      var hold = typeof view.hasUnsavedEdits === "function" && view.hasUnsavedEdits();
+      if (auto && !hold) location.reload();
+    }, AUTO_REFRESH_MS);
+  }
+
+  // ── outcome panel (final run only) ─────────────────────────
+  var KIND_LABEL = { "code": "코드", "docs": "문서", "other": "기타" };
+  var FILE_STATUS_LABEL = { "added": "생성", "modified": "수정", "deleted": "삭제", "renamed": "이름 변경" };
+  var KIND_ORDER = { "code": 0, "docs": 1, "other": 2 };
+
+  function lineCell(row, n, cls) {
+    var td = el("td", "num");
+    td.appendChild(el("span", cls, n ? (cls === "add" ? "+" : "−") + n : "—"));
+    row.appendChild(td);
+  }
+
+  function renderOutcome() {
+    var o = data.outcome;
+    if (!o) return;
+    var host = document.getElementById("r-outcome");
+    host.appendChild(el("h2", null, "결과 — 이번 실행이 바꾼 것"));
+    var refs = [];
+    if (o.branch) refs.push(o.branch);
+    if (o.baseRef && o.headRef) refs.push(shortRef(o.baseRef) + " → " + shortRef(o.headRef));
+    if (refs.length) host.appendChild(el("div", "refs", refs.join("  ·  ")));
+
+    if (typeof view.renderOutcome === "function") view.renderOutcome(host, ctx);
+
+    var files = (o.files || []).slice().sort(function (a, b) {
+      var ka = KIND_ORDER[a.kind] === undefined ? 3 : KIND_ORDER[a.kind];
+      var kb = KIND_ORDER[b.kind] === undefined ? 3 : KIND_ORDER[b.kind];
+      if (ka !== kb) return ka - kb;
+      return ((b.added || 0) + (b.removed || 0)) - ((a.added || 0) + (a.removed || 0));
+    });
+    if (files.length) {
+      function tally(pred) {
+        return files.filter(pred).reduce(function (acc, f) {
+          acc.files += 1;
+          acc.added += f.added || 0;
+          acc.removed += f.removed || 0;
+          return acc;
+        }, { files: 0, added: 0, removed: 0 });
+      }
+      function byKind(kind) { return tally(function (f) { return f.kind === kind; }); }
+      function byStatus(status) { return files.filter(function (f) { return f.status === status; }).length; }
+      function lines(t) { return "+" + t.added + " / −" + t.removed; }
+
+      var stats = el("div", "stats");
+      stats.appendChild(stat("파일",
+        byStatus("added") + "개 생성 · " + byStatus("modified") + "개 수정",
+        byStatus("deleted") ? byStatus("deleted") + "개 삭제" : ""));
+      ["code", "docs", "other"].forEach(function (kind) {
+        var t = byKind(kind);
+        if (!t.files) return;
+        stats.appendChild(stat(KIND_LABEL[kind], lines(t), t.files + "개 파일"));
+      });
+      host.appendChild(stats);
+    }
+    if (o.note) host.appendChild(el("p", "note", o.note));
+
+    if (files.length) {
+      var table = el("table", "files");
+      var headRow = el("tr");
+      ["파일", "구분", "상태", "추가", "삭제"].forEach(function (h) {
+        headRow.appendChild(el("th", null, h));
+      });
+      table.appendChild(headRow);
+      files.forEach(function (f) {
+        var row = el("tr");
+        var pathCell = el("td", "path", f.path);
+        if (f.note) {
+          pathCell.appendChild(document.createElement("br"));
+          pathCell.appendChild(el("span", "fnote", f.note));
+        }
+        row.appendChild(pathCell);
+        var kindCell = el("td");
+        kindCell.appendChild(el("span", "badge " + (KIND_LABEL[f.kind] ? f.kind : "other"),
+          KIND_LABEL[f.kind] || f.kind || "기타"));
+        row.appendChild(kindCell);
+        var statusCell = el("td");
+        statusCell.appendChild(el("span", "badge " + (FILE_STATUS_LABEL[f.status] ? f.status : "renamed"),
+          FILE_STATUS_LABEL[f.status] || f.status || "수정"));
+        row.appendChild(statusCell);
+        lineCell(row, f.added || 0, "add");
+        lineCell(row, f.removed || 0, "del");
+        table.appendChild(row);
+      });
+      var wrap = el("div", "files-wrap");
+      wrap.appendChild(table);
+      host.appendChild(wrap);
+    }
+    host.hidden = false;
+  }
+
+  renderProgress();
+  renderOutcome();
+  if (typeof view.render === "function") view.render(document.getElementById("r-view"), ctx);
+  // No progress section (a gate page): the run will republish once it starts.
+  if (!progressShown) startPolling(document.getElementById("r-gate-refresh"));
+})();
+</script>
+</body>
+</html>

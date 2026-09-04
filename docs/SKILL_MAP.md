@@ -110,16 +110,29 @@ They are different axes, not synonyms.
 
 ## 5. Cross-agent loop skills
 
-The matt-loop package installs on Codex, OpenCode, Claude Code, and Gemini CLI.
-Codex routes task tiers directly with subagent model/effort overrides (`gpt-5.6-luna`/low, `gpt-5.6-terra`/medium, `gpt-5.6-sol`/high, and `gpt-5.6-sol`/max for Deep retries). OpenCode and Claude Code use packaged routing agents (`matt-fast` / `matt-default` / `matt-deep`, plus `matt-max` fable/xhigh on Claude Code):
+Long-running delegated loops share one runtime, shipped in **weed-harness** (repo root
+`skills/`, installed on every platform):
 
-- **matt-auto** — conducts Matt Pocock's main flow (interview → spec → tickets → implementation → optional PR via `--dev`/`--main`) with human-in-the-loop gates; `--orca` runs the ticket DAG as parallel Orca-orchestrated workers
-- **pr-babysit** — shepherds one open PR through review and CI without merging it
-- **resolving-merge-conflicts** — resolves an active merge/rebase; direct Codex / OpenCode / Claude Code use routes to a deep model
-- **graphify** (`graphify install --platform codex`)
+- **loop-report** — the live progress page of a run and its delivery (Orca artifact link →
+  Orca browser tab → path); each loop plugs in its own view
+- **model-routing** — the one table of Fast / Default / Deep / Max tiers with the model and
+  reasoning-effort pair per platform (Codex `spawn_agent`, Claude Code agents, OpenCode, Orca
+  `worker-start` flags) and the escalation ladder
+- **loop-gates** — how the loops use the upstream unlazy skill so "done" is a re-verified
+  ledger, not a report
 
-These live in `plugins/matt-loop/skills/`. Native plugin and npx installation
-availability differs by platform; see the repository README.
+On top of it, two loops with different graphs:
+
+- **matt-loop** (`plugins/matt-loop/skills/`): **matt-auto** conducts Matt Pocock's main flow
+  (interview → spec → tickets → implementation → optional PR via `--dev`/`--main`), publishing
+  its decision graph through loop-report and running independent tickets as parallel Orca
+  workers; **pr-babysit** shepherds one open PR without merging; **resolving-merge-conflicts**
+  resolves an active merge/rebase on the Deep tier
+- **auto-loop** (`plugins/auto-loop/skills/`): **autocode** runs a hypothesis-driven parallel
+  improvement loop, publishing its experiment board through loop-report
+- **graphify** (`graphify install --platform codex`) stays a standalone install
+
+Native plugin and npx installation availability differs by platform; see the repository README.
 
 ---
 

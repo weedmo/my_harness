@@ -1,0 +1,644 @@
+<!--
+  autocode view for the loop-report shell: the experiment board of a
+  hypothesis-driven improvement run. render.py splices the <style> and
+  <script> below into the shell; this file is never opened on its own. It
+  registers window.LoopView (see loop-report's SKILL.md, "The view interface").
+
+  View data (validated by validate.py next to this file):
+    { run: { branch, bestCommit,
+             metric: { name, direction: lower|higher, baseline, noiseBand, best, target },
+             budget: { done, max, parallel, placement },
+             strategist: { tier: deep|max, escalated, consecutiveDiscards },
+             terminatedReason: null | budget_exhausted | target_reached | exhausted | plateau | paused },
+      hypotheses: [ { id, seq?, claim, experiment, expectedDelta,
+                      status: pending|running|measured|keep|discard|crash|conflict|interaction|cancelled,
+                      difficulty: fast|default|deep, route,
+                      worker: { model, effort, worktree, dispatchId },
+                      touches, dependsOn, priority,
+                      metric, delta, commit, startedAt, measuredAt,
+                      ifConfirmed, ifRefuted, note, obstacle, rerouted } ] }
+  `seq` is the measurement order and only measured hypotheses carry one;
+  `delta` is the signed percent against the best at the time of measurement.
+-->
+<style>
+  /* ── metric strip + strategist tile ────────────────────────── */
+  .ac-strip { margin-top: 14px; }
+  .ac-strip .stat .sub .badge { margin-left: 6px; vertical-align: 1px; }
+  .ac-strip .stat .v.imp { color: var(--done); }
+  .ac-strip .stat .v.worse { color: var(--flagged); }
+
+  /* ── trend chart (inline SVG, no library) ──────────────────── */
+  .ac-chart { margin-top: 14px; max-width: 960px; }
+  .ac-chart .chead { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px; }
+  .ac-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .ac-chart .grid { stroke: var(--border); stroke-width: 1; }
+  .ac-chart .axis { stroke: var(--border-strong); stroke-width: 1; }
+  .ac-chart .tick { fill: var(--muted-foreground); font-size: 11px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+  .ac-chart .ylabel { fill: var(--muted-foreground); font-size: 11px; font-family: var(--font-mono); }
+  .ac-chart .best-line { fill: none; stroke: var(--progress); stroke-width: 1.6; }
+  .ac-chart .base-line { stroke: var(--muted-foreground); stroke-width: 1; stroke-dasharray: 4 3; }
+  .ac-chart .target-line { stroke: var(--brand); stroke-width: 1; stroke-dasharray: 5 3; }
+  .ac-chart .ref-label { font-size: 10.5px; font-family: var(--font-sans); }
+  .ac-chart .ref-label.base { fill: var(--muted-foreground); }
+  .ac-chart .ref-label.target { fill: var(--brand); }
+  .ac-chart .pt { stroke: var(--background); stroke-width: 1.5; }
+  .ac-chart .pt.keep { fill: var(--done); }
+  .ac-chart .pt.discard { fill: var(--muted-foreground); }
+  .ac-chart .pt.crash, .ac-chart .pt.conflict, .ac-chart .pt.interaction { fill: var(--flagged); }
+  .ac-chart .pt.crash { stroke: var(--flagged); fill: none; }
+  .ac-chart .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11px; color: var(--muted-foreground); margin-top: 6px; }
+  .ac-chart .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .ac-chart .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+  .ac-chart .legend i.keep { background: var(--done); }
+  .ac-chart .legend i.discard { background: var(--muted-foreground); }
+  .ac-chart .legend i.flag { background: var(--flagged); }
+  .ac-chart .legend i.line { width: 14px; height: 0; border-radius: 0; border-top: 2px solid var(--progress); }
+  .ac-chart .legend i.base { width: 14px; height: 0; border-radius: 0; border-top: 1px dashed var(--muted-foreground); }
+  .ac-chart .legend i.target { width: 14px; height: 0; border-radius: 0; border-top: 1px dashed var(--brand); }
+  .ac-empty { color: var(--muted-foreground); font-size: 12px; margin: 12px 0 0; }
+
+  /* ── frontier nodes: statuses the shell does not colour ─────── */
+  .tnode.measured { border-left-color: var(--progress); }
+  .tnode.measured .ndot { background: var(--progress); }
+  .tnode.conflict, .tnode.interaction { border-left-color: var(--escalated); }
+  .tnode.conflict .ndot, .tnode.interaction .ndot { background: var(--escalated); }
+  .tnode.cancelled { opacity: 0.6; }
+  .tnode .ndelta { font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .ndelta.up { color: var(--done); }
+  .ndelta.down { color: var(--flagged); }
+  .ndelta.flat { color: var(--muted-foreground); }
+  .wcol .wstub {
+    font-size: 11px; color: var(--muted-foreground);
+    border: 1px dashed var(--border-strong); border-radius: var(--radius-sm);
+    padding: 6px 8px;
+  }
+  .wcol .wempty { font-size: 11px; color: var(--dim); padding: 6px 0; }
+
+  /* ── outcome: kept changes ─────────────────────────────────── */
+  .ac-kept { margin-top: 14px; }
+  .ac-kept h3 { font-size: 11px; font-weight: 600; color: var(--muted-foreground); margin: 0 0 6px; letter-spacing: 0.04em; }
+  .ac-kept ol { margin: 0; padding-left: 22px; font-size: 13px; max-width: 78ch; }
+  .ac-kept li { padding: 2px 0; }
+  .ac-kept .hid { font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); margin-right: 6px; }
+
+  /* ── experiment log table ──────────────────────────────────── */
+  .ac-log-wrap { overflow-x: auto; }
+  table.ac-log { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.ac-log th, table.ac-log td {
+    text-align: left;
+    padding: 7px 12px 7px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  table.ac-log tr:last-child td { border-bottom: 0; }
+  table.ac-log th { color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+  table.ac-log td.num { text-align: right; padding-right: 18px; font-variant-numeric: tabular-nums; }
+  table.ac-log th.num { text-align: right; padding-right: 18px; }
+  table.ac-log .mono { font-family: var(--font-mono); font-size: 12px; }
+  table.ac-log .claim { white-space: normal; min-width: 260px; max-width: 520px; }
+  table.ac-log .lnote { color: var(--muted-foreground); font-size: 12px; white-space: normal; min-width: 180px; max-width: 360px; }
+  table.ac-log tbody tr[role="button"] { cursor: pointer; }
+  table.ac-log tbody tr[role="button"]:hover td { background: var(--muted-bg); }
+  .ac-frontier { margin-top: 14px; }
+  .ac-frontier h3 { font-size: 11px; font-weight: 600; color: var(--muted-foreground); margin: 0 0 6px; letter-spacing: 0.04em; }
+  .ac-frontier .frow { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted-foreground); padding: 3px 0; align-items: baseline; }
+  .ac-frontier .frow .hid { font-family: var(--font-mono); color: var(--foreground); }
+  .ac-frontier .frow .fclaim { flex-basis: 100%; }
+  @media (min-width: 900px) { .ac-frontier .frow .fclaim { flex-basis: auto; flex: 1 1 auto; min-width: 0; } }
+</style>
+<script>
+window.LoopView = (function () {
+  "use strict";
+
+  var data = JSON.parse(document.getElementById("graph-data").textContent);
+  var run = data.run || {};
+  var metric = run.metric || {};
+  var budget = run.budget || {};
+  var strategist = run.strategist || {};
+  var hyps = data.hypotheses || [];
+  var el, minutesSince, fmtMinutes;
+
+  var STATUS_LABEL = {
+    "pending": "대기", "running": "실행 중", "measured": "측정 중", "keep": "채택",
+    "discard": "기각", "crash": "크래시", "conflict": "충돌", "interaction": "상호작용",
+    "cancelled": "취소"
+  };
+  // Each status maps onto a shell badge colour so the page stays one system.
+  var BADGE_CLASS = {
+    "pending": "pending", "running": "in-progress", "measured": "in-progress", "keep": "done",
+    "discard": "skipped", "crash": "flagged", "conflict": "escalated", "interaction": "escalated",
+    "cancelled": "skipped"
+  };
+  var TERMINATED_LABEL = {
+    "budget_exhausted": "예산 소진", "target_reached": "목표 달성", "exhausted": "가설 소진",
+    "plateau": "정체", "paused": "일시 중지"
+  };
+  var TIER_LABEL = { "deep": "딥", "max": "맥스" };
+
+  // ── numbers ─────────────────────────────────────────────────
+  function isNum(v) { return typeof v === "number" && isFinite(v); }
+  function fmtNum(v) {
+    if (!isNum(v)) return "—";
+    var a = Math.abs(v);
+    var d = a >= 1000 ? 0 : a >= 100 ? 1 : 2;
+    return d ? v.toFixed(d).replace(/\.?0+$/, "") : v.toFixed(0);
+  }
+  function fmtPct(v) {
+    if (!isNum(v)) return "";
+    return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1) + "%";
+  }
+  function fmtTime(iso) {
+    var t = iso ? Date.parse(iso) : NaN;
+    if (!t) return "";
+    var d = new Date(t);
+    return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+  }
+  function lower() { return metric.direction !== "higher"; }
+  // Percent improvement of `v` against `from`, positive when it is better in
+  // the configured direction.
+  function improvement(from, v) {
+    if (!isNum(from) || !isNum(v) || from === 0) return null;
+    var raw = (v - from) / Math.abs(from) * 100;
+    return lower() ? -raw : raw;
+  }
+  // A delta is the raw signed percent of the metric; whether that is good
+  // depends on the direction.
+  function deltaClass(d) {
+    if (!isNum(d) || d === 0) return "flat";
+    var good = lower() ? d < 0 : d > 0;
+    return good ? "up" : "down";
+  }
+  function deltaSpan(d) {
+    return el("span", "ndelta " + deltaClass(d), isNum(d) ? fmtPct(d) : "—");
+  }
+
+  // ── hypothesis sets ─────────────────────────────────────────
+  function measured() {
+    return hyps.filter(function (h) { return isNum(h.seq); })
+      .sort(function (a, b) { return a.seq - b.seq; });
+  }
+  function byStatus(st) { return hyps.filter(function (h) { return h.status === st; }); }
+  function count(st) { return byStatus(st).length; }
+  function bestValue() {
+    if (isNum(metric.best)) return metric.best;
+    var best = metric.baseline;
+    measured().forEach(function (h) { if (h.status === "keep" && isNum(h.metric)) best = h.metric; });
+    return best;
+  }
+  function median(xs) {
+    if (!xs.length) return 0;
+    var s = xs.slice().sort(function (a, b) { return a - b; });
+    var m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function durationMin(h) {
+    var a = Date.parse(h.startedAt), b = Date.parse(h.measuredAt);
+    return a && b && b >= a ? (b - a) / 60000 : null;
+  }
+  function agentLabel(h) {
+    var parts = [];
+    if (h.route) parts.push(h.route);
+    var w = h.worker || {};
+    var ml = [w.model, w.effort].filter(Boolean).join("/");
+    if (ml) parts.push(ml);
+    return parts.join(" · ");
+  }
+  function statusBadge(st) {
+    return el("span", "badge " + (BADGE_CLASS[st] || "pending"), STATUS_LABEL[st] || st || "");
+  }
+
+  // ── hypothesis detail modal ─────────────────────────────────
+  function openHyp(h, ctx) {
+    var st = h.status || "pending";
+    ctx.modal({ id: h.id || "", title: h.claim || "", badge: statusBadge(st) }, function (box) {
+      var hs = ctx.section("가설");
+      var dl = el("dl", "kv");
+      ctx.kvRow(dl, "실험", h.experiment);
+      ctx.kvRow(dl, "예상 효과", h.expectedDelta);
+      hs.appendChild(dl);
+      box.appendChild(hs);
+
+      var sc = ctx.section("범위");
+      var dl2 = el("dl", "kv");
+      ctx.kvRow(dl2, "파일", (h.touches || []).join(", "), true);
+      ctx.kvRow(dl2, "선행", (h.dependsOn || []).join(", "), true);
+      ctx.kvRow(dl2, "우선순위", isNum(h.priority) ? "p" + h.priority : "");
+      ctx.kvRow(dl2, "난이도", h.difficulty);
+      sc.appendChild(dl2);
+      box.appendChild(sc);
+
+      var who = ctx.section("워커");
+      var dl3 = el("dl", "kv");
+      var w = h.worker || {};
+      ctx.kvRow(dl3, "라우트", h.route + (h.rerouted ? " (재라우팅)" : ""));
+      ctx.kvRow(dl3, "모델", [w.model, w.effort].filter(Boolean).join(" / "), true);
+      ctx.kvRow(dl3, "워크트리", w.worktree, true);
+      ctx.kvRow(dl3, "디스패치", w.dispatchId, true);
+      var timing = [];
+      if (h.startedAt) timing.push("시작 " + fmtTime(h.startedAt));
+      if (h.measuredAt) timing.push("측정 " + fmtTime(h.measuredAt));
+      var dur = durationMin(h);
+      if (dur !== null) timing.push("소요 " + fmtMinutes(dur));
+      else if (h.startedAt && (st === "running" || st === "measured")) timing.push("경과 " + fmtMinutes(minutesSince(h.startedAt)));
+      ctx.kvRow(dl3, "시간", timing.join(" · "));
+      who.appendChild(dl3);
+      box.appendChild(who);
+
+      if (isNum(h.metric) || isNum(h.delta) || h.commit || h.note || h.obstacle) {
+        var rs = ctx.section("결과");
+        var dl4 = el("dl", "kv");
+        ctx.kvRow(dl4, "측정값", isNum(h.metric) ? fmtNum(h.metric) + " " + (metric.name || "") : "", true);
+        if (isNum(h.delta)) {
+          dl4.appendChild(el("dt", null, "Δ"));
+          var dd = el("dd", "mono");
+          dd.appendChild(deltaSpan(h.delta));
+          dd.appendChild(document.createTextNode(" (측정 당시 최고 대비)"));
+          dl4.appendChild(dd);
+        }
+        ctx.kvRow(dl4, "커밋", h.commit, true);
+        ctx.kvRow(dl4, "메모", h.note);
+        ctx.kvRow(dl4, "장애", h.obstacle);
+        rs.appendChild(dl4);
+        box.appendChild(rs);
+      }
+
+      [["확정 시", h.ifConfirmed], ["반증 시", h.ifRefuted]].forEach(function (pair) {
+        if (!pair[1] || !pair[1].length) return;
+        var s = ctx.section(pair[0]);
+        var ul = el("ul", "plain");
+        pair[1].forEach(function (t) { ul.appendChild(el("li", null, t)); });
+        s.appendChild(ul);
+        box.appendChild(s);
+      });
+    });
+  }
+
+  // ── metric strip ────────────────────────────────────────────
+  function renderStrip(host, ctx) {
+    var stats = el("div", "stats ac-strip");
+    var base = metric.baseline, best = bestValue();
+    var imp = improvement(base, best);
+    stats.appendChild(ctx.stat("기준 " + (metric.name || ""), fmtNum(base),
+      lower() ? "낮을수록 좋음" : "높을수록 좋음"));
+    var bestTile = ctx.stat("최고", fmtNum(best), imp === null ? "" : "기준 대비 " + fmtPct(imp) + " 개선");
+    if (imp !== null && imp !== 0) bestTile.querySelector(".v").classList.add(imp > 0 ? "imp" : "worse");
+    stats.appendChild(bestTile);
+    stats.appendChild(ctx.stat("노이즈 밴드", "±" + fmtNum(metric.noiseBand),
+      "이 폭을 넘어야 채택"));
+    if (isNum(metric.target)) {
+      var gap = lower() ? best - metric.target : metric.target - best;
+      stats.appendChild(ctx.stat("목표", fmtNum(metric.target),
+        gap <= 0 ? "달성" : "남은 거리 " + fmtNum(gap)));
+    } else {
+      stats.appendChild(ctx.stat("목표", "없음", "예산 또는 정체로 종료"));
+    }
+    var tier = ctx.stat("전략가", TIER_LABEL[strategist.tier] || strategist.tier || "—",
+      "연속 기각 " + (strategist.consecutiveDiscards || 0));
+    if (strategist.escalated) tier.querySelector(".sub").appendChild(el("span", "badge escalated", "에스컬레이션됨"));
+    stats.appendChild(tier);
+    host.appendChild(stats);
+  }
+
+  // ── trend chart ─────────────────────────────────────────────
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs, text) {
+    var n = document.createElementNS(SVG_NS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function niceStep(range, n) {
+    var raw = range / Math.max(1, n);
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var r = raw / mag;
+    var s = r >= 5 ? 10 : r >= 2 ? 5 : r >= 1 ? 2 : 1;
+    return s * mag;
+  }
+  function renderChart(host) {
+    var ms = measured();
+    if (!ms.length) {
+      host.appendChild(el("p", "ac-empty", "아직 측정된 실험이 없습니다 — 첫 측정이 끝나면 추이가 여기에 그려집니다."));
+      return;
+    }
+    var W = 960, H = 240, L = 62, R = 18, T = 16, B = 30;
+    var pw = W - L - R, ph = H - T - B;
+    var base = metric.baseline;
+
+    // Series: the best-so-far step starts at the baseline (seq 0) and moves on each keep.
+    var best = base, steps = [{ x: 0, y: base }], pts = [];
+    ms.forEach(function (h) {
+      if (h.status === "keep" && isNum(h.metric)) best = h.metric;
+      pts.push({ h: h, x: h.seq, y: isNum(h.metric) ? h.metric : best });
+      steps.push({ x: h.seq, y: best });
+    });
+    var ys = [base].concat(pts.map(function (p) { return p.y; }));
+    if (isNum(metric.target)) ys.push(metric.target);
+    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    var pad = (yMax - yMin || Math.abs(yMax) || 1) * 0.12;
+    yMin -= pad; yMax += pad;
+    var xMax = Math.max(1, ms[ms.length - 1].seq);
+    function sx(x) { return L + (x / xMax) * pw; }
+    function sy(y) { return T + (1 - (y - yMin) / (yMax - yMin)) * ph; }
+
+    var wrap = el("div", "ac-chart");
+    var head = el("div", "chead");
+    head.appendChild(el("span", null, "측정 추이"));
+    head.appendChild(el("span", "ylabel", metric.name || ""));
+    wrap.appendChild(head);
+    var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+      "aria-label": (metric.name || "metric") + " 측정 추이" });
+
+    // y grid + ticks
+    var step = niceStep(yMax - yMin, 4);
+    for (var v = Math.ceil(yMin / step) * step; v <= yMax + 1e-9; v += step) {
+      var yy = sy(v);
+      svg.appendChild(svgEl("line", { "class": "grid", x1: L, x2: W - R, y1: yy, y2: yy }));
+      svg.appendChild(svgEl("text", { "class": "tick", x: L - 8, y: yy + 4, "text-anchor": "end" }, fmtNum(v)));
+    }
+    // x ticks: every seq, thinned when there are many
+    var every = Math.max(1, Math.ceil(xMax / 16));
+    for (var xi = 0; xi <= xMax; xi += every) {
+      svg.appendChild(svgEl("text", { "class": "tick", x: sx(xi), y: H - B + 16, "text-anchor": "middle" }, xi === 0 ? "기준" : "#" + xi));
+    }
+    svg.appendChild(svgEl("line", { "class": "axis", x1: L, x2: W - R, y1: T + ph, y2: T + ph }));
+    svg.appendChild(svgEl("line", { "class": "axis", x1: L, x2: L, y1: T, y2: T + ph }));
+
+    // reference lines
+    var bl = svgEl("line", { "class": "base-line", x1: L, x2: W - R, y1: sy(base), y2: sy(base) });
+    bl.appendChild(svgEl("title", {}, "기준 " + fmtNum(base)));
+    svg.appendChild(bl);
+    svg.appendChild(svgEl("text", { "class": "ref-label base", x: W - R, y: sy(base) - 4, "text-anchor": "end" }, "기준 " + fmtNum(base)));
+    if (isNum(metric.target)) {
+      var tl = svgEl("line", { "class": "target-line", x1: L, x2: W - R, y1: sy(metric.target), y2: sy(metric.target) });
+      tl.appendChild(svgEl("title", {}, "목표 " + fmtNum(metric.target)));
+      svg.appendChild(tl);
+      // The latest points crowd the right end as the run closes in on the
+      // target, so its label sits at the left where nothing lands early.
+      svg.appendChild(svgEl("text", { "class": "ref-label target", x: L + 6, y: sy(metric.target) - 4 }, "목표 " + fmtNum(metric.target)));
+    }
+
+    // best-so-far step line (step-after)
+    var d = "";
+    steps.forEach(function (p, i) {
+      if (!i) { d += "M" + sx(p.x) + " " + sy(p.y); return; }
+      d += " H" + sx(p.x) + " V" + sy(p.y);
+    });
+    var path = svgEl("path", { "class": "best-line", d: d });
+    path.appendChild(svgEl("title", {}, "최고 추이 (채택될 때마다 갱신)"));
+    svg.appendChild(path);
+
+    // one point per measured hypothesis
+    pts.forEach(function (p) {
+      var st = p.h.status || "measured";
+      var tip = p.h.id + " · #" + p.h.seq + " · " + (STATUS_LABEL[st] || st) +
+        (isNum(p.h.metric) ? " · " + fmtNum(p.h.metric) : " · 측정값 없음") +
+        (isNum(p.h.delta) ? " (" + fmtPct(p.h.delta) + ")" : "");
+      var node;
+      if (st === "crash") {
+        // A crash has no value: an open marker on the best line marks where it sat in the order.
+        node = svgEl("circle", { "class": "pt crash", cx: sx(p.x), cy: sy(p.y), r: 4.5 });
+      } else {
+        node = svgEl("circle", { "class": "pt " + st, cx: sx(p.x), cy: sy(p.y), r: 4.5 });
+      }
+      node.appendChild(svgEl("title", {}, tip));
+      svg.appendChild(node);
+    });
+    wrap.appendChild(svg);
+
+    var legend = el("div", "legend");
+    [["keep", "채택"], ["discard", "기각"], ["flag", "크래시 · 충돌 · 상호작용"], ["line", "최고 추이"], ["base", "기준"]]
+      .concat(isNum(metric.target) ? [["target", "목표"]] : [])
+      .forEach(function (pair) {
+        var s = el("span");
+        s.appendChild(el("i", pair[0]));
+        s.appendChild(document.createTextNode(pair[1]));
+        legend.appendChild(s);
+      });
+    wrap.appendChild(legend);
+    host.appendChild(wrap);
+  }
+
+  // ── frontier: 대기 → 실행 중 → 측정됨 ───────────────────────
+  function hypNode(h, ctx) {
+    var st = h.status || "pending";
+    var node = el("div", "tnode " + st);
+    var head = el("div", "nhead");
+    head.appendChild(el("span", "ndot"));
+    head.appendChild(el("span", "nid", h.id || ""));
+    head.appendChild(el("span", "ntitle", h.claim || ""));
+    node.appendChild(head);
+
+    var meta = el("div", "nmeta");
+    meta.appendChild(statusBadge(st));
+    if (h.difficulty) meta.appendChild(el("span", "badge", h.difficulty));
+    if (st === "pending" && isNum(h.priority)) meta.appendChild(el("span", "badge", "p" + h.priority));
+    if (h.rerouted) meta.appendChild(el("span", "badge redirect", "재라우팅"));
+    if (isNum(h.seq)) meta.appendChild(el("span", "badge", "#" + h.seq));
+    if (isNum(h.delta)) meta.appendChild(deltaSpan(h.delta));
+    node.appendChild(meta);
+
+    if (st === "running" || st === "measured") {
+      var agent = agentLabel(h);
+      if (agent) node.appendChild(el("div", "nagent", agent));
+      var w = h.worker || {};
+      if (w.worktree) node.appendChild(el("div", "nagent", w.worktree));
+      if (h.startedAt) node.appendChild(el("p", "nnote", "경과 " + fmtMinutes(minutesSince(h.startedAt))));
+    } else if (st === "pending") {
+      if (h.touches && h.touches.length) node.appendChild(el("div", "nagent", h.touches.join(", ")));
+      if (h.dependsOn && h.dependsOn.length) node.appendChild(el("p", "nnote", "선행 " + h.dependsOn.join(", ")));
+    } else {
+      if (isNum(h.metric)) node.appendChild(el("div", "nagent", fmtNum(h.metric) + " " + (metric.name || "")));
+      if (st === "crash" && (h.obstacle || h.note)) node.appendChild(el("p", "nwhy", h.obstacle || h.note));
+      else if (h.note) node.appendChild(el("p", "nnote", h.note));
+    }
+    ctx.clickable(node, "클릭하면 이 가설의 상세를 봅니다", function () { openHyp(h, ctx); });
+    return node;
+  }
+  function column(title, badgeText, items, ctx, stub, empty) {
+    var col = el("div", "wcol");
+    var wh = el("div", "whead");
+    wh.appendChild(el("span", null, title));
+    wh.appendChild(el("span", "badge", badgeText));
+    col.appendChild(wh);
+    items.forEach(function (h) { col.appendChild(hypNode(h, ctx)); });
+    if (stub) col.appendChild(el("div", "wstub", stub));
+    if (!items.length && empty) col.appendChild(el("div", "wempty", empty));
+    return col;
+  }
+  function renderFrontier(host, ctx) {
+    var pending = byStatus("pending").sort(function (a, b) {
+      return (isNum(a.priority) ? a.priority : 99) - (isNum(b.priority) ? b.priority : 99);
+    });
+    var running = byStatus("running").concat(byStatus("measured"));
+    var done = measured().reverse();
+    var LIMIT = 6;
+
+    var head = el("div", "flow-head");
+    head.appendChild(el("span", "phead", "프론티어"));
+    head.appendChild(el("span", "badge", "동시 " + (budget.parallel || 1)));
+    if (budget.placement) head.appendChild(el("span", "badge", budget.placement));
+    if (run.branch) head.appendChild(el("span", "badge gates", run.branch));
+    host.appendChild(head);
+
+    var wrap = el("div", "flow-wrap");
+    var flow = el("div", "flow");
+    flow.appendChild(column("대기", pending.length + "개", pending.slice(0, LIMIT), ctx,
+      pending.length > LIMIT ? "+" + (pending.length - LIMIT) + "개 더 대기 중 — 아래 프론티어 전체 참조" : "",
+      "대기 중인 가설 없음"));
+    var c1 = el("div", "conn"); c1.appendChild(el("span", null, "→")); flow.appendChild(c1);
+    flow.appendChild(column("실행 중", running.length + "/" + (budget.parallel || 1), running, ctx, "",
+      "실행 중인 실험 없음"));
+    var c2 = el("div", "conn"); c2.appendChild(el("span", null, "→")); flow.appendChild(c2);
+    flow.appendChild(column("측정됨", done.length + "개", done.slice(0, LIMIT), ctx,
+      done.length > LIMIT ? "+" + (done.length - LIMIT) + "개 더 — 아래 실험 기록 참조" : "",
+      "측정된 실험 없음"));
+    wrap.appendChild(flow);
+    host.appendChild(wrap);
+  }
+
+  // ── outcome ─────────────────────────────────────────────────
+  function renderOutcome(host, ctx) {
+    var ms = measured();
+    var stats = el("div", "stats");
+    stats.appendChild(ctx.stat("실험", String(budget.done || ms.length),
+      count("keep") + " 채택 · " + count("discard") + " 기각 · " + (count("conflict") + count("interaction")) +
+      " 충돌·상호작용 · " + count("crash") + " 크래시"));
+    var routes = { fast: 0, "default": 0, deep: 0 }, rerouted = 0;
+    ms.forEach(function (h) {
+      if (routes.hasOwnProperty(h.difficulty)) routes[h.difficulty] += 1;
+      if (h.rerouted) rerouted += 1;
+    });
+    stats.appendChild(ctx.stat("라우트", "fast " + routes.fast + " / default " + routes["default"] + " / deep " + routes.deep,
+      "재라우팅 " + rerouted));
+    stats.appendChild(ctx.stat("종료 사유", TERMINATED_LABEL[run.terminatedReason] || run.terminatedReason || "—",
+      run.terminatedReason === "target_reached" && isNum(metric.target) ? "목표 " + fmtNum(metric.target) : ""));
+    var best = bestValue(), imp = improvement(metric.baseline, best);
+    stats.appendChild(ctx.stat("최고", fmtNum(best) + (metric.name ? " " + metric.name : ""),
+      (imp === null ? "" : "기준 " + fmtNum(metric.baseline) + " 대비 " + fmtPct(imp)) + (run.bestCommit ? " · " + (ctx.shortRef ? ctx.shortRef(run.bestCommit) : run.bestCommit) : "")));
+    host.appendChild(stats);
+
+    var kept = ms.filter(function (h) { return h.status === "keep"; });
+    var box = el("div", "ac-kept");
+    box.appendChild(el("h3", null, "채택된 변경 (머지 순)"));
+    if (!kept.length) {
+      box.appendChild(el("p", "ac-empty", "채택된 변경이 없습니다."));
+    } else {
+      var ol = el("ol");
+      kept.forEach(function (h) {
+        var li = el("li");
+        li.appendChild(el("span", "hid", h.id));
+        li.appendChild(document.createTextNode((h.claim || "") + " ("));
+        li.appendChild(deltaSpan(h.delta));
+        li.appendChild(document.createTextNode(")"));
+        ctx.clickable(li, "클릭하면 이 가설의 상세를 봅니다", function () { openHyp(h, ctx); });
+        ol.appendChild(li);
+      });
+      box.appendChild(ol);
+    }
+    host.appendChild(box);
+  }
+
+  // ── experiment log ──────────────────────────────────────────
+  function renderLog(host, ctx) {
+    var ms = measured();
+    var rest = hyps.filter(function (h) { return h.status === "pending" || h.status === "cancelled"; })
+      .sort(function (a, b) {
+        if (a.status !== b.status) return a.status === "pending" ? -1 : 1;
+        return (isNum(a.priority) ? a.priority : 99) - (isNum(b.priority) ? b.priority : 99);
+      });
+    if (!ms.length && !rest.length) return;
+    var panel = el("section", "panel");
+    panel.appendChild(el("h2", null, "실험 기록"));
+    if (ms.length) {
+      var wrap = el("div", "ac-log-wrap");
+      var table = el("table", "ac-log");
+      var thead = el("thead");
+      var hr = el("tr");
+      [["#", "num"], ["id", ""], ["주장", ""], ["라우트", ""], ["모델", ""], ["측정값", "num"], ["Δ", "num"], ["상태", ""], ["메모", ""]]
+        .forEach(function (c) { hr.appendChild(el("th", c[1] || null, c[0])); });
+      thead.appendChild(hr);
+      table.appendChild(thead);
+      var tbody = el("tbody");
+      ms.forEach(function (h) {
+        var tr = el("tr");
+        tr.appendChild(el("td", "num", "#" + h.seq));
+        tr.appendChild(el("td", "mono", h.id));
+        tr.appendChild(el("td", "claim", h.claim || ""));
+        var rt = el("td", "mono", h.route || h.difficulty || "");
+        if (h.rerouted) { rt.appendChild(document.createTextNode(" ")); rt.appendChild(el("span", "badge redirect", "재라우팅")); }
+        tr.appendChild(rt);
+        var w = h.worker || {};
+        tr.appendChild(el("td", "mono", [w.model, w.effort].filter(Boolean).join("/")));
+        tr.appendChild(el("td", "num mono", isNum(h.metric) ? fmtNum(h.metric) : "—"));
+        var dt = el("td", "num");
+        dt.appendChild(deltaSpan(h.delta));
+        tr.appendChild(dt);
+        var stc = el("td");
+        stc.appendChild(statusBadge(h.status));
+        tr.appendChild(stc);
+        tr.appendChild(el("td", "lnote", h.status === "crash" ? (h.obstacle || h.note || "") : (h.note || "")));
+        ctx.clickable(tr, "클릭하면 이 가설의 상세를 봅니다", function () { openHyp(h, ctx); });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      panel.appendChild(wrap);
+    } else {
+      panel.appendChild(el("p", "ac-empty", "아직 측정된 실험이 없습니다."));
+    }
+    if (rest.length) {
+      var fr = el("div", "ac-frontier");
+      fr.appendChild(el("h3", null, "프론티어 전체 — 대기 " + count("pending") + " · 취소 " + count("cancelled")));
+      rest.forEach(function (h) {
+        var row = el("div", "frow");
+        row.appendChild(el("span", "hid", h.id));
+        row.appendChild(el("span", null, isNum(h.priority) ? "p" + h.priority : "p—"));
+        row.appendChild(el("span", null, h.difficulty || ""));
+        row.appendChild(statusBadge(h.status));
+        row.appendChild(el("span", "fclaim", h.claim || ""));
+        ctx.clickable(row, "클릭하면 이 가설의 상세를 봅니다", function () { openHyp(h, ctx); });
+        fr.appendChild(row);
+      });
+      panel.appendChild(fr);
+    }
+    host.appendChild(panel);
+  }
+
+  function bind(ctx) {
+    el = ctx.el;
+    minutesSince = ctx.minutesSince;
+    fmtMinutes = ctx.fmtMinutes;
+  }
+
+  return {
+    kind: "실험 보드",
+    meta: function () { return "실험 " + measured().length + "개 측정"; },
+    // Percent is experiments against the budget; the ETA extrapolates the
+    // median measured experiment over what is left, spread across the slots.
+    progress: function (d, ctx) {
+      bind(ctx);
+      var done = budget.done || 0, max = budget.max || 0, par = budget.parallel || 1;
+      var kept = count("keep");
+      var durs = measured().map(durationMin).filter(function (m) { return m !== null; });
+      var remaining = max > 0 ? Math.max(0, max - done) : count("pending") + count("running") + count("measured");
+      return {
+        percent: max > 0 ? (done / max) * 100 : undefined,
+        remainingMin: durs.length >= 2 ? median(durs) * remaining / par : 0,
+        count: "실험 " + done + (max > 0 ? "/" + max : "") + " · 채택 " + kept
+      };
+    },
+    // The coordinator writes progress.blockers itself; nothing is derived here.
+    blockers: function () { return []; },
+    renderProgress: function (host, ctx) {
+      bind(ctx);
+      renderStrip(host, ctx);
+      renderChart(host);
+      renderFrontier(host, ctx);
+    },
+    renderOutcome: function (host, ctx) { bind(ctx); renderOutcome(host, ctx); },
+    render: function (host, ctx) { bind(ctx); renderLog(host, ctx); },
+    hasUnsavedEdits: function () { return false; }
+  };
+})();
+</script>

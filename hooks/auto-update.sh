@@ -9,8 +9,10 @@
 #    loop plugins when they are installed natively.
 #  - weed-plugins (opencode): re-run the repo installer from the marketplace
 #    clone when plugin versions change (no plugin marketplace in opencode).
-#  - matt-* codex skills: legacy file-sync fallback, only when the codex
-#    plugins are NOT installed natively.
+#  - weed-plugins codex skills: legacy file-sync fallback, only when the
+#    codex plugins are NOT installed natively.
+#  - unlazy (npx skills): ensure the loops' gate skill is present; update it
+#    at most once a day.
 # Must never break session startup: all failures are swallowed, always exit 0.
 set +e
 
@@ -42,7 +44,7 @@ fi
 # --- weed-plugins (codex): refresh snapshot + reinstall when installed natively ---
 if command -v codex >/dev/null 2>&1 && [ -d "$HOME/.codex/plugins/cache/weed-plugins" ]; then
   codex plugin marketplace upgrade weed-plugins >/dev/null 2>&1
-  for p in matt-loop auto-loop; do
+  for p in weed-harness matt-loop auto-loop; do
     codex plugin add "$p@weed-plugins" >/dev/null 2>&1
   done
 fi
@@ -64,20 +66,46 @@ if [ -d "$MP" ] && [ -d "$OC" ] && command -v node >/dev/null 2>&1; then
   fi
 fi
 
-# --- matt-loop skills for codex: legacy file-sync fallback. Only runs when
+# --- weed-plugins skills for codex: legacy file-sync fallback. Only runs when
 # the codex plugins are NOT installed natively (the plugin cache path above
 # supersedes this and file copies would show up as duplicates in Orca).
-SRC="$HOME/.claude/plugins/marketplaces/weed-plugins/plugins/matt-loop/skills"
+# Syncs the shared runtime (root skills/, minus the Claude-only ones) and both
+# loop plugins so matt-auto / autocode find loop-report next to them.
+MPC="$HOME/.claude/plugins/marketplaces/weed-plugins"
 DST="$HOME/.codex/skills"
-if [ -d "$SRC" ] && [ -d "$DST" ] && [ ! -d "$HOME/.codex/plugins/cache/weed-plugins" ]; then
-  for d in "$SRC"/*/; do
-    s="$(basename "$d")"
-    if ! diff -rq "$d" "$DST/$s" >/dev/null 2>&1; then
-      rm -rf "${DST:?}/$s"
-      cp -r "$d" "$DST/$s"
-      echo "[auto-update] codex skill $s refreshed"
-    fi
+if [ -d "$MPC" ] && [ -d "$DST" ] && [ ! -d "$HOME/.codex/plugins/cache/weed-plugins" ]; then
+  for SRC in "$MPC/skills" "$MPC/plugins/matt-loop/skills" "$MPC/plugins/auto-loop/skills"; do
+    [ -d "$SRC" ] || continue
+    for d in "$SRC"/*/; do
+      s="$(basename "$d")"
+      case "$s" in setup|design-map) continue ;; esac
+      [ -f "$d/SKILL.md" ] || continue
+      if ! diff -rq "$d" "$DST/$s" >/dev/null 2>&1; then
+        rm -rf "${DST:?}/$s"
+        cp -r "$d" "$DST/$s"
+        echo "[auto-update] codex skill $s refreshed"
+      fi
+    done
   done
+fi
+
+# --- unlazy: the loops' completion-gate skill (see skills/loop-gates). Not
+# vendored; `npx skills add` links it into ~/.agents/skills and the per-CLI
+# skill dirs. Ensure present, then update at most once a day.
+if command -v npx >/dev/null 2>&1; then
+  present=""
+  for d in "$HOME/.claude/skills/unlazy" "$HOME/.codex/skills/unlazy" "$HOME/.agents/skills/unlazy"; do
+    [ -f "$d/scripts/gate-check.mjs" ] && present=1 && break
+  done
+  if [ -z "$present" ]; then
+    timeout 90 npx --yes skills add Leonxlnx/unlazy -g -y >/dev/null 2>&1 && echo "[auto-update] unlazy installed"
+  else
+    stamp="$HOME/.agents/.unlazy-update-stamp"
+    today="$(date +%Y-%m-%d)"
+    if [ "$(cat "$stamp" 2>/dev/null)" != "$today" ]; then
+      timeout 90 npx --yes skills update unlazy -g -y >/dev/null 2>&1 && printf '%s\n' "$today" > "$stamp"
+    fi
+  fi
 fi
 
 exit 0

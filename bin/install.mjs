@@ -7,9 +7,13 @@
 //   npx github:weedmo/skills --yes           # everything, everywhere
 //   npx github:weedmo/skills --platforms claude-code,codex --plugins auto-loop
 //
-// Claude Code setup is always installed when that platform is selected. Loop
-// plugins are opt-in and available on every platform.
+// weed-harness (the shared loop runtime: loop-report, model-routing,
+// loop-gates) is always installed on every selected platform; its Claude
+// Code-only skills (setup, design-map) are skipped elsewhere. Loop plugins
+// are opt-in and available on every platform. The unlazy skill the loops
+// verify with is ensured via `npx skills add` unless --no-unlazy is given.
 
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -46,8 +50,9 @@ const PLUGINS = {
   "weed-harness": {
     required: true,
     src: path.join(ROOT, "skills"),
-    desc: "Claude Code setup (HUD and hooks)",
-    platforms: ["claude-code"],
+    desc: "shared loop runtime (loop-report, model-routing, loop-gates) + Claude Code setup",
+    // Only meaningful on Claude Code: the HUD/hooks setup and the Artifact-based design flow.
+    claudeOnlySkills: ["setup", "design-map"],
   },
   "matt-loop": {
     src: path.join(ROOT, "plugins", "matt-loop", "skills"),
@@ -97,6 +102,7 @@ Options:
   --plugins <a,b|all|none>  Optional loop plugins (Claude Code setup is automatic)
   --yes                  Non-interactive; defaults to all platforms + all plugins
   --dry-run              Show what would be installed without writing
+  --no-unlazy            Skip ensuring the unlazy skill (npx skills add Leonxlnx/unlazy -g)
   --home <dir>           Override home directory (mainly for testing)
   --help                 Show this help`);
   process.exit(0);
@@ -223,13 +229,11 @@ console.log(`\n${DRY ? "[dry-run] " : ""}Installing selected packages → ${plat
 let failures = 0;
 for (const platform of platforms) {
   const dest = PLATFORMS[platform].dir(HOME);
-  const platformPlugins = platform === "claude-code"
-    ? ["weed-harness", ...plugins]
-    : plugins;
+  const platformPlugins = ["weed-harness", ...plugins];
   console.log(`[${platform}] ${dest} (${platformPlugins.join(", ") || "cleanup only"})`);
   const legacySkills = platform === "claude-code"
     ? LEGACY_SKILLS
-    : [...LEGACY_SKILLS, "setup"];
+    : [...LEGACY_SKILLS, "setup", "design-map"];
   const legacyDirs = platform === "opencode"
     ? [dest, path.join(HOME, ".config", "opencode", "skill")]
     : [dest];
@@ -252,9 +256,10 @@ for (const platform of platforms) {
     }
   }
   for (const plugin of platformPlugins) {
-    const { src, platforms: supportedPlatforms } = PLUGINS[plugin];
-    if (supportedPlatforms && !supportedPlatforms.includes(platform)) continue;
-    const skills = skillDirs(src);
+    const { src, claudeOnlySkills = [] } = PLUGINS[plugin];
+    const skills = skillDirs(src).filter(
+      (skill) => platform === "claude-code" || !claudeOnlySkills.includes(skill),
+    );
     if (skills.length === 0) {
       console.log(`  ! ${plugin}: no skills found at ${src}`);
       failures++;
@@ -318,6 +323,35 @@ for (const platform of platforms) {
     }
   }
   console.log(`  note: ${PLATFORMS[platform].note}\n`);
+}
+
+// ---------- unlazy ----------
+// The loops' completion gates (see skills/loop-gates) run on the upstream
+// unlazy skill. It is not vendored; `npx skills add` links it into
+// ~/.agents/skills and the per-CLI skill dirs, so one install serves every
+// platform selected above.
+function unlazyPresent(home) {
+  return [
+    path.join(home, ".claude", "skills", "unlazy"),
+    path.join(home, ".codex", "skills", "unlazy"),
+    path.join(home, ".agents", "skills", "unlazy"),
+  ].some((dir) => fs.existsSync(path.join(dir, "scripts", "gate-check.mjs")));
+}
+
+if (!flag("no-unlazy")) {
+  if (unlazyPresent(HOME)) {
+    console.log("[unlazy] present");
+  } else if (DRY) {
+    console.log("[unlazy] would run: npx --yes skills add Leonxlnx/unlazy -g -y");
+  } else {
+    console.log("[unlazy] installing: npx --yes skills add Leonxlnx/unlazy -g -y");
+    const r = spawnSync("npx", ["--yes", "skills", "add", "Leonxlnx/unlazy", "-g", "-y"], {
+      stdio: "inherit",
+      env: { ...process.env, HOME },
+    });
+    if (r.status === 0 && unlazyPresent(HOME)) console.log("  ✓ unlazy");
+    else console.log("  ! unlazy not installed — run `npx skills add Leonxlnx/unlazy -g` yourself; the loops verify without gates until then");
+  }
 }
 
 if (failures > 0) {

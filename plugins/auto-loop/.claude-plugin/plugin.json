@@ -1,7 +1,7 @@
 {
   "name": "auto-loop",
-  "version": "2.0.0",
-  "description": "Autonomous code improvement loop - autocode: hypothesis-driven parallel experiments with model routing (strategist on the expensive tier, experimenters routed by hypothesis difficulty).",
+  "version": "2.1.0",
+  "description": "Autonomous code improvement loop - autocode: hypothesis-driven parallel experiments with model routing (strategist on the expensive tier, experimenters routed by hypothesis difficulty), a live experiment board via weed-harness loop-report, and unlazy-backed termination gates.",
   "author": {
     "name": "weedmo"
   },

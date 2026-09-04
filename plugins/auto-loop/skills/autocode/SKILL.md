@@ -19,9 +19,13 @@ wall-clock hour. Three ideas make it fast:
    trying); each experimenter runs on the cheapest tier its hypothesis needs. Keep/discard,
    scheduling, and merging are arithmetic — no model at all.
 
-Inspired by [autoresearch](https://github.com/karpathy/autoresearch). When the
-[unlazy](https://github.com/Leonxlnx/unlazy) skill is installed, termination is backed by
-runnable gates instead of self-assessment (see 2E).
+Inspired by [autoresearch](https://github.com/karpathy/autoresearch). The run is visible the
+whole time on a live **experiment board** — one HTML page built and delivered by the shared
+`$loop-report` skill (weed-harness) and republished on every state change (see 3I) — and
+termination is backed by runnable [unlazy](https://github.com/Leonxlnx/unlazy) gates through
+the shared `$loop-gates` convention instead of self-assessment (see 2E). If those shared
+skills are missing, say `weed-harness 3.x required: <skill> missing` once and continue with
+the fallback each of them names.
 
 ## Subcommands
 
@@ -45,6 +49,7 @@ WORKTREE_DIR="$AUTOCODE_DIR/worktrees"
 LESSONS_DIR="$AUTOCODE_DIR/lessons"
 LOGS_DIR="$AUTOCODE_DIR/logs"
 RETRO_DIR="$AUTOCODE_DIR/retrospectives"
+REPORT_DIR="$AUTOCODE_DIR/report"          # autocode.data.json / autocode.html / autocode.delivery.json
 ```
 
 ## Step 1: Parse Subcommand
@@ -157,18 +162,10 @@ committed).
 
 ### 2E: Runnable completion gates (unlazy, optional)
 
-Detect unlazy:
-
-```bash
-UNLAZY_DIR=""
-for d in "$HOME/.claude/skills/unlazy" "$HOME/.codex/skills/unlazy" "$HOME/.agents/skills/unlazy"; do
-  [ -f "$d/scripts/gate-check.mjs" ] && UNLAZY_DIR="$d" && break
-done
-```
-
-If missing, ask once whether to install it (`npx skills add Leonxlnx/unlazy -g`); on decline set
-`unlazy_gates: false` and continue. If present, write `$AUTOCODE_DIR/GATES.md` with one gate per
-script under `$AUTOCODE_DIR/verify/` (portable Node, no dependencies):
+Follow `$loop-gates` (shared): locate unlazy once; if missing, ask once whether to install it
+(`npx skills add Leonxlnx/unlazy -g`), on decline set `unlazy_gates: false` and continue. If
+present, write `$AUTOCODE_DIR/GATES.md` with one gate per script under `$AUTOCODE_DIR/verify/`
+(portable Node, no dependencies):
 
 - `verify-guard.mjs` — runs the guard on the experiment branch; prints `autocode gate passed: guard` on exit 0.
 - `verify-metric.mjs` — re-runs the metric on the experiment branch and asserts it is at least as good as `best_metric` in `state.json` within the noise band; prints `autocode gate passed: metric`. It re-measures the claim; it never trusts the recorded number.
@@ -176,8 +173,9 @@ script under `$AUTOCODE_DIR/verify/` (portable Node, no dependencies):
 
 Scripts read thresholds from `program.md` / `state.json`, so `CHECK:` lines never change during
 a run and one approval keeps the loop autonomous. Show the user `GATES.md` and every script,
-then with explicit consent run `node "$UNLAZY_DIR/scripts/gate-check.mjs" --approve
-$AUTOCODE_DIR/GATES.md` once. Do not install unlazy's Stop hook automatically.
+then with explicit consent approve the ledger once (`gate-check.mjs --approve`). The
+coordinator re-verifies it at termination (3F); the retry bound, the handoff on unmet gates,
+and the boundaries with Orca are loop-gates'. Do not install unlazy's Stop hook.
 
 ### 2F: Approval
 
@@ -204,6 +202,10 @@ code itself and never reasons about what to try next — that is the strategist'
    Without Orca, workers are in-session subagents in local worktrees — that is the default
    and is not a degraded mode.
 5. Load lessons from `$LESSONS_DIR/*.json`.
+6. **Probe report delivery** — have `$loop-report` **probe** (see 3I) and print the answer with
+   the other pre-flight facts (`Report delivery: link` / `tab — <why>` / `path — <why>`), so
+   the user knows before the first experiment where the board will be. Use `orca-ide` when
+   the `orca` shim fails with `--no-sandbox`, as in step 4.
 
 ### 3B: Baseline and noise band
 
@@ -237,7 +239,10 @@ Write `state.json`:
 }
 ```
 
-Display the baseline, noise band, branch, parallelism, strategist tier, and worker placement.
+Display the baseline, noise band, branch, parallelism, strategist tier, and worker placement,
+then **publish the board for the first time** (3I) — `progress.state: running`, the metric
+strip with baseline and noise band, an empty frontier. From here on every state change
+republishes it.
 
 ### 3C: Spawn the strategist (persistent)
 
@@ -299,7 +304,9 @@ at least `2 × parallel` hypotheses, preferring disjoint `touches`.
 ### 3D: Scheduler loop (event-driven)
 
 The coordinator runs this loop until 3F terminates it. Every state change is written to
-`state.json` immediately (atomic write), and every result is appended to `results.tsv`.
+`state.json` immediately (atomic write), every result is appended to `results.tsv`, and every
+state change also **republishes the board** (3I): a dispatch, a measurement, a keep/discard,
+a strategist delta applied, a plateau or escalation. Not on a timer, not per commit.
 
 ```
 loop:
@@ -340,9 +347,8 @@ returns nothing twice in a row, terminate with `exhausted`.
    Orca placement (only when `--on <env>` was given or the user chose Orca at init and 3A's probe
    succeeded): `orca orchestration run-create` once per run, then `task-create` +
    `worker-start --task <id> --worktree path:<worktree> <route flags>` with the same prompt plus
-   Orca lifecycle lines (report with `worker_done`, ask with `orchestration ask`). Route flags:
-   fast → `--agent claude --model haiku`; default → `--agent claude --model sonnet --effort
-   medium`; deep → `--agent claude --model opus --effort high`. Verify a `worker_done` by reading
+   Orca lifecycle lines (report with `worker_done`, ask with `orchestration ask`). Route flags
+   come from `$model-routing`'s Orca table for the tier (3H). Verify a `worker_done` by reading
    the result file and the branch; it is a signal, not evidence.
 
 3. Set `H.status = running`, add to `state.running`, log the route in `results.tsv` later.
@@ -426,9 +432,16 @@ Then: remove leftover worktrees, release any Orca dispatches, leave the experime
 out at `best_commit`.
 
 When `unlazy_gates: true`, run `node "$UNLAZY_DIR/scripts/gate-check.mjs" --reverify
-$AUTOCODE_DIR/GATES.md` first. Compose the summary only on `ALL MET`; otherwise record
-`ABANDON: <id> <reason>` in the ledger and end as an explicit handoff naming the unmet gates.
-`target_reached` in particular must be backed by the target gate's measured evidence.
+$AUTOCODE_DIR/GATES.md` first, per `$loop-gates`. Compose the summary only on `ALL MET`;
+otherwise record `ABANDON: <id> <reason>` in the ledger and end as an explicit handoff naming
+the unmet gates. `target_reached` in particular must be backed by the target gate's measured
+evidence.
+
+Then **publish the board one last time** (3I) with `progress.state: "done"`,
+`run.terminatedReason` set, and the `outcome` block: `outcome.files` measured with
+`git diff --numstat <branch base>..<best_commit>` / `--name-status`, one Korean line per file,
+`.autocode/**` left out. That final page is the report the user keeps; the terminal summary
+below points at it.
 
 **Final summary**:
 
@@ -463,26 +476,85 @@ $AUTOCODE_DIR/GATES.md` first. Compose the summary only on `ALL MET`; otherwise 
 
 ### 3H: Model routing
 
-Classify from the hypothesis, not from keywords, and use the lowest tier that is clearly
-sufficient.
+The tiers, the exact model/effort pair per platform, the `spawn_agent` / Claude agent / Orca
+`worker-start` dispatch mechanics, and the escalation ladder live in the shared
+**`$model-routing`** skill (weed-harness). Read it; do not restate pairs here. autocode's
+roles map onto its tiers:
 
-| Route | Claude Code agent (ships with this plugin) | Codex `spawn_agent` | Use when |
+| autocode role | Tier | Claude Code agent | Use when |
 |---|---|---|---|
-| Strategist (Deep) | `auto-loop:strategist` | gpt-5.6-sol / high | Default strategist tier |
-| Strategist (Max) | `auto-loop:strategist-max` | gpt-5.6-sol / max | `problem_difficulty: hard`, or escalation in 3E |
-| Experimenter Fast | `auto-loop:experimenter-fast` | gpt-5.6-luna / low | One-site mechanical change: constant/flag tuning, obvious API swap, dropping redundant work |
-| Experimenter Default | `auto-loop:experimenter-default` | gpt-5.6-terra / medium | Multi-site change inside a module, new helper, data-structure swap, loop restructuring |
-| Experimenter Deep | `auto-loop:experimenter-deep` | gpt-5.6-sol / high | Algorithm replacement, cross-module restructuring, concurrency, invariants |
+| Strategist | Deep | `auto-loop:strategist` | Default strategist tier |
+| Strategist (escalated) | Max | `auto-loop:strategist-max` | `problem_difficulty: hard`, or escalation in 3E — the only role that uses Max |
+| Experimenter fast | Fast | `auto-loop:experimenter-fast` | One-site mechanical change: constant/flag tuning, obvious API swap, dropping redundant work |
+| Experimenter default | Default | `auto-loop:experimenter-default` | Multi-site change inside a module, new helper, data-structure swap, loop restructuring |
+| Experimenter deep | Deep | `auto-loop:experimenter-deep` | Algorithm replacement, cross-module restructuring, concurrency, invariants |
 
-- On Claude Code each agent definition fixes model and effort; spawn it by name and never pass a
-  `model` override. On Codex, set `model` and `reasoning_effort` per the table and
-  `fork_turns: "none"`; put every path and constraint in the prompt.
 - The strategist assigns `difficulty`; the coordinator only translates it into a route. When an
-  experimenter reports `beyond_scope`, re-dispatch once on the next route up (3D-2). `deep` is
-  the ceiling for experimenters; the Max tier is reserved for the strategist.
-- On a platform with neither named agents nor model overrides (OpenCode, others), use the
-  platform's normal subagent for every role, name the intended route in the prompt, and say so
-  once at start. Do not silently pick another provider.
+  experimenter reports `beyond_scope`, re-dispatch once on the next route up (3D-2) and mark
+  the hypothesis `rerouted`. **Deep is the ceiling for experimenters**; Max is reserved for the
+  strategist.
+- Orca workers take the tier's `worker-start` flags from `$model-routing`'s Orca table.
+- On a platform with neither named agents nor model overrides, use the platform's normal
+  subagent for every role, name the intended tier in the prompt, and say so once at start.
+
+### 3I: The experiment board
+
+The board is the run's status page and, at the end, its report — built and delivered by
+`$loop-report` with autocode's own view (`assets/view.html` next to this file, its data checks
+in `assets/validate.py`). autocode owns the data; loop-report owns the page around it and the
+route (artifact link, Orca browser tab, or path — see its SKILL.md). Never run `orca artifacts`
+/ `tab` / `reload` from here; say probe or publish and relay the answer.
+
+**Publish** = write `$REPORT_DIR/autocode.data.json`, then hand it to `$loop-report`:
+
+```
+python3 <loop-report's dir>/assets/render.py \
+  --data .autocode/report/autocode.data.json \
+  --out  .autocode/report/autocode.html \
+  --view <this skill's dir>/assets/view.html
+```
+
+and let loop-report push it on the run's route (it keeps `autocode.delivery.json` beside the
+page so every republish lands on the same link or tab). Publish first after the baseline (3B),
+then on every state change (3D), on plateau/escalation (3E), and last at termination (3F) with
+`progress.state: "done"` and the `outcome`.
+
+**Data** — the common keys follow loop-report's contract (`title`, `slug: "autocode"`,
+`generated`, `summary`, `progress { state, updated (from the clock), startedAt, current, note,
+blockers }`, `outcome`); the view's keys are:
+
+```json
+"run": {
+  "branch": "autocode/2026-09-04-1410", "bestCommit": "a1b2c3d",
+  "metric": { "name": "p95_latency_ms", "direction": "lower", "baseline": 182.4, "noiseBand": 2.1, "best": 151.0, "target": 120 },
+  "budget": { "done": 6, "max": 20, "parallel": 2, "placement": "local" },
+  "strategist": { "tier": "deep", "escalated": false, "consecutiveDiscards": 1 },
+  "terminatedReason": null
+},
+"hypotheses": [
+  { "id": "H007", "seq": 5, "claim": "…", "experiment": "…", "expectedDelta": "-15% ~ -25%",
+    "status": "keep", "difficulty": "fast", "route": "experimenter-fast",
+    "worker": { "model": "haiku", "effort": "low", "worktree": ".autocode/worktrees/H007", "dispatchId": "" },
+    "touches": ["src/validate.ts"], "dependsOn": [], "priority": 2,
+    "metric": 151.0, "delta": -19.2, "commit": "9f8e7d6", "startedAt": "…", "measuredAt": "…",
+    "ifConfirmed": ["…"], "ifRefuted": ["…"], "note": "…", "obstacle": "", "rerouted": false }
+]
+```
+
+- `hypotheses` mirrors `hypotheses/*.json` + `results.tsv`: every hypothesis the run has seen,
+  with `status` as in 3C (`pending … cancelled`), `seq` = measurement order (measured ones
+  only), `metric` the measured value, `delta` the signed percent against the best at the time,
+  `worker` the model/effort the route resolved to (plus worktree, and the dispatch id for an
+  Orca worker). Claims, notes, and obstacles are translated into one plain Korean line each;
+  the strategist's English JSON is not pasted through.
+- `run.terminatedReason` is null until 3F, then one of `budget_exhausted`, `target_reached`,
+  `exhausted`, `plateau`, or `paused` (3G's measurement pause). `validate.py` refuses an
+  `outcome` without it.
+- `progress.current` is the one line the coordinator is on right now ("H007 측정 중", "전략가
+  프론티어 갱신 대기"); `progress.blockers` carries anything that stops the run — 3G's paused
+  measurement, a worktree that cannot be created — with the checkable fact in `detail`.
+- The page derives everything else (improvement %, the trend chart, routes tally, ETA from the
+  median experiment duration); never pre-sum numbers into the data.
 
 ---
 
@@ -501,6 +573,7 @@ Read `state.json`, `results.tsv`, and `hypotheses/*.json`; display:
 **Strategist**: {deep|max}{ (escalated)} · consecutive discards {n}
 **Routes used**: fast {n} / default {n} / deep {n}
 **Rate**: {experiments/hour}, measurement share {pct}%
+**Board**: {link | tab + path | path} (from autocode.delivery.json)
 ```
 
 ## Step 5: Resume (`/autocode resume`)
@@ -532,7 +605,11 @@ Read `state.json`, `results.tsv`, and `hypotheses/*.json`; display:
 ├── logs/H001.log                   # metric stdout/stderr
 ├── retrospectives/retro_1.md       # written on plateau
 ├── GATES.md                        # [unlazy] runnable termination gates
-└── verify/*.mjs                    # [unlazy] gate scripts
+├── verify/*.mjs                    # [unlazy] gate scripts
+└── report/                         # the experiment board (see 3I)
+    ├── autocode.data.json          # what autocode writes
+    ├── autocode.html               # what loop-report renders
+    └── autocode.delivery.json      # the route loop-report keeps (link / tab / path)
 ```
 
 ## Anti-patterns
@@ -550,3 +627,8 @@ Read `state.json`, `results.tsv`, and `hypotheses/*.json`; display:
   coordinator's own measurement, nothing else.
 - Running one hypothesis at a time when `parallel > 1` and the frontier has disjoint `touches` →
   that is the sequential loop this design replaces.
+- Letting the board go stale while `state.json` moves on, or skipping a publish because the
+  artifact link was refused → the page is the user's window into a run they are not watching;
+  loop-report has a route for every case, and the timing is the coordinator's.
+- Running `orca artifacts` / `tab` / `reload` from here, or splicing the page by hand →
+  delivery and the build have one owner; say publish and relay what comes back.

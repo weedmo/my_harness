@@ -9,7 +9,7 @@ Shepherd one existing PR to a merge-ready state. Watch checks, address actionabl
 
 ## Merge-ready gates (unlazy)
 
-When the [unlazy](https://github.com/Leonxlnx/unlazy) skill is installed (check `~/.claude/skills/unlazy`, `~/.codex/skills/unlazy`, or `~/.agents/skills/unlazy` for `scripts/gate-check.mjs`; skip this section when absent), "merge-ready" is a measured verdict, not your judgment. After workflow step 2, write `.unlazy/pr-babysit/<pr>.GATES.md`:
+When the [unlazy](https://github.com/Leonxlnx/unlazy) skill is installed (locate it as `$loop-gates` says; skip this section when absent), "merge-ready" is a measured verdict, not your judgment — the ledger conventions, the coordinator-side `--reverify`, and the retry bound are `$loop-gates`'. After workflow step 2, write `.unlazy/pr-babysit/<pr>.GATES.md`:
 
 ```markdown
 - [ ] G1: every required check passes on the PR head
@@ -43,7 +43,7 @@ If `ROUTED_EXECUTION=1` is already present, execute the workflow and route fresh
 | Difficult CI failure, semantic conflict, architecture-sensitive review | `matt-deep` |
 | Very large logs or repository-wide evidence gathering | `matt-large-context` (OpenCode) or chunked `matt-max` (Codex/Claude Code), then hand the focused fix to default or deep |
 
-Default to `matt-default` when uncertain. On Codex, map Fast → `gpt-5.6-luna/low`, Default → `gpt-5.6-terra/medium`, Deep → `gpt-5.6-sol/high`, and Max → `gpt-5.6-sol/max`; use `fork_turns: "none"` and put all required PR/repository context in each child prompt. Escalate fast → default → deep only when the lower tier reports a concrete scope or reasoning limit; Max is only a retry after Deep reports that the task exceeds it. Include `ROUTED_EXECUTION=1` in every routed child prompt, especially when invoking `$resolving-merge-conflicts`, so child skills execute instead of routing recursively. In free-only mode use `matt-free-fast` for fast work and `matt-free` for everything else; if either free agent is unavailable, stop and report the blocker rather than falling back to a potentially paid model. In normal routing, unavailable named agents or Codex model overrides may fall back to the platform's normal agent if the fallback is reported.
+Default to `matt-default` when uncertain. The model/effort pair for each tier per platform, the `fork_turns: "none"` rule, and the escalation ladder (fast → default → deep only when the lower tier reports a concrete limit; Max only as a retry after Deep) come from the shared `$model-routing` skill — put all required PR/repository context in each child prompt. Include `ROUTED_EXECUTION=1` in every routed child prompt, especially when invoking `$resolving-merge-conflicts`, so child skills execute instead of routing recursively. In free-only mode use `matt-free-fast` for fast work and `matt-free` for everything else; if either free agent is unavailable, stop and report the blocker rather than falling back to a potentially paid model. In normal routing, unavailable named agents or Codex model overrides may fall back to the platform's normal agent if the fallback is reported.
 
 If `matt-large-context` fails because the Google provider, Gemini credentials, model, or quota is unavailable, retry with `matt-deep`; Gemini CLI is not required. Split oversized CI logs or repository evidence into coherent chunks, preserve check names and source links in each chunk summary, and synthesize them with a final `matt-deep` call. In free-only mode use `matt-free` for this chunked fallback instead.
 

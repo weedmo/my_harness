@@ -1,0 +1,32 @@
+{
+  "name": "weed-harness",
+  "version": "3.0.0",
+  "description": "Codex packaging for the shared loop runtime every weed loop plugin builds on: loop-report (the live progress page and its Orca delivery), model-routing (the shared model/effort tier table), and loop-gates (unlazy-backed completion discipline). Required by matt-loop and auto-loop.",
+  "author": {
+    "name": "weedmo",
+    "url": "https://github.com/weedmo"
+  },
+  "homepage": "https://github.com/weedmo/skills",
+  "repository": "https://github.com/weedmo/skills",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "skills",
+    "harness",
+    "loop"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "weed-harness",
+    "shortDescription": "Shared runtime for long-running delegated loops: progress page, model routing, completion gates",
+    "longDescription": "Install weed-harness in Codex to get the layer matt-loop and auto-loop share: loop-report builds and delivers a live progress page for a delegated run (Orca artifact link, or the Orca browser tab when links are unavailable), model-routing is the one table of model/effort tiers every loop routes through, and loop-gates is the convention for turning 'done' into a re-verified unlazy ledger. The Claude Code-only setup skill (statusLine HUD, hooks) is not part of the Codex package.",
+    "developerName": "weedmo",
+    "category": "Coding",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}
