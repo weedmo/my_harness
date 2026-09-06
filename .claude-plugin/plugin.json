@@ -1,6 +1,6 @@
 {
   "name": "weed-harness",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "Shared runtime for long-running delegated loops (loop-report progress page + Orca delivery, model-routing tier table, unlazy-backed loop-gates) plus the Claude Code statusLine HUD and opt-in hooks",
   "author": {
     "name": "weedmo"
