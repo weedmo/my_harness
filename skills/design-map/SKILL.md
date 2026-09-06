@@ -272,17 +272,21 @@ together, then republishes and runs the step-3 render check.
 
 ### 7. Handoff
 The spec crosses to the implementing CLI as a committed file — nothing else
-does; the receiving session never sees this conversation. Design here, implement
-elsewhere (Codex or OpenCode) is the default split. In order:
+does; a receiving Codex or OpenCode session never sees this conversation. On
+Claude Code with the matt-loop Claude edition installed, this session itself
+continues into the loop (the delegate fork inherits the design conversation).
+In order:
 
 1. **Facts.** `git branch --show-current`, `git remote -v`, `git status --porcelain`.
-   Note which loop skills this session can see — matt-loop is deliberately absent
-   on some machines, so Claude Code is an option only where the loop is installed.
+   Note which loop skills this session can see — the Claude edition
+   (`/matt-loop:matt-auto`, `/auto-loop:autocode`) is deliberately absent on some
+   machines, so continuing here is an option only where it is installed.
 2. **One question** (AskUserQuestion, one round): the loop (recommend the
-   frontmatter's `loop`); the platform — Codex (recommended) / OpenCode / Claude
-   Code (only when installed here) / 명령만 받기; the base branch (recommend the
-   current one when it is `main` or `dev`, else `main`); the branch name
-   (recommend `feat/<slug>`, or stay on the base).
+   frontmatter's `loop`); where it runs — 이 세션에서 계속 (recommended when the
+   Claude edition is installed here) / `/fork` 배경 세션 / Codex / OpenCode /
+   명령만 받기; the base branch (recommend the current one when it is `main` or
+   `dev`, else `main`); the branch name (recommend `feat/<slug>`, or stay on the
+   base).
 3. **Commit the spec alone.** If `git status --porcelain` shows tracked changes
    other than the spec, do not switch branches — ask once (commit on the current
    branch / stop). Otherwise `git checkout -b <name> <base>` (skip when staying),
@@ -300,13 +304,19 @@ elsewhere (Codex or OpenCode) is the default split. In order:
    `<bin> terminal read --terminal <handle> --screen --json` until the CLI's
    input prompt is on screen (Codex: `› Ask Codex`; up to 60 s, else print the
    line), then `<bin> terminal send --terminal <handle> --text "<handoff line>" --enter --json`,
-   poll again until `Working (` appears, and stop there. Claude Code or 명령만
-   받기: print the platform's line for the user to type — matt-auto and
-   implement are `disable-model-invocation`, so never invoke them yourself.
-   The lines: Codex `use $matt-auto --spec <path>`, OpenCode
-   `/matt-auto --spec <path>`, Claude Code `/matt-loop:matt-auto --spec <path>`
-   (autocode: `… init --spec <path>`; implement: `use $implement on <path>`, no
-   flag, no gate).
-5. **Report and stop**: spec path, Artifact link, `base → branch`, where it went
-   (terminal handle, or "붙여넣기") and the handoff line. Do not watch the run —
-   from here its own loop-report page is the window.
+   poll again until `Working (` appears, and stop there. 이 세션에서 계속: invoke
+   the Claude edition right here — `matt-loop:matt-auto` with `--spec <path>`
+   (or `auto-loop:autocode init --spec <path>`); it has no
+   `disable-model-invocation`, its delegate is a fork of this conversation, and
+   its interview asks only what the spec leaves open. `/fork` 배경 세션: a session
+   cannot fork itself — print `/fork /matt-loop:matt-auto --spec <path>` for the
+   user to type, then stop. 명령만 받기: print the line. The lines: Codex
+   `use $matt-auto --spec <path>`, OpenCode `/matt-auto --spec <path>`, Claude
+   Code `/matt-loop:matt-auto --spec <path>` (autocode: `… init --spec <path>`;
+   implement: `use $implement on <path>`, no flag, no gate — on Claude Code that
+   is the one-file path: one question, then build it here).
+5. **Report and stop** (Codex / OpenCode / 명령만 받기 / `/fork`): spec path,
+   Artifact link, `base → branch`, where it went (terminal handle, or
+   "붙여넣기") and the handoff line. Do not watch the run — from here its own
+   loop-report page is the window. 이 세션에서 계속: report the same facts in one
+   line and go on as the loop.

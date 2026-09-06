@@ -20,13 +20,13 @@ jobs:
                 "progress": {"state": "running", "updated": "2026-01-01T00:00:00Z"},
                 "stages": [{"id": "a", "name": "A", "status": "done", "decisions": []}]}
           json.dump(fx, open("/tmp/m.json", "w"))
-          subprocess.check_call([sys.executable, "skills/loop-report/assets/render.py", "--data", "/tmp/m.json", "--out", "/tmp/m.html", "--view", "plugins/matt-loop/skills/interview-report/assets/view.html"])
+          subprocess.check_call([sys.executable, "skills/loop-report/assets/render.py", "--data", "/tmp/m.json", "--out", "/tmp/m.html", "--view", "skills/interview-report/assets/view.html"])
           fa = {"title": "t", "slug": "autocode", "generated": "2026-01-01", "summary": "s",
                 "progress": {"state": "running", "updated": "2026-01-01T00:00:00Z"},
                 "run": {"branch": "b", "metric": {"name": "m", "direction": "lower", "baseline": 1.0}, "budget": {"done": 0, "max": 4, "parallel": 1}, "strategist": {"tier": "deep"}, "terminatedReason": None},
                 "hypotheses": []}
           json.dump(fa, open("/tmp/a.json", "w"))
-          subprocess.check_call([sys.executable, "skills/loop-report/assets/render.py", "--data", "/tmp/a.json", "--out", "/tmp/a.html", "--view", "plugins/auto-loop/skills/autocode/assets/view.html"])
+          subprocess.check_call([sys.executable, "skills/loop-report/assets/render.py", "--data", "/tmp/a.json", "--out", "/tmp/a.html", "--view", "skills/autocode-board/assets/view.html"])
           PY
       - name: SKILL.md frontmatter parses as strict YAML
         run: |

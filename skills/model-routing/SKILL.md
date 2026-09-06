@@ -1,44 +1,40 @@
 ---
 name: model-routing
-description: "The shared model/effort routing table for every delegated loop in this harness (matt-auto, pr-babysit, resolving-merge-conflicts, autocode) — four tiers (Fast / Default / Deep / Max) with the exact model and reasoning-effort pair each resolves to on Codex, Claude Code, OpenCode, and as Orca worker-start flags, plus the dispatch rules and the escalation ladder. A loop maps its own roles onto these tiers and dispatches through this table; it never invents its own pairs. Reference skill: read it when routing, do not invoke it standalone."
+description: "Codex · OpenCode · Orca only; the Claude Code editions route by their agent files and never read this. Two tiers, Default and Deep, their pair per platform and as Orca worker flags, dispatch rules, the one-step ladder. Reference skill, never invoked standalone."
 ---
 
 # Model routing (shared)
 
-Classify from the actual task, not keyword matching, and use the lowest tier that is clearly sufficient. Tier names and thresholds are the same on every platform; only the dispatch mechanism differs. A loop defines *roles* (matt-auto's delegate and implementers, autocode's strategist and experimenters) and maps each role to a tier here — the pairs below are the only ones any loop uses.
+Classify from the actual task, not keywords; take the lowest tier that is clearly sufficient. A loop's SKILL.md maps its *roles* to a tier here, plus any cap or reservation; pairs, dispatch, and the ladder live only here, so a rename is one edit.
 
 ## Tiers
 
 | Tier | Codex `spawn_agent` | Claude Code agent | OpenCode | Use when |
 |---|---|---|---|---|
-| Fast | gpt-5.6-luna / low | haiku / low | gpt-5.6-luna / low | Small bug fixes, type errors, focused tests, boilerplate, one-site mechanical edits |
-| Default | gpt-5.6-terra / medium | sonnet / medium | gpt-5.6-terra / medium | Ordinary feature work, tests, moderate refactors, multi-site changes inside a module, code-plus-doc tasks |
-| Deep | gpt-5.6-sol / high | opus / high | gpt-5.6-sol / high | Difficult debugging, architecture, broad refactors, migrations, algorithm replacement, concurrency, invariants, demanding review, any role that makes design decisions for a whole run |
-| Max | gpt-5.6-sol / max | fable / xhigh | — (retry Deep) | Only as the retry tier when Deep reports the problem is beyond it, or for a role a loop explicitly reserves for it (autocode's escalated strategist) |
-| Large context | chunk via Max | chunk via Max | Gemini | Repository-scale discovery or large PDF, image, video, log, or document analysis |
+| Default | gpt-6-astra / medium | opus / medium | gpt-5.6-terra / medium | Feature work, tests, moderate refactors, small fixes, mechanical edits |
+| Deep | gpt-6-astra / high | fable / high | gpt-5.6-sol / high | Hard debugging, architecture, migrations, algorithms, concurrency, invariants, demanding review, whole-run decisions |
+| Large context | chunk via Deep | chunk via Deep | Gemini | Repository-scale discovery; large documents, logs, media |
 
-- Default to **Default** when two tiers are plausible. Use **Deep** for any persistent role that makes decisions across a whole run (a decision delegate, a strategist) — it is cheap relative to a wrong plan.
-- **Escalation ladder.** If a Fast agent reports the task exceeds its scope, retry once on Default. If Default identifies a genuinely difficult reasoning problem, retry once on Deep. On Codex or Claude Code, if Deep in turn reports the problem is beyond it, retry once on Max; that is the only automatic path to Codex `max` or Claude `xhigh`. On OpenCode, Deep is the ceiling. A loop may cap a role lower (autocode caps experimenters at Deep) — say so in the loop.
-- **Large context.** On Codex and Claude Code there is no separate large-context route: split oversized repositories, documents, or logs into coherent chunks, ask the routed agent to summarize each chunk with source references, then synthesize those summaries in a final routed call on Max. On OpenCode, if the Gemini-backed agent cannot start (provider, credentials, model, or quota), retry the analysis on Deep with the same chunking. This fallback never requires Gemini CLI.
+- Codex: one model, the tier *is* the effort. Design decisions never go below Deep.
+- OpenCode's `openai` provider lacks gpt-6-astra (2026-09-06); it keeps the 5.6 pairs.
+- Both plausible → Default; a persistent whole-run role → Deep.
+- **Ladder, one step.** Default reports genuinely difficult reasoning → retry once on Deep. Deep reports the problem beyond it → Codex calls the *same* agent once more with `reasoning_effort: "max"`; Claude Code and OpenCode stop there as a handoff. A loop may reserve the Codex `max` retry for one role (autocode's strategist).
+- **No `ultra` in a loop.** Astra's `ultra` delegates inside the worker, outside the loop's worktrees, measurement, and re-verification. `max` is the Codex ceiling; `ultra` is for the user's own session.
+- **Large context.** Chunk the material, summarize each chunk with source references on the routed agent, synthesize on Deep. OpenCode does the same when its Gemini agent cannot start; Gemini CLI is never needed.
 
 ## Dispatch per platform
 
-- **Codex** — `spawn_agent` with `model` and `reasoning_effort` set to the pair in the table, and `fork_turns: "none"` for fresh-context workers. A model override cannot be combined with a full-history fork, so put every required path, ticket/spec reference, user constraint, and a `ROUTED_EXECUTION=1` marker in the prompt. A persistent role also uses `fork_turns: "none"` with an explicit brief in its prompt; keep its returned agent id and continue it with `send_message`/`followup_task` — do not respawn it per question.
-- **Claude Code** — each loop ships agent definitions that fix both the model and the reasoning effort (`matt-loop:matt-fast` … `matt-loop:matt-max`, `auto-loop:experimenter-fast` … `auto-loop:strategist-max`). Routing a task to an agent *is* choosing its effort: spawn it by name, never pass a `model` override on top, and never ask the user for effort when these agents are present.
-- **OpenCode** — use the loop's packaged subagent types (`matt-fast` / `matt-default` / `matt-deep`; the installer places them under `~/.config/opencode/agents/`). A loop without packaged OpenCode agents uses the platform's normal subagent and names the intended tier in the prompt.
-- **Orca workers** (`orca orchestration worker-start`) — translate the tier into flags instead of an in-session agent. Under Codex: Fast → `--agent codex --model gpt-5.6-luna --effort low`; Default → `--agent codex --model gpt-5.6-terra --effort medium`; Deep → `--agent codex --model gpt-5.6-sol --effort high`; Max → `--agent codex --model gpt-5.6-sol --effort max`, only as a `--retry-of` after Deep reports the problem is beyond it. Under Claude Code: Fast → `--agent claude --model haiku` (Orca rejects `--effort` for haiku); Default → `--agent claude --model sonnet --effort medium`; Deep → `--agent claude --model opus --effort high`; Max → `--agent claude --model claude-fable-5 --effort xhigh`, same retry rule. Under OpenCode use `--agent opencode` and put `ROUTED_EXECUTION=1; use <the loop's agent for the tier>` in the worker prompt, since Orca does not forward model flags to opencode workers. If Orca rejects a model/effort pair, retry without `--effort` and note it on the board; if the runtime rejects `--model`/`--effort` (older runtime), start the worker without them, name the tier in the prompt, and note the fallback.
-- **Any other platform** (no named agents, no model overrides) — use the platform's normal subagent for every role, name the intended tier in the prompt, and say so once at start. Do not silently pick another provider or model.
-- **Unavailable route** — if a named agent or a Codex model override is unavailable, fall back to the platform's normal subagent and report the fallback. Never silently substitute a different provider.
-- **Free-only mode** — a loop that defines a free route set (matt-loop's `matt-free` / `matt-free-fast` on OpenCode) uses only those routes in that mode and never crosses into a paid tier; if a free agent is unavailable, stop and report rather than fall back to a paid one. Other platforms report that free-only has no route there and continue with normal routing.
-
-## How a loop uses this
-
-Each loop's SKILL.md carries one short table: its role names → the tier here, plus any cap or reservation (retry ceilings, which role gets Max). Everything else — the pairs, the dispatch mechanics, the ladder — is this file, so a model rename is one edit. If this skill is not installed (weed-harness 3.x missing), the loop says `model-routing unavailable — using the platform's normal subagent for every role` once and continues; it does not guess pairs.
+- **Codex** — `spawn_agent` with `model: "gpt-6-astra"`, the tier's `reasoning_effort`, `fork_turns: "none"` (an override cannot ride a full-history fork), and a prompt carrying every path, ticket/spec reference, user constraint, and `ROUTED_EXECUTION=1`. A persistent role gets a brief; keep its agent id and continue it with `send_message`, never respawn per question.
+- **Claude Code** — the loop's agents fix model and effort (`matt-loop:matt-default` / `matt-deep`, `auto-loop:experimenter-default` / `experimenter-deep` / `strategist`). Spawn by name, no `model` override.
+- **OpenCode** — the packaged subagents (`matt-default` / `matt-deep` under `~/.config/opencode/agents/`); without them, the normal subagent, tier named in the prompt.
+- **Orca workers** (`orca orchestration worker-start`) — Codex `--agent codex --model gpt-6-astra --effort medium|high`; `--effort max` only with `--retry-of <dispatch>` after Deep reported the problem beyond it. Claude Code `--agent claude --model opus --effort medium` (Default), `--agent claude --model claude-fable-5-1 --effort high` (Deep). OpenCode `--agent opencode` with `ROUTED_EXECUTION=1; use <tier agent>` in the prompt (no model flags reach opencode). Rejected pair → retry without `--effort`; rejected flags → start without them, tier in the prompt; note it on the board.
+- **Other platforms, or an unavailable route** — the normal subagent, tier in the prompt, fallback reported once; never a silent swap.
+- **Free-only mode** — only the loop's free set (matt-loop's `matt-free` / `matt-free-fast` on OpenCode); a missing free agent stops the run rather than paying. Elsewhere, say it has no route and route normally.
 
 ## Red flags
 
-- Asking the user which effort to use on Codex, OpenCode, or Claude Code → routing is automatic there; only a platform with neither named agents nor overrides asks, and only when the loop says so.
-- Passing a `model` override on top of a Claude Code routing agent → the agent definition already fixes model and effort; the override fights it.
-- Retrying on Max after a Fast or Default failure, or more than once per rung → the ladder is one step at a time and Max is reserved for "Deep says it's beyond me".
-- Choosing Deep or Max for a task because it sounds important → classify from what the task actually needs; the lowest clearly sufficient tier is the rule.
-- A loop carrying its own model/effort pairs → they drift from this table on the next model rename; map roles to tiers instead.
+- Asking the user for an effort on Codex, OpenCode, or Claude Code → routing is automatic there.
+- A `model` override on a Claude Code routing agent → the agent already fixes both.
+- Two retries on a rung, or Codex `max` after a Default failure → one step at a time.
+- A routed role on `ultra`, Deep because the task sounds important, a loop with its own pairs → the loop owns orchestration; classify from need; map roles to tiers.
+- Guessing pairs when this skill is missing → say `model-routing unavailable — using the platform's normal subagent for every role` once and continue.

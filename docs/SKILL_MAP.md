@@ -115,7 +115,7 @@ Long-running delegated loops share one runtime, shipped in **weed-harness** (rep
 
 - **loop-report** — the live progress page of a run and its delivery (Orca artifact link →
   Orca browser tab → path); each loop plugs in its own view
-- **model-routing** — the one table of Fast / Default / Deep / Max tiers with the model and
+- **model-routing** — Codex · OpenCode · Orca only: the one table of Default / Deep tiers with the model and
   reasoning-effort pair per platform (Codex `spawn_agent`, Claude Code agents, OpenCode, Orca
   `worker-start` flags) and the escalation ladder
 - **loop-gates** — how the loops use the upstream unlazy skill so "done" is a re-verified
@@ -123,13 +123,13 @@ Long-running delegated loops share one runtime, shipped in **weed-harness** (rep
 
 On top of it, two loops with different graphs:
 
-- **matt-loop** (`plugins/matt-loop/skills/`): **matt-auto** conducts Matt Pocock's main flow
+- **matt-loop** (`plugins/matt-loop-claude/skills/` on Claude Code, `plugins/matt-loop-codex/skills/` elsewhere): **matt-auto** conducts Matt Pocock's main flow
   (interview → spec → tickets → implementation → optional PR via `--dev`/`--main`; `--spec`
   starts from a confirmed design-map spec), publishing
   its decision graph through loop-report and running independent tickets as parallel Orca
   workers; **pr-babysit** shepherds one open PR without merging; **resolving-merge-conflicts**
   resolves an active merge/rebase on the Deep tier
-- **auto-loop** (`plugins/auto-loop/skills/`): **autocode** runs a hypothesis-driven parallel
+- **auto-loop** (`plugins/auto-loop-claude/skills/` on Claude Code, `plugins/auto-loop-codex/skills/` elsewhere): **autocode** runs a hypothesis-driven parallel
   improvement loop (`init --spec` pre-fills it from a design-map spec), publishing its
   experiment board through loop-report and ending in a PR of the kept changes (one squash
   commit each, on a worktree branch; `run --pr <base>` / `--no-pr`)

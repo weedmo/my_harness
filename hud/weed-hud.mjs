@@ -88,12 +88,12 @@ function getGitInfo(cwd) {
 function shortModel(data) {
   const id = data.model?.id || "";
   const display = data.model?.display_name || "";
-  const fromId = id.match(/claude-(opus|sonnet|haiku)-(\d+)-(\d+)/i);
+  const fromId = id.match(/claude-(opus|sonnet|haiku|fable|mythos)-(\d+)-(\d+)/i);
   if (fromId) {
     const [, , major, minor] = fromId;
     return `${major}.${minor}`;
   }
-  const fromDisplay = display.match(/(Opus|Sonnet|Haiku)\s+(\d+)\.(\d+)/i);
+  const fromDisplay = display.match(/(Opus|Sonnet|Haiku|Fable|Mythos)\s+(\d+)\.(\d+)/i);
   if (fromDisplay) {
     const [, , major, minor] = fromDisplay;
     return `${major}.${minor}`;

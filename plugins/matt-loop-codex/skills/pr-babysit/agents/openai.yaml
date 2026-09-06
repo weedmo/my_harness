@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Babysit"
+  short_description: "Shepherd one GitHub PR through reviews and CI"
+  default_prompt: "Use $pr-babysit to shepherd this PR to merge-ready without merging it."

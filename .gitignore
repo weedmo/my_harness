@@ -39,10 +39,14 @@ plans/
 /plugins/
 !/plugins/
 /plugins/*
-!/plugins/matt-loop/
-!/plugins/matt-loop/**
-!/plugins/auto-loop/
-!/plugins/auto-loop/**
+!/plugins/matt-loop-claude/
+!/plugins/matt-loop-claude/**
+!/plugins/matt-loop-codex/
+!/plugins/matt-loop-codex/**
+!/plugins/auto-loop-claude/
+!/plugins/auto-loop-claude/**
+!/plugins/auto-loop-codex/
+!/plugins/auto-loop-codex/**
 
 # Runtime & OMC state
 .omc/
