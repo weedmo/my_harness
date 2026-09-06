@@ -54,20 +54,28 @@ const PLUGINS = {
     // Only meaningful on Claude Code: the HUD/hooks setup and the Artifact-based design flow.
     claudeOnlySkills: ["setup", "design-map"],
   },
+  // Loop plugins ship two roots: plugins/<name>-claude (Claude Code edition,
+  // built on Workflow / Agent / Artifact) and plugins/<name>-codex (Codex,
+  // OpenCode, gemini-cli, Orca edition). The platform picks the root.
   "matt-loop": {
-    src: path.join(ROOT, "plugins", "matt-loop", "skills"),
+    src: (platform) => path.join(ROOT, "plugins", `matt-loop-${platform === "claude-code" ? "claude" : "codex"}`, "skills"),
     desc: "matt-auto + vendored Matt Pocock skills (human-in-the-loop conducted Matt flow)",
   },
   "auto-loop": {
-    src: path.join(ROOT, "plugins", "auto-loop", "skills"),
+    src: (platform) => path.join(ROOT, "plugins", `auto-loop-${platform === "claude-code" ? "claude" : "codex"}`, "skills"),
     desc: "autocode (hypothesis-driven parallel code improvement loop)",
   },
+};
+
+const pluginSrc = (plugin, platform) => {
+  const { src } = PLUGINS[plugin];
+  return typeof src === "function" ? src(platform) : src;
 };
 
 const OPENCODE_ASSETS = {
   "matt-loop": [
     {
-      src: path.join(ROOT, "plugins", "matt-loop", "opencode", "agents"),
+      src: path.join(ROOT, "plugins", "matt-loop-codex", "opencode", "agents"),
       dir: (home) => path.join(home, ".config", "opencode", "agents"),
       desc: "model-routing agents",
     },
@@ -189,7 +197,7 @@ function normalizeOpenCodeSkill(skillDir, sourceName, installedName) {
 function installOpenCodeCommands(plugin, home) {
   if (plugin !== "matt-loop") return;
   const commandDir = path.join(home, ".config", "opencode", "command");
-  const skills = skillDirs(PLUGINS[plugin].src);
+  const skills = skillDirs(pluginSrc(plugin, "opencode"));
   fs.mkdirSync(commandDir, { recursive: true });
   for (const skill of skills) {
     const command = `---\ndescription: Run the Matt Loop ${skill} workflow.\n---\n\nUse the \`${skill}\` skill to complete this request:\n\n$ARGUMENTS\n`;
@@ -256,7 +264,8 @@ for (const platform of platforms) {
     }
   }
   for (const plugin of platformPlugins) {
-    const { src, claudeOnlySkills = [] } = PLUGINS[plugin];
+    const { claudeOnlySkills = [] } = PLUGINS[plugin];
+    const src = pluginSrc(plugin, platform);
     const skills = skillDirs(src).filter(
       (skill) => platform === "claude-code" || !claudeOnlySkills.includes(skill),
     );

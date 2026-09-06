@@ -1,0 +1,31 @@
+{
+  "name": "auto-loop",
+  "version": "4.0.0",
+  "description": "Autonomous code improvement loop - autocode: hypothesis-driven parallel experiments with model routing (strategist on the expensive tier, experimenters routed by hypothesis difficulty), a live experiment board via weed-harness loop-report, unlazy-backed termination gates, and kept changes collected as one squash commit each on a worktree branch that ends in a PR.",
+  "author": {
+    "name": "weedmo",
+    "url": "https://github.com/weedmo"
+  },
+  "homepage": "https://github.com/weedmo/skills",
+  "repository": "https://github.com/weedmo/skills",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "loop",
+    "autonomous",
+    "performance",
+    "hypothesis"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "auto-loop",
+    "shortDescription": "Hypothesis-driven parallel code improvement loop",
+    "developerName": "weedmo",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ]
+  }
+}

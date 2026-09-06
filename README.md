@@ -5,9 +5,9 @@ for **Claude Code, Codex, opencode, gemini-cli, and Orca**.
 
 | Plugin | Where | What | Required |
 |--------|-------|------|----------|
-| `weed-harness` | repo root | The shared runtime every loop builds on — `loop-report` (live progress page + Orca delivery), `model-routing` (model/effort tiers), `loop-gates` (unlazy-backed completion) — plus the Claude Code-only setup, hooks, and HUD | yes, every platform |
-| `matt-loop` | `plugins/matt-loop/` | matt-auto + vendored Matt Pocock skills (a conducted Matt flow with a decision graph) | optional, needs weed-harness 3.1+ |
-| `auto-loop` | `plugins/auto-loop/` | autocode hypothesis-driven parallel code improvement loop with a live experiment board | optional, needs weed-harness 3.1+ |
+| `weed-harness` | repo root | The shared runtime every loop builds on — `loop-report` (live progress page; Artifact on Claude Code, Orca delivery elsewhere), `interview-report` and `autocode-board` (the loops' page views), `model-routing` (Codex-side model/effort tiers), `loop-gates` (unlazy-backed completion) — plus the Claude Code-only setup, hooks, and HUD | yes, every platform |
+| `matt-loop` | `plugins/matt-loop-claude/` · `plugins/matt-loop-codex/` | matt-auto + vendored Matt Pocock skills (a conducted Matt flow with a decision graph); one edition per platform | optional, needs weed-harness 5.0+ |
+| `auto-loop` | `plugins/auto-loop-claude/` · `plugins/auto-loop-codex/` | autocode hypothesis-driven parallel code improvement loop with a live experiment board; one edition per platform | optional, needs weed-harness 5.0+ |
 
 The split: **weed-harness is the loop runtime** (what every long delegated run
 needs — a page the user can watch, one routing table, gates that make "done"
@@ -124,17 +124,20 @@ workflow guidance.
 | Skill | Platforms | Description |
 |-------|-----------|-------------|
 | `loop-report` | all | Builds the live progress page of a delegated run from `assets/shell.html` + the loop's view + a data JSON (`assets/render.py`), and delivers it with `assets/deliver.py` (`probe` / `publish` / `show`): Orca artifact link, or the Orca built-in browser tab when links are unavailable, or the path — route kept stable per run; `npm test` runs its tests against a fake Orca CLI |
-| `model-routing` | all | The Fast / Default / Deep / Max tier table with the exact model and reasoning-effort pair per platform (Codex `spawn_agent`, Claude Code agents, OpenCode, Orca `worker-start` flags), dispatch rules, and the escalation ladder |
+| `model-routing` | Codex · OpenCode · Orca | The Default / Deep tier table with the exact model and reasoning-effort pair per platform (Codex `spawn_agent`, Claude Code agents, OpenCode, Orca `worker-start` flags), dispatch rules, and the escalation ladder |
+| `interview-report` | all | matt-auto's decision-graph view (`assets/view.html` + `validate.py`) — stages, editable decision nodes with the `<slug>.edits.json` round-trip, ticket waves, the execution plan, review and PR lanes — rendered by `loop-report` |
+| `autocode-board` | all | autocode's experiment board view, data checks, and the templates / schemas / prompts autocode reads (`assets/reference.md`) |
 | `loop-gates` | all | How the loops use the upstream unlazy skill: ledger per unit of work, coordinator-side `--reverify`, two retries then handoff, boundaries with Orca |
 | `/setup` | Claude Code | Terminal UI + basic settings only: statusLine HUD, custom hooks (language-rule, auto-update) |
 | `/design-map` | Claude Code | Visual-first design flow on an Artifact diagram, ending in a spec file with a frontmatter the loops read; the handoff commits the spec on a branch and hands it to `matt-auto --spec` / `autocode init --spec` on Codex or OpenCode (Orca terminal when reachable, else a line to paste) |
 
 ### matt-loop
 
+Two editions of the same flow, one per plugin root. `plugins/matt-loop-claude` (Claude Code) is built on the built-ins — a fork as the decision delegate, plugin agents for tickets, Workflow or `/batch` for parallel waves, `/code-review` · `/simplify` · `/security-review` for the review pass, `/loop` for PR shepherding, the Artifact tool for the page — and adds an execution plan gate (engine, model, agents, review level, cost) the user approves before anything runs. `plugins/matt-loop-codex` (Codex, OpenCode, Orca) routes through `model-routing`, runs parallel waves as Orca workers, and delivers with `deliver.py`. Both read the same `interview-report` view.
+
 | Skill | Description |
 |-------|-------------|
 | `matt-auto` | Conductor for Matt Pocock's main flow (interview → spec → tickets → implementation) with a decision delegate, one interview gate, and automatic model/effort routing via `model-routing`; publishes its decision graph and live ticket board through `interview-report` → `loop-report`; `--spec <path>` takes a confirmed design-map spec (its decisions become a read-only design stage, the interview asks only what is left open); `--dev` / `--main` / `--pr <base>` also opens a PR and shepherds it to merge-ready via pr-babysit; independent tickets run in parallel as Orca-orchestrated workers when Orca is reachable |
-| `interview-report` | matt-auto's decision-graph view (`assets/view.html` + `validate.py`) — stages, editable decision nodes with the `<slug>.edits.json` round-trip, ticket waves, review and PR lanes — rendered and delivered by `loop-report` |
 | `pr-babysit` | Shepherd one open GitHub PR through CI and review with automatic model/effort routing on Codex, OpenCode, and Claude Code |
 | `resolving-merge-conflicts` | Resolve an active merge/rebase conflict; direct OpenCode / Claude Code use routes to a deep model |
 | vendored Matt Pocock skills | The remaining upstream skills matt-auto conducts: `grilling`, `grill-me`, `grill-with-docs`, `to-spec`, `to-tickets`, `handoff`, `tdd`, `implement`, `diagnosing-bugs`, `codebase-design`, `domain-modeling`, `research`, `prototype`, `code-review`, `setup-matt-pocock-skills` |
@@ -143,12 +146,14 @@ The vendored skills come from
 [mattpocock/skills](https://github.com/mattpocock/skills) and are auto-synced:
 a daily GitHub Actions workflow (`sync-mattpocock.yml`) re-vendors them, bumps
 the matt-loop patch version, and commits when upstream changed. The pinned
-upstream commit lives in `plugins/matt-loop/mattpocock.lock.json`; to sync
-manually, run `bash plugins/matt-loop/scripts/sync-upstream.sh`. On this
+upstream commit lives in `plugins/matt-loop-codex/mattpocock.lock.json`; to sync
+manually (both roots), run `bash plugins/matt-loop-codex/scripts/sync-upstream.sh`. On this
 machine the `auto-update.sh` SessionStart hook then propagates every matt-loop
 skill to `~/.codex/skills/`.
 
 ### auto-loop
+
+Two editions as well: `plugins/auto-loop-claude` (in-session experimenters, plugin agents, Artifact board) and `plugins/auto-loop-codex` (Orca placement, `model-routing`, `deliver.py`); both render `autocode-board`.
 
 | Skill | Description |
 |-------|-------------|

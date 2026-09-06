@@ -13,11 +13,11 @@ jobs:
       - name: Sync vendored skills from mattpocock/skills
         id: sync
         run: |
-          bash plugins/matt-loop/scripts/sync-upstream.sh
-          if git status --porcelain plugins/matt-loop/skills | grep -q .; then
+          bash plugins/matt-loop-codex/scripts/sync-upstream.sh
+          if git status --porcelain plugins/matt-loop-codex/skills plugins/matt-loop-claude/skills | grep -q .; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
-            git checkout -- plugins/matt-loop/mattpocock.lock.json
+            git checkout -- plugins/matt-loop-codex/mattpocock.lock.json
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No skill changes upstream"
           fi
@@ -28,8 +28,8 @@ jobs:
           import json
 
           plugin_paths = [
-              "plugins/matt-loop/.claude-plugin/plugin.json",
-              "plugins/matt-loop/.codex-plugin/plugin.json",
+              "plugins/matt-loop-claude/.claude-plugin/plugin.json",
+              "plugins/matt-loop-codex/.codex-plugin/plugin.json",
           ]
           d = json.load(open(plugin_paths[0]))
           major, minor, patch = d["version"].split(".")
@@ -53,9 +53,9 @@ jobs:
       - name: Commit and push
         if: steps.sync.outputs.changed == 'true'
         run: |
-          SHA=$(python3 -c "import json; print(json.load(open('plugins/matt-loop/mattpocock.lock.json'))['commit'][:12])")
+          SHA=$(python3 -c "import json; print(json.load(open('plugins/matt-loop-codex/mattpocock.lock.json'))['commit'][:12])")
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add plugins/matt-loop .claude-plugin/marketplace.json
+          git add plugins/matt-loop-codex plugins/matt-loop-claude .claude-plugin/marketplace.json
           git commit -m "chore(matt-loop): sync mattpocock skills to ${SHA}"
           git push origin main

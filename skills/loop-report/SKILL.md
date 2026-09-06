@@ -23,7 +23,11 @@ python3 <this skill's dir>/assets/render.py \
 
 The script validates the common contract below, then the view's own `validate.py`, and refuses to write a page that would render wrong — so a regeneration is "edit the JSON, rerun the script". Never splice the shell or a view by hand (no `cp` + `sed`/`perl`): a hand-rolled substitution silently ate 30 KB of the shell in testing. Never edit the shell's or a view's CSS/JS. If `python3` is missing, say so and stop.
 
-**Deliver** — after every build:
+**Deliver** — after every build. Which way depends on the platform:
+
+- **Claude Code** — publish the page with the **Artifact tool** on the same file path every time (same path, same URL; favicon on the first publish only) and relay the URL. No probe, no `deliver.py`; without the Artifact tool the page is a path, said once.
+- **Codex, OpenCode, Orca** — `deliver.py`, below.
+
 
 ```
 python3 <this skill's dir>/assets/deliver.py probe   --page <dir>/<slug>.html

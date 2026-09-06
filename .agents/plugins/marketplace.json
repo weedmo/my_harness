@@ -20,7 +20,7 @@
       "name": "matt-loop",
       "source": {
         "source": "local",
-        "path": "./plugins/matt-loop"
+        "path": "./plugins/matt-loop-codex"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -32,7 +32,7 @@
       "name": "auto-loop",
       "source": {
         "source": "local",
-        "path": "./plugins/auto-loop"
+        "path": "./plugins/auto-loop-codex"
       },
       "policy": {
         "installation": "AVAILABLE",

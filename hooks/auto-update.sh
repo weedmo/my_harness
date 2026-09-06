@@ -74,7 +74,7 @@ fi
 MPC="$HOME/.claude/plugins/marketplaces/weed-plugins"
 DST="$HOME/.codex/skills"
 if [ -d "$MPC" ] && [ -d "$DST" ] && [ ! -d "$HOME/.codex/plugins/cache/weed-plugins" ]; then
-  for SRC in "$MPC/skills" "$MPC/plugins/matt-loop/skills" "$MPC/plugins/auto-loop/skills"; do
+  for SRC in "$MPC/skills" "$MPC/plugins/matt-loop-codex/skills" "$MPC/plugins/auto-loop-codex/skills"; do
     [ -d "$SRC" ] || continue
     for d in "$SRC"/*/; do
       s="$(basename "$d")"
