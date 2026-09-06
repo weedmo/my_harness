@@ -57,7 +57,7 @@ shell, build, and delivery are **`$loop-report`**'s:
 
 Delivery is `deliver.py`'s alone — never hand-splice the page or edit the view's CSS/JS; relay
 its one-line answer to matt-auto verbatim. If `$loop-report` is missing, say
-`loop-report unavailable — weed-harness 3.x required` once; the decision log on disk is then the
+`loop-report unavailable — weed-harness 4.x required` once; the decision log on disk is then the
 only report, and matt-auto's board must say so.
 
 ### Data format
@@ -139,7 +139,8 @@ contract. The view's own keys:
     / `ci` / `conflict` / `dependency` / `worker` / `review` / `other`; `detail` is the checkable
     fact — the unmet gate id with expected-vs-actual, the failing check, the open question.
     "막혔습니다" with no detail is the failure this panel exists to prevent.
-  - `gates` is the unlazy ledger tally when installed (`$loop-gates`); omit otherwise.
+  - `gates` counts the ticket's verification commands: `total` the commands the ticket names,
+    `met` how many passed on the coordinator's own last run. Omit when the ticket names none.
   - **Who does the work shows on the node**: `route` is the routed agent; `worker` the model and
     effort it resolved to plus, for an Orca worker, `dispatchId` and `worktree`. Fill both — a
     route alone half-answers "어떤 티켓을 어떤 서브에이전트가 어떤 모델로".

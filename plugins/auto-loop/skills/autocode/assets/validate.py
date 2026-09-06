@@ -10,7 +10,7 @@ DIRECTIONS = {"lower", "higher"}
 TIERS = {"deep", "max"}
 STATUSES = {"pending", "running", "measured", "keep", "discard", "crash",
             "conflict", "interaction", "cancelled"}
-DIFFICULTIES = {"fast", "default", "deep"}
+DIFFICULTIES = {"default", "deep"}
 TERMINATED = {"budget_exhausted", "target_reached", "exhausted", "plateau", "paused"}
 # These statuses come out of the coordinator's own measurement, so the number
 # and the order it was measured in must both be there.

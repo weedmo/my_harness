@@ -38,12 +38,11 @@ If `ROUTED_EXECUTION=1` is already present, execute the workflow and route fresh
 
 | Work | Agent |
 |---|---|
-| Read-only status/check inspection or a mechanical fix | `matt-fast` |
-| Normal CI diagnosis, review response, or focused implementation | `matt-default` |
+| Status/check inspection, a mechanical fix, normal CI diagnosis, review response, focused implementation | `matt-default` |
 | Difficult CI failure, semantic conflict, architecture-sensitive review | `matt-deep` |
-| Very large logs or repository-wide evidence gathering | `matt-large-context` (OpenCode) or chunked `matt-max` (Codex/Claude Code), then hand the focused fix to default or deep |
+| Very large logs or repository-wide evidence gathering | `matt-large-context` (OpenCode) or chunked `matt-deep` (Codex/Claude Code), then hand the focused fix to default or deep |
 
-Default to `matt-default` when uncertain. The model/effort pair for each tier per platform, the `fork_turns: "none"` rule, and the escalation ladder (fast → default → deep only when the lower tier reports a concrete limit; Max only as a retry after Deep) come from the shared `$model-routing` skill — put all required PR/repository context in each child prompt. Include `ROUTED_EXECUTION=1` in every routed child prompt, especially when invoking `$resolving-merge-conflicts`, so child skills execute instead of routing recursively. In free-only mode use `matt-free-fast` for fast work and `matt-free` for everything else; if either free agent is unavailable, stop and report the blocker rather than falling back to a potentially paid model. In normal routing, unavailable named agents or Codex model overrides may fall back to the platform's normal agent if the fallback is reported.
+Default to `matt-default` when uncertain. The model/effort pair for each tier per platform, the `fork_turns: "none"` rule, and the escalation ladder (default → deep only when the lower tier reports a concrete limit; on Codex one `max`-effort retry after Deep) come from the shared `$model-routing` skill — put all required PR/repository context in each child prompt. Include `ROUTED_EXECUTION=1` in every routed child prompt, especially when invoking `$resolving-merge-conflicts`, so child skills execute instead of routing recursively. In free-only mode use `matt-free-fast` for mechanical work and `matt-free` for everything else; if either free agent is unavailable, stop and report the blocker rather than falling back to a potentially paid model. In normal routing, unavailable named agents or Codex model overrides may fall back to the platform's normal agent if the fallback is reported.
 
 If `matt-large-context` fails because the Google provider, Gemini credentials, model, or quota is unavailable, retry with `matt-deep`; Gemini CLI is not required. Split oversized CI logs or repository evidence into coherent chunks, preserve check names and source links in each chunk summary, and synthesize them with a final `matt-deep` call. In free-only mode use `matt-free` for this chunked fallback instead.
 

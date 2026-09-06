@@ -67,7 +67,7 @@ spec: {design-map spec path|null}
 ## Routing
 - **problem_difficulty**: {standard|hard}
 - **strategist_tier**: {deep|max}
-- **experimenter_routes**: fast | default | deep (per hypothesis, chosen by the strategist)
+- **experimenter_routes**: default | deep (per hypothesis, chosen by the strategist)
 
 ## Plateau
 - **consecutive_discard_threshold**: 5
@@ -115,7 +115,7 @@ spec: {design-map spec path|null}
   "expected_delta": "-15% to -25% p95_latency_ms",
   "touches": ["src/validate.ts"],
   "depends_on": [],
-  "difficulty": "fast",
+  "difficulty": "default",
   "if_confirmed": ["Apply the same memoization to the response serializer (src/serialize.ts)", "Add an LRU bound once hit ratio is known"],
   "if_refuted": ["Schema compile is off the hot path; profile the handler (new hypothesis) before more caching"],
   "priority": 2,
@@ -147,7 +147,7 @@ Include verbatim in the strategist's first prompt:
 > and never run the metric. Each hypothesis is a JSON object written to
 > `.autocode/hypotheses/H{NNN}.json` with the schema in your prompt. Prefer hypotheses that are
 > independent (disjoint `touches`) so they can run concurrently. Assign `difficulty` honestly:
-> `fast` for one-site mechanical changes, `default` for multi-site changes within a module,
+> `default` for one-site or multi-site changes within a module,
 > `deep` for algorithm replacement, cross-module restructuring, or anything touching invariants.
 > Pre-commit `if_confirmed` and `if_refuted`: the concrete next hypotheses or cancellations each
 > outcome implies. When the coordinator sends you a result, reply with a frontier delta
@@ -180,7 +180,7 @@ perf(H007): memoize the compiled validator by schema identity
 
 metric   p95_latency_ms 182.4 -> 147.3 (-19.2%)
 noise    ±2.1
-route    experimenter-fast (haiku/low)
+route    experimenter-default (opus/medium)
 claim    per-request schema compilation dominates p95
 board    https://claude.ai/code/artifact/… (or the page path)
 ```
@@ -216,8 +216,8 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 },
 "hypotheses": [
   { "id": "H007", "seq": 5, "claim": "…", "experiment": "…", "expectedDelta": "-15% ~ -25%",
-    "status": "keep", "difficulty": "fast", "route": "experimenter-fast",
-    "worker": { "model": "haiku", "effort": "low", "worktree": ".autocode/worktrees/H007", "dispatchId": "" },
+    "status": "keep", "difficulty": "default", "route": "experimenter-default",
+    "worker": { "model": "opus", "effort": "medium", "worktree": ".autocode/worktrees/H007", "dispatchId": "" },
     "touches": ["src/validate.ts"], "dependsOn": [], "priority": 2,
     "metric": 151.0, "delta": -19.2, "commit": "9f8e7d6", "startedAt": "…", "measuredAt": "…",
     "ifConfirmed": ["…"], "ifRefuted": ["…"], "note": "…", "obstacle": "", "rerouted": false }
@@ -251,7 +251,7 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 - Experiments: {done} ({kept} keep, {discarded} discard, {crashed} crash, {conflict} conflict, {interaction} interaction)
 - Wall clock: {elapsed}; {experiments/hour}; measurement time share {pct}%
 - Strategist: {deep|max}{, escalated at experiment N}
-- Experimenter routes: fast {n} / default {n} / deep {n}; re-routed {n}
+- Experimenter routes: default {n} / deep {n}; re-routed {n}
 - Gates caught: {n}
 - Termination: {reason}
 - PR: {url} → {pr_base} | none — nothing kept | skipped (--no-pr) | not opened — {reason}, then `git push -u origin {branch}` + `gh pr create --base {pr_base} --head {branch}`
@@ -277,10 +277,10 @@ The common keys follow loop-report's contract (`title`, `slug: "autocode"`, `gen
 **Best**: {metric_name} {best_metric} (baseline {baseline}, {improvement}%, noise ±{noise_band})
 **Experiments**: {done}/{max} — {kept} keep · {discarded} discard · {crashed} crash · {conflict} conflict · {interaction} interaction
 **Kept commits**: {kept} on the branch{ · PR {pr_url}}
-**Running** ({n}/{parallel}): H012 (default, 4 min) · H015 (fast, 1 min)
+**Running** ({n}/{parallel}): H012 (default, 4 min) · H015 (deep, 1 min)
 **Frontier**: {pending count} pending — next: H016 (p1), H013 (p2)
 **Strategist**: {deep|max}{ (escalated)} · consecutive discards {n}
-**Routes used**: fast {n} / default {n} / deep {n}
+**Routes used**: default {n} / deep {n}
 **Rate**: {experiments/hour}, measurement share {pct}%
 **Board**: {link | tab + path | path} (from `deliver.py show --page .autocode/report/autocode.html`)
 ```

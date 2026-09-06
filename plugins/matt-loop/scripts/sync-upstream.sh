@@ -15,11 +15,9 @@ DEST="$PLUGIN_DIR/skills"
 LOCK="$PLUGIN_DIR/mattpocock.lock.json"
 PY="$(command -v python3 || command -v python)"
 
-# The skills matt-auto's flow (ask-matt's main flow) drives, plus standalone
-# skills kept for direct use. qa and request-refactor-plan live under
-# skills/deprecated/ upstream but are kept for direct invocation.
+# The skills matt-auto's flow drives, plus standalone skills kept for direct
+# use. Only skills something in this repo references are listed.
 SKILLS=(
-  ask-matt
   codebase-design
   code-review
   diagnosing-bugs
@@ -31,8 +29,6 @@ SKILLS=(
   implement
   improve-codebase-architecture
   prototype
-  qa
-  request-refactor-plan
   research
   setup-matt-pocock-skills
   tdd

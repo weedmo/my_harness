@@ -115,7 +115,7 @@ Long-running delegated loops share one runtime, shipped in **weed-harness** (rep
 
 - **loop-report** — the live progress page of a run and its delivery (Orca artifact link →
   Orca browser tab → path); each loop plugs in its own view
-- **model-routing** — the one table of Fast / Default / Deep / Max tiers with the model and
+- **model-routing** — the one table of Default / Deep tiers with the model and
   reasoning-effort pair per platform (Codex `spawn_agent`, Claude Code agents, OpenCode, Orca
   `worker-start` flags) and the escalation ladder
 - **loop-gates** — how the loops use the upstream unlazy skill so "done" is a re-verified
