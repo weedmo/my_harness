@@ -15,6 +15,5 @@
     "performance",
     "hypothesis"
   ],
-  "skills": "./skills/",
-  "agents": "./agents/"
+  "skills": "./skills/"
 }
