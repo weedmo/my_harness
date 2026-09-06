@@ -83,6 +83,11 @@ const OPENCODE_ASSETS = {
 };
 
 const LEGACY_SKILLS = [
+  // vendored Matt skills dropped in matt-loop 2.0.0 (harness diet B)
+  "ask-matt",
+  "merging-pr-queue",
+  "qa",
+  "request-refactor-plan",
   "auto_research",
   "find-skills",
   "harness-sync",
