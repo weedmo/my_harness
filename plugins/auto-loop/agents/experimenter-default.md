@@ -1,7 +1,7 @@
 ---
 name: experimenter-default
 description: Implements a single medium-difficulty autocode hypothesis inside its own worktree — multi-site changes within a module, new helpers, data-structure swaps, loop restructuring. Dispatched by autocode, not for direct invocation.
-model: sonnet
+model: opus
 effort: medium
 ---
 

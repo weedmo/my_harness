@@ -125,7 +125,7 @@ contract. The view's own keys:
   { "id": "T3", "title": "결과 패널 렌더링", "status": "blocked",
     "blockedBy": [], "gates": { "met": 3, "total": 5 },
     "route": "matt-deep",
-    "worker": { "model": "opus", "effort": "high",
+    "worker": { "model": "fable", "effort": "high",
                 "dispatchId": "dispatch-7f2", "worktree": "matt-auto/T3" },
     "estimateMin": 25,
     "blocker": { "reason": "gate", "detail": "G4 스냅샷 테스트 실패 — 기대 +504/−175, 수신 +504/−134" },

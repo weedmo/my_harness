@@ -1,7 +1,7 @@
 ---
 name: experimenter-deep
 description: Implements a single high-difficulty autocode hypothesis inside its own worktree — algorithm replacement, cross-module restructuring, concurrency, changes that touch invariants. Dispatched by autocode, not for direct invocation.
-model: opus
+model: fable
 effort: high
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: strategist
 description: Generates and revises the hypothesis frontier for the autocode loop — the expensive reasoning tier that decides what to try next. Persistent for the whole run; dispatched by autocode, not for direct invocation.
-model: opus
+model: fable
 effort: high
 ---
 

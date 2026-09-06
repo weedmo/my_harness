@@ -91,7 +91,7 @@ empty. A pre-filled value is an answer: the follow-ups it triggers still run.
 Classify the problem from the recon and the answers, and show the classification in the approval
 step so the user can override it:
 
-- **standard** → strategist runs on the Deep route (`strategist`, opus/high).
+- **standard** → strategist runs on the Deep route (`strategist`, fable/high).
 - **hard** → strategist runs on the Max route (`strategist-max`, fable/xhigh) from the start.
 
 Classify **hard** when any of: scope is system-wide; the target spans more than three modules; the
