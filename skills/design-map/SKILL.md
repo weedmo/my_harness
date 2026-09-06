@@ -51,8 +51,10 @@ Load the `artifact-diagramming` skill first, then build one Artifact page contai
   two alternatives side by side (design-it-twice) with a short tradeoff table and
   a recommendation; otherwise one proposal is fine.
 - **Decision list** — each open question as a row: question / options / your pick / why.
-Use mermaid or inline SVG per the diagramming skill's guidance, under the
-drawing rules below.
+Every diagram on the page is hand-drawn inline SVG under the drawing rules
+below — from the first round, not only after confirmation. Mermaid appears
+only in the spec's 확정 구조 (the source the implementing loops read), never
+on the Artifact.
 
 Drawing rules (every diagram, every round — adapted from
 cathrynlavery/diagram-design; its fonts, palette, brand onboarding and
@@ -66,11 +68,12 @@ theme switch stay):
   same thing, use the table.
 - **Plan first.** One line in chat before drawing: the diagram type and what
   the budget forces out. Skip it only when the user already pinned both.
-- **Iterate in mermaid, polish once.** Rounds of the understanding loop stay
-  in mermaid (cheap to change); switch a diagram to hand-drawn inline SVG
-  only when mermaid cannot lay it out legibly. After the design is confirmed
-  the 확정 구조 is redrawn once as inline SVG (step 6); the spec keeps the
-  mermaid source.
+- **Right the first time.** There is no draft round. The Artifact exists so
+  the user understands the design, and understanding starts at the first
+  look — so the first publish is drawn to the same standard as the last:
+  full geometry and a11y rules, real names, the recommendation already
+  picked. Each later round edits that SVG; nothing is deferred to a
+  "polish" pass.
 - **Inline SVG geometry.** Everything on a 4px grid: font sizes (12, 16, 20),
   coordinates, box sizes, gaps, padding. Paint arrows before boxes. A
   connector between nodes that share no axis is orthogonal with rounded
@@ -109,28 +112,24 @@ it is the authority; declare only what its roster serves):
   then hide the editing affordances and the page stays a plain view.
 
 Korean text is wide — size everything for it before drawing. Budget one
-font-size per Hangul glyph (Latin needs about half). Inline SVG: put each box
-and its label in one `<g>`, and make the rect at least
-`chars × font-size + 24px` wide, rounded up to the 4px grid; a label that
-does not fit gets split across lines or shortened, never squeezed. Mermaid:
-always quote labels (`A["라벨"]`), keep them to roughly 12 Hangul characters,
-break longer ones with `<br/>`, and move explanations to the caption —
-mermaid estimates CJK width badly, which is exactly what produces clipped
-labels and nodes drawn on top of each other.
+font-size per Hangul glyph (Latin needs about half). Put each box and its
+label in one `<g>`, and make the rect at least `chars × font-size + 24px`
+wide, rounded up to the 4px grid; a label that does not fit gets split across
+lines or shortened, never squeezed. In the spec's mermaid: always quote
+labels (`A["라벨"]`), keep them to roughly 12 Hangul characters, break longer
+ones with `<br/>` — mermaid estimates CJK width badly.
 
 Publish, then run the render check below. Only when it passes, hand the user
 the link and tell them the three ways to respond: chat, selecting any part of
 the page and commenting, or editing the text directly and pressing 저장.
 
 Render check (MANDATORY after every publish that touches a diagram or layout):
-the host lays the page out with its own fonts and mermaid version, so what the
+the host lays the page out with its own fonts, so what the
 local file looks like proves nothing — check the live page.
 1. Open the published URL in a browser that carries the user's claude.ai login
    (the `claude-in-chrome` tools; new tab, never one the user is working in).
-   Fallback when no logged-in browser is reachable: write a scratch copy of the
-   file that adds `<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.2/mermaid.min.js">`
-   (mermaid fences only render natively on the host), serve the scratch
-   directory with `python3 -m http.server <port>` and open the copy over
+   Fallback when no logged-in browser is reachable: serve a scratch copy of
+   the file with `python3 -m http.server <port>` and open it over
    `http://localhost` with the playwright or chrome-devtools tools (`file://`
    is blocked there). Say in the handoff that the check ran on a local render.
 2. Run this in the page and read the result; anything but `OK` is a defect:
@@ -189,7 +188,7 @@ local file looks like proves nothing — check the live page.
    `'light'` if the browser is already dark), re-run the script, and screenshot
    again — the fonts do not change between themes, but contrast bugs do.
 4. Any finding → fix the source file (shorten or wrap the label, widen the box,
-   change the mermaid direction or split the diagram), republish to the same
+   reroute the connector or split the diagram), republish to the same
    path, and run the check again. Repeat until it comes back `OK` in both
    themes. Report in one line what the check covered and which browser it ran in.
 
@@ -249,7 +248,7 @@ metric:                  # required when loop or followup is autocode; allowed o
 # <title>
 ## 큰 틀        — 5–10 sentences a delegate can act on without this conversation
 ## 목표 / ## 비목표
-## 확정 구조   — the final mermaid diagram source
+## 확정 구조   — mermaid source transcribed from the confirmed SVG (same nodes, same arrows)
 ## 결정        — table: id · 질문 · 선택 · 이유 (from the decision list)
 ## 구현 순서   — numbered steps, each with a verify check
 ```
@@ -268,11 +267,8 @@ code-review skill is unavailable in the session, spawn one general-purpose agent
 adversarially review the spec (contradictions, missing edge cases, steps that can't
 be verified) and apply what survives.
 
-Then polish once: redraw the spec's 확정 구조 as inline SVG under the step-3
-drawing rules (the mermaid in the spec stays the source the loops read),
-replace the proposed-structure diagram on the Artifact with it, republish,
-and run the step-3 render check. Any later spec change edits the mermaid
-first and the SVG to match.
+Any spec change from here on edits the mermaid and the Artifact's SVG
+together, then republishes and runs the step-3 render check.
 
 ### 7. Handoff
 The spec crosses to the implementing CLI as a committed file — nothing else
