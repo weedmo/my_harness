@@ -51,7 +51,42 @@ Load the `artifact-diagramming` skill first, then build one Artifact page contai
   two alternatives side by side (design-it-twice) with a short tradeoff table and
   a recommendation; otherwise one proposal is fine.
 - **Decision list** — each open question as a row: question / options / your pick / why.
-Use mermaid or inline SVG per the diagramming skill's guidance.
+Use mermaid or inline SVG per the diagramming skill's guidance, under the
+drawing rules below.
+
+Drawing rules (every diagram, every round — adapted from
+cathrynlavery/diagram-design; its fonts, palette, brand onboarding and
+separate light/dark variants are deliberately not adopted — our tokens and
+theme switch stay):
+- **Budget.** At most 9 nodes, 12 arrows and 2 accent-colored elements per
+  diagram. Over budget → split into an overview and a detail diagram, never
+  compress. Before drawing, try to remove each node, merge any two that
+  always travel together, drop any arrow the layout already implies, and
+  drop any label that color or shape already carries. If a table says the
+  same thing, use the table.
+- **Plan first.** One line in chat before drawing: the diagram type and what
+  the budget forces out. Skip it only when the user already pinned both.
+- **Iterate in mermaid, polish once.** Rounds of the understanding loop stay
+  in mermaid (cheap to change); switch a diagram to hand-drawn inline SVG
+  only when mermaid cannot lay it out legibly. After the design is confirmed
+  the 확정 구조 is redrawn once as inline SVG (step 6); the spec keeps the
+  mermaid source.
+- **Inline SVG geometry.** Everything on a 4px grid: font sizes (12, 16, 20),
+  coordinates, box sizes, gaps, padding. Paint arrows before boxes. A
+  connector between nodes that share no axis is orthogonal with rounded
+  right-angle bends (`r=8`); a straight line only when the endpoints share
+  an x or y. An arrow label sits on an opaque rect filled with the page
+  background token, 6–10px off the stroke, over open canvas — never over a
+  box painted after it. No two connectors share a path or a segment;
+  connectors leaving the same edge of a box get their own attach points
+  ≥12px apart; a connector never passes behind a box that is not its
+  endpoint — reroute, and when geometry makes that impossible draw it dashed
+  with the label at the visible end.
+- **Accessible SVG.** Each `<svg>` carries `role="img"` and `aria-labelledby`
+  naming a `<title id="<slug>-title">` (first child; the diagram's name, in
+  Korean) and a `<desc id="<slug>-desc">` (one Korean sentence on what it
+  shows, not its geometry). IDs are prefixed per diagram, never bare
+  `title` / `desc`.
 
 Theme check (MANDATORY before every publish): the page must be legible in both
 light and dark viewer themes. Define the complete palette as CSS tokens on bare
@@ -76,12 +111,12 @@ it is the authority; declare only what its roster serves):
 Korean text is wide — size everything for it before drawing. Budget one
 font-size per Hangul glyph (Latin needs about half). Inline SVG: put each box
 and its label in one `<g>`, and make the rect at least
-`chars × font-size + 24px` wide; a label that does not fit gets split across
-lines or shortened, never squeezed. Mermaid: always quote labels
-(`A["라벨"]`), keep them to roughly 12 Hangul characters, break longer ones
-with `<br/>`, and move explanations to the caption — mermaid estimates CJK
-width badly, which is exactly what produces clipped labels and nodes drawn on
-top of each other.
+`chars × font-size + 24px` wide, rounded up to the 4px grid; a label that
+does not fit gets split across lines or shortened, never squeezed. Mermaid:
+always quote labels (`A["라벨"]`), keep them to roughly 12 Hangul characters,
+break longer ones with `<br/>`, and move explanations to the caption —
+mermaid estimates CJK width badly, which is exactly what produces clipped
+labels and nodes drawn on top of each other.
 
 Publish, then run the render check below. Only when it passes, hand the user
 the link and tell them the three ways to respond: chat, selecting any part of
@@ -129,14 +164,25 @@ local file looks like proves nothing — check the live page.
          const A = boxes[a].s, B = boxes[b].s;
          if (hit(A, B) && !inside(A, B) && !inside(B, A)) out.push(`overlap svg#${i}: "${boxes[a].label}" x "${boxes[b].label}"`);
        }
+       if (!svg.hasAttribute('aria-roledescription') && !svg.closest('.mermaid')) {
+         const k = svg.getBoundingClientRect().width / (svg.viewBox.baseVal.width || svg.getBoundingClientRect().width || 1);
+         const rs = [...svg.querySelectorAll('rect')].map(r => r.getBoundingClientRect());
+         rs.forEach((m, a) => {
+           if (m.width < 20 * k || m.height < 8 * k || m.height > 20 * k) return;
+           if (rs.slice(a + 1).some(n => n.width >= 60 * k && n.height >= 40 * k && hit(m, n) && !inside(m, n)))
+             out.push(`clipped-label svg#${i}: mask at ${Math.round(m.left)},${Math.round(m.top)} under a later box`);
+         });
+       }
      });
      return out.length ? out.join('\n') : 'OK';
    })()
    ```
    It flags clipped HTML text, replacement characters, a label whose glyphs
-   leave its box, and two labeled boxes that partially overlap (a box fully
+   leave its box, two labeled boxes that partially overlap (a box fully
    inside another — a mermaid subgraph around its nodes — is nesting, not a
-   defect). Hand-drawn SVG is only checked where box and label share a `<g>`.
+   defect), and in hand-drawn SVG an arrow-label mask that a box painted
+   later covers. Hand-drawn SVG is only checked where box and label share a
+   `<g>`.
 3. Take a full-page screenshot and look at it yourself — the script cannot see
    edge labels crossing nodes, arrows through text, or a diagram wider than the
    page. Then set `document.documentElement.dataset.theme = 'dark'` (and
@@ -221,6 +267,12 @@ If findings come back, fix the spec and update the Artifact to match. If the
 code-review skill is unavailable in the session, spawn one general-purpose agent to
 adversarially review the spec (contradictions, missing edge cases, steps that can't
 be verified) and apply what survives.
+
+Then polish once: redraw the spec's 확정 구조 as inline SVG under the step-3
+drawing rules (the mermaid in the spec stays the source the loops read),
+replace the proposed-structure diagram on the Artifact with it, republish,
+and run the step-3 render check. Any later spec change edits the mermaid
+first and the SVG to match.
 
 ### 7. Handoff
 The spec crosses to the implementing CLI as a committed file — nothing else
