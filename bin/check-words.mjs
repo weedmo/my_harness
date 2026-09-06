@@ -12,7 +12,7 @@ const CAPS = {
   "skills/model-routing/SKILL.md": 700,
   "skills/loop-gates/SKILL.md": 700,
   "plugins/matt-loop/skills/matt-auto/SKILL.md": 3800,
-  "plugins/auto-loop/skills/autocode/SKILL.md": 4200,
+  "plugins/auto-loop/skills/autocode/SKILL.md": 4250,
 };
 const CHAIN = [
   "plugins/matt-loop/skills/matt-auto/SKILL.md",
