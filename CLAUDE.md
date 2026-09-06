@@ -9,10 +9,12 @@ Reduce common LLM coding mistakes. Merge with project-specific instructions as n
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
 Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
+- State your assumptions explicitly. Make routine judgment calls yourself; ask only when
+  different readings would lead to materially different work.
+- If multiple interpretations exist and they matter, present them - don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+- If you see a real problem with the task as specified, say so in a sentence, then keep
+  building under stated assumptions.
 
 ## 2. Simplicity First
 
@@ -50,13 +52,6 @@ Transform tasks into verifiable goals:
 - "Add validation" → "Write tests for invalid inputs, then make them pass"
 - "Fix the bug" → "Write a test that reproduces it, then make it pass"
 - "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 

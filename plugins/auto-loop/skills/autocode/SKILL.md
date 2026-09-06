@@ -201,7 +201,7 @@ Then **publish the board one last time** (3I) with `progress.state: "done"`, `ru
 
 ### 3G: Failure handling
 
-- An experimenter that produces no result file within the time budget (default 30 min, or `worktree_setup` + guard duration × 3 once known) is stopped and recorded as `crash` with note `timeout`.
+- An experimenter that produces no result file within the time budget (default 60 min, or `worktree_setup` + guard duration × 3 once known, whichever is larger) is stopped and recorded as `crash` with note `timeout`. A single Deep turn can legitimately run a quarter of an hour; the budget is for a worker that stopped, not one that is still working.
 - A worktree that cannot be created (dirty state, name clash) is removed and re-created once; then the hypothesis is `discard`ed with note `worktree`.
 - If the metric command fails on the squashed tree in `$WORKTREE_DIR/best`, the staged squash is discarded (`git reset --hard`, `best_commit` untouched) and the run pauses with a clear message — a broken measurement is not something to loop past.
 

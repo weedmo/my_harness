@@ -77,6 +77,20 @@ flowchart LR
 | D8 | 버전은? | major 셋 다 — weed-harness 4.0.0 / matt-loop 2.0.0 / auto-loop 3.0.0 | 티어 이름과 에이전트 이름이 바뀌어 옛 루프가 새 표를 못 읽는다 |
 | D9 | 체인 목표는? | ≤ 8,500 (문서별 상한 합 3,500 + 700 + 700 + interview-report 1,880 + loop-report 1,538 = 8,318) | 7,000은 문서별 상한으로 도달할 수 없었다. interview-report · loop-report를 자를 D-id가 없다 |
 
+## 추가 결정 — Fable 5.1 기준 규칙 재점검 (2026-09-06)
+
+claude-api 스킬의 프롬프트 감사 가이드와 Fable 5.1 마이그레이션 절로 레포의 규칙 표면(CLAUDE.md · 공통 스킬 · 루프 스킬 · 에이전트 정의 · 훅 · HUD)을 다시 훑은 결과. D1–D4는 가이드가 뒷받침한다(low effort의 Fable이 하위 모델보다 작업당 비용에서 경쟁력 있음 → D1; xhigh/max는 긴 산출물을 thinking과 답에 두 번 써 출력이 두 배 → D2·D3; "검증 지시는 지우지 말라"는 5.1 명시 → D4는 코디네이터의 직접 실행을 남긴다). 아래는 spec 밖에서 찾은 것으로, `적용됨`은 이 spec과 같은 브랜치에 이미 반영된 변경이다. 구현 단계 1–11은 이 변경을 되돌리지 않는다.
+
+| id | 대상 | 결정 | 이유 | 상태 |
+|---|---|---|---|---|
+| D10 | `CLAUDE.md` 1절 "불확실하면 묻고 멈춰라" | "동료처럼 판단하고, 해석에 따라 결과가 크게 달라질 때만 묻는다"로 재작성 | 5.1 가이드의 자율 실행 권고. 루프의 "묻지 말고 delegate에 넘겨라" 원칙과도 충돌했다 | 적용됨 |
+| D11 | `CLAUDE.md` 4절 "다단계 작업은 계획을 먼저 써라" | 계획 출력 의무 삭제, 성공 기준 정의는 유지 | "plan before acting"은 과계획을 유발하는 스캐폴드 | 적용됨 |
+| D12 | 남는 에이전트 5개(`matt-default` · `matt-deep` · `experimenter-default` · `experimenter-deep` · `strategist`) | 본문 끝에 무인 실행 문구 3문장 추가(턴 끝 점검 · 툴 결과에 근거한 보고) | 5.1의 드문 조기 종료("이제 X를 하겠다"로 턴 종료)는 무인 워커에서 재시도 한 라운드를 낭비한다 | 적용됨 |
+| D13 | autocode 3G 실험자 타임아웃 | 기본 30분 → 60분, `worktree_setup` + guard × 3과 큰 쪽 | 5.1은 어려운 작업에서 단일 요청 15분이 정상 | 적용됨 |
+| D14 | `settings.json` 모델 핀 · `hud/weed-hud.mjs` 모델 정규식 | `claude-fable-5-1[1m]`(실제 `~/.claude/settings.json`과 동일) · 정규식에 fable/mythos 추가 | Fable 5 시절 화석 | 적용됨 |
+| D15 | Claude Code Default 티어의 페어 | 검토 대상: opus/medium 대신 fable/low 또는 fable/medium. 이 spec의 D1은 그대로 두고 실측 후 별도 결정 | 가이드: "더 싼 모델로 가기 전에 low Fable을 평가하라". 채택하면 Codex처럼 모델 축이 완전히 사라진다 | 미결 |
+| D16 | flag만: `hooks/language-rule.sh`의 매 턴 재주입, Red flags 절 6곳의 사고 근거 없는 항목, matt-auto · autocode의 Orca 우회책(`agent_prompt_stalled` · 신뢰 선등록 · `--no-sandbox` 재시도) | 이번에 손대지 않음. 훅은 전역 CLAUDE.md 한 줄로 옮긴 뒤 회귀 관찰, Red flags는 D6 원칙대로 provenance 있는 항목만, Orca 우회책은 현재 런타임에서 재현 여부 확인 후 | 제거는 가설이라 실측이 먼저다 | flag |
+
 ## 구현 순서
 
 1. `skills/model-routing/SKILL.md`를 2티어로 재작성 — 티어 표 Default/Deep + Large context("chunk via Deep"), 사다리 한 단 + Codex effort max 재호출, Orca 플래그 두 티어 + `--effort max`는 `--retry-of`와 함께만, `ultra` 금지 유지 → 확인: `wc -w` ≤ 700; 본문에 `Fast` · `Max` 티어 이름과 `haiku` · `xhigh`가 없다; `ultra` 문장이 있다.
