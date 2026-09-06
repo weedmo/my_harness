@@ -13,6 +13,10 @@ const CAPS = {
   "skills/loop-gates/SKILL.md": 700,
   "plugins/matt-loop-codex/skills/matt-auto/SKILL.md": 3800,
   "plugins/auto-loop-codex/skills/autocode/SKILL.md": 4250,
+  // Claude Code editions, measured after the 2026-09-07 regression (platform-split step 9).
+  "plugins/matt-loop-claude/skills/matt-auto/SKILL.md": 4200,
+  "plugins/matt-loop-claude/skills/pr-babysit/SKILL.md": 1100,
+  "plugins/auto-loop-claude/skills/autocode/SKILL.md": 4200,
 };
 const CHAIN = [
   "plugins/matt-loop-codex/skills/matt-auto/SKILL.md",
@@ -22,12 +26,6 @@ const CHAIN = [
   "skills/loop-gates/SKILL.md",
 ];
 const CHAIN_CAP = 8700;
-// Claude Code editions: reported, not capped yet (platform-split spec: measure first).
-const INFO = [
-  "plugins/matt-loop-claude/skills/matt-auto/SKILL.md",
-  "plugins/matt-loop-claude/skills/pr-babysit/SKILL.md",
-  "plugins/auto-loop-claude/skills/autocode/SKILL.md",
-];
 
 const words = (file) => fs.readFileSync(path.join(root, file), "utf8").split(/\s+/).filter(Boolean).length;
 
@@ -42,5 +40,4 @@ const chain = CHAIN.reduce((sum, f) => sum + words(f), 0);
 const chainOk = chain <= CHAIN_CAP;
 if (!chainOk) bad++;
 console.log(`  ${chainOk ? "✓" : "✗"} matt-auto chain ${chain} words (cap ${CHAIN_CAP})`);
-for (const file of INFO) console.log(`  · ${file} ${words(file)} words (no cap yet)`);
 process.exit(bad ? 1 : 0);
