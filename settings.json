@@ -5,7 +5,6 @@
   "model": "claude-fable-5[1m]",
   "skillOverrides": {
     "browse": "off",
-    "qa": "off",
     "scrape": "off",
     "diagram": "off",
     "karpathy-guidelines": "off"
